@@ -17,9 +17,8 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Extract Android project
-        run: |
-          unzip -q MyAI_Assistant_V1_PHONE_BUILD.zip
+      - name: Extract project
+        run: unzip -q MyAI_Assistant_V1_PHONE_BUILD.zip
 
       - name: Install Gradle
         run: |
