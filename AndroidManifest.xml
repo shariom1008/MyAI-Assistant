@@ -1,14 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
+    <uses-permission android:name="android.permission.CAMERA"/>
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
         android:theme="@style/Theme.MyAI"
         android:label="AURIX"
         android:allowBackup="true"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
@@ -16,7 +21,8 @@
 
             <intent-filter>
 
-                <action android:name="android.intent.action.MAIN"/>
+                <action
+                    android:name="android.intent.action.MAIN"/>
 
                 <category
                     android:name="android.intent.category.LAUNCHER"/>
