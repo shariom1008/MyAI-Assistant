@@ -31,30 +31,25 @@ jobs:
         run: |
           python3 -c '
           import os
-          target_file = "app/build.gradle"
-          if os.path.exists(target_file):
-              print(f"Found {target_file} directly!")
-              with open(target_file, "r", encoding="utf-8") as f:
-                  content = f.read()
-              
-              content = content.replace("VERSION_1_8", "VERSION_17")
-              content = content.replace("1.8", "17")
-              
-              with open(target_file, "w", encoding="utf-8") as f:
-                  f.write(content)
-              print("Successfully updated app/build.gradle!")
-          else:
-              print("Searching all files...")
-              for root, dirs, files in os.walk("."):
-                  for file in files:
-                      if file == "build.gradle" or file == "build.gradle.kts":
-                          path = os.path.join(root, file)
-                          print(f"Updating: {path}")
+          for root, dirs, files in os.walk("."):
+              for file in files:
+                  if file.endswith(".gradle") or file.endswith(".gradle.kts") or file.endswith(".kts") or file.endswith(".properties"):
+                      path = os.path.join(root, file)
+                      try:
                           with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                              c = f.read()
-                          c = c.replace("VERSION_1_8", "VERSION_17").replace("1.8", "17")
-                          with open(path, "w", encoding="utf-8") as f:
-                              f.write(c)
+                              content = f.read()
+                          
+                          new_content = content
+                          new_content = new_content.replace("1.8", "17")
+                          new_content = new_content.replace("VERSION_1_8", "VERSION_17")
+                          new_content = new_content.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_1_7")
+                          
+                          if content != new_content:
+                              with open(path, "w", encoding="utf-8") as f:
+                                  f.write(new_content)
+                              print(f"Updated: {path}")
+                      except Exception as e:
+                          pass
           '
 
       - name: Build APK
@@ -66,4 +61,3 @@ jobs:
         with:
           name: MyAI-Assistant-debug
           path: MyAI_Assistant_V1/app/build/outputs/apk/debug/app-debug.apk
-          
