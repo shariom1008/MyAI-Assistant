@@ -119,13 +119,11 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             object : RecognitionListener {
 
                 override fun onReadyForSpeech(params: Bundle?) {
-
                     statusText.text = "🎙️ Listening..."
                     speakButton.text = "🎙️ Listening..."
                 }
 
                 override fun onBeginningOfSpeech() {
-
                     statusText.text = "🔴 Sun raha hoon..."
                 }
 
@@ -134,7 +132,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 override fun onBufferReceived(buffer: ByteArray?) {}
 
                 override fun onEndOfSpeech() {
-
                     statusText.text = "⏳ Processing..."
                     speakButton.text = "🎙️ Speak"
                 }
@@ -182,6 +179,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     eventType: Int,
                     params: Bundle?
                 ) {}
+            }
+        )
+    }
 
     private fun startListening() {
 
@@ -237,8 +237,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         val lowerCommand =
             command.lowercase(Locale.getDefault()).trim()
 
-        // HELLO
-
         if (
             lowerCommand.contains("hello") ||
             lowerCommand.contains("hi") ||
@@ -252,8 +250,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
             return
         }
-
-        // TIME
 
         if (
             lowerCommand.contains("time") ||
@@ -273,8 +269,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        // DATE
-
         if (
             lowerCommand.contains("date") ||
             lowerCommand.contains("तारीख") ||
@@ -291,8 +285,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
             return
         }
-
-        // YOUTUBE
 
         if (
             lowerCommand.contains("open youtube") ||
@@ -312,8 +304,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        // CHROME
-
         if (
             lowerCommand.contains("open chrome") ||
             lowerCommand.contains("chrome kholo") ||
@@ -331,8 +321,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
             return
         }
-
-        // GOOGLE SEARCH
 
         if (
             lowerCommand.contains("search") ||
@@ -382,8 +370,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        // SETTINGS
-
         if (
             lowerCommand.contains("settings") ||
             lowerCommand.contains("setting") ||
@@ -408,8 +394,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
             return
         }
-
-        // UNKNOWN COMMAND
 
         speak(
             "Maine suna: $command. " +
