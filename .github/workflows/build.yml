@@ -3,12 +3,11 @@ name: Build AURIX APK
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -41,8 +40,7 @@ jobs:
             cp styles.xml app/src/main/res/values/styles.xml
           fi
 
-          cat << 'EOF' > settings.gradle.kts
-
+          cat > settings.gradle.kts <<'EOF'
           pluginManagement {
               repositories {
                   google()
@@ -52,10 +50,7 @@ jobs:
           }
 
           dependencyResolutionManagement {
-
-              repositoriesMode.set(
-                  RepositoriesMode.FAIL_ON_PROJECT_REPOS
-              )
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
               repositories {
                   google()
@@ -66,58 +61,37 @@ jobs:
           rootProject.name = "AURIX"
 
           include(":app")
-
           EOF
 
-          cat << 'EOF' > build.gradle.kts
-
+          cat > build.gradle.kts <<'EOF'
           plugins {
-
-              id("com.android.application")
-                  version "8.2.0"
-                  apply false
-
-              id("org.jetbrains.kotlin.android")
-                  version "1.9.10"
-                  apply false
+              id("com.android.application") version "8.2.0" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.10" apply false
           }
-
           EOF
 
-          cat << 'EOF' > app/build.gradle.kts
-
+          cat > app/build.gradle.kts <<'EOF'
           plugins {
-
               id("com.android.application")
-
               id("org.jetbrains.kotlin.android")
           }
 
           android {
-
-              namespace =
-                  "com.example.myaiassistant"
+              namespace = "com.example.myaiassistant"
 
               compileSdk = 34
 
               defaultConfig {
-
-                  applicationId =
-                      "com.example.myaiassistant"
-
+                  applicationId = "com.example.myaiassistant"
                   minSdk = 24
-
                   targetSdk = 34
 
                   versionCode = 3
-
                   versionName = "3.0"
               }
 
               buildTypes {
-
                   release {
-
                       isMinifyEnabled = false
 
                       proguardFiles(
@@ -130,31 +104,19 @@ jobs:
               }
 
               compileOptions {
-
-                  sourceCompatibility =
-                      JavaVersion.VERSION_17
-
-                  targetCompatibility =
-                      JavaVersion.VERSION_17
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
               }
 
               kotlinOptions {
-
                   jvmTarget = "17"
               }
           }
 
           dependencies {
-
-              implementation(
-                  "androidx.core:core-ktx:1.12.0"
-              )
-
-              implementation(
-                  "androidx.activity:activity-ktx:1.8.2"
-              )
+              implementation("androidx.core:core-ktx:1.12.0")
+              implementation("androidx.activity:activity-ktx:1.8.2")
           }
-
           EOF
 
       - name: Install Gradle
@@ -179,8 +141,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-
           name: AURIX-v3
-
-          path:
-            app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
