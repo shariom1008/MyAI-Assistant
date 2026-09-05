@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -18,18 +19,51 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
-      - name: Create Proper Android Structure
+      - name: Create Android Project
         run: |
+
           mkdir -p app/src/main/java/com/example/myaiassistant
           mkdir -p app/src/main/res/values
 
-          # Move files to correct paths if they are in root
-          [ -f MainActivity.kt ] && mv MainActivity.kt app/src/main/java/com/example/myaiassistant/
-          [ -f AndroidManifest.xml ] && mv AndroidManifest.xml app/src/main/
-          [ -f styles.xml ] && mv styles.xml app/src/main/res/values/
+          if [ -f MainActivity.kt ]; then
+            mv MainActivity.kt app/src/main/java/com/example/myaiassistant/
+          fi
 
-          # Create root build.gradle.kts
+          if [ -f AndroidManifest.xml ]; then
+            mv AndroidManifest.xml app/src/main/
+          fi
+
+          if [ -f styles.xml ]; then
+            mv styles.xml app/src/main/res/values/
+          fi
+
+          cat << 'EOF' > settings.gradle.kts
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(
+                  RepositoriesMode.FAIL_ON_PROJECT_REPOS
+              )
+
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = "AURIX"
+
+          include(":app")
+          EOF
+
           cat << 'EOF' > build.gradle.kts
           plugins {
               id("com.android.application") version "8.2.0" apply false
@@ -37,27 +71,6 @@ jobs:
           }
           EOF
 
-          # Create settings.gradle.kts
-          cat << 'EOF' > settings.gradle.kts
-          pluginManagement {
-              repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                google()
-                mavenCentral()
-              }
-          }
-          rootProject.name = "AURIX"
-          include(":app")
-          EOF
-
-          # Create app/build.gradle.kts with Compose support
           cat << 'EOF' > app/build.gradle.kts
           plugins {
               id("com.android.application")
@@ -66,64 +79,117 @@ jobs:
 
           android {
               namespace = "com.example.myaiassistant"
+
               compileSdk = 34
 
               defaultConfig {
                   applicationId = "com.example.myaiassistant"
+
                   minSdk = 24
+
                   targetSdk = 34
-                  versionCode = 1
-                  versionName = "1.0"
+
+                  versionCode = 2
+
+                  versionName = "2.0"
               }
 
               buildTypes {
+
                   release {
                       isMinifyEnabled = false
+
                       proguardFiles(
-                          getDefaultProguardFile("proguard-android-optimize.txt"),
+                          getDefaultProguardFile(
+                              "proguard-android-optimize.txt"
+                          ),
                           "proguard-rules.pro"
                       )
                   }
               }
+
               compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
+
+                  sourceCompatibility =
+                      JavaVersion.VERSION_17
+
+                  targetCompatibility =
+                      JavaVersion.VERSION_17
               }
+
               kotlinOptions {
                   jvmTarget = "17"
               }
+
               buildFeatures {
                   compose = true
               }
+
               composeOptions {
-                  kotlinCompilerExtensionVersion = "1.5.3"
+                  kotlinCompilerExtensionVersion =
+                      "1.5.3"
               }
           }
 
           dependencies {
-              implementation("androidx.core:core-ktx:1.12.0")
-              implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-              implementation("androidx.activity:activity-compose:1.8.2")
-              implementation(platform("androidx.compose:compose-bom:2023.10.01"))
-              implementation("androidx.compose.ui:ui")
-              implementation("androidx.compose.ui:ui-graphics")
-              implementation("androidx.compose.ui:ui-tooling-preview")
-              implementation("androidx.compose.material3:material3")
+
+              implementation(
+                  "androidx.core:core-ktx:1.12.0"
+              )
+
+              implementation(
+                  "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
+              )
+
+              implementation(
+                  "androidx.activity:activity-compose:1.8.2"
+              )
+
+              implementation(
+                  platform(
+                      "androidx.compose:compose-bom:2023.10.01"
+                  )
+              )
+
+              implementation(
+                  "androidx.compose.ui:ui"
+              )
+
+              implementation(
+                  "androidx.compose.ui:ui-graphics"
+              )
+
+              implementation(
+                  "androidx.compose.ui:ui-tooling-preview"
+              )
+
+              implementation(
+                  "androidx.compose.material3:material3"
+              )
           }
           EOF
 
       - name: Install Gradle
         run: |
-          curl -L -o gradle.zip https://services.gradle.org/distributions/gradle-8.9-bin.zip
+
+          curl -L \
+            -o gradle.zip \
+            https://services.gradle.org/distributions/gradle-8.9-bin.zip
+
           unzip -q gradle.zip -d "$HOME/gradle"
+
           echo "$HOME/gradle/gradle-8.9/bin" >> "$GITHUB_PATH"
 
       - name: Build APK
-        run: gradle --no-daemon assembleDebug
+        run: |
+
+          gradle \
+            --no-daemon \
+            --stacktrace \
+            assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyAI-Assistant-debug
+          name: AURIX-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-          
