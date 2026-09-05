@@ -1,17 +1,25 @@
 package com.example.myaiassistant
 
 import android.Manifest
+import android.app.AlarmManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
+import android.media.AudioManager
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Bundle
+import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
+import android.speech.tts.UtteranceProgressListener
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
@@ -23,6 +31,7 @@ import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.regex.Pattern
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
@@ -45,7 +54,12 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         createUI()
         setupSpeechRecognizer()
+        setupTextToSpeech()
     }
+
+    // =========================================================
+    // UI
+    // =========================================================
 
     private fun createUI() {
 
@@ -53,69 +67,78 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         root.orientation = LinearLayout.VERTICAL
         root.gravity = Gravity.CENTER
-        root.setPadding(30, 50, 30, 40)
+        root.setPadding(25, 45, 25, 35)
 
         val background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(
-                Color.rgb(3, 8, 20),
-                Color.rgb(5, 18, 35),
-                Color.rgb(2, 5, 15)
+                Color.rgb(2, 6, 18),
+                Color.rgb(5, 20, 38),
+                Color.rgb(1, 4, 12)
             )
         )
 
         root.background = background
 
+        // TITLE
         val title = TextView(this)
 
         title.text = "A U R I X"
         title.textSize = 34f
-        title.setTextColor(Color.rgb(0, 220, 255))
+        title.setTextColor(Color.rgb(0, 225, 255))
         title.gravity = Gravity.CENTER
 
+        // SUBTITLE
         val subtitle = TextView(this)
 
         subtitle.text = "VOICE INTELLIGENCE SYSTEM"
         subtitle.textSize = 12f
         subtitle.setTextColor(Color.rgb(130, 210, 230))
         subtitle.gravity = Gravity.CENTER
-        subtitle.setPadding(0, 0, 0, 35)
+        subtitle.setPadding(0, 0, 0, 25)
 
+        // STATUS
         statusText = TextView(this)
 
         statusText.text = "● STANDBY"
-        statusText.textSize = 16f
+        statusText.textSize = 15f
         statusText.setTextColor(Color.rgb(0, 255, 200))
         statusText.gravity = Gravity.CENTER
-        statusText.setPadding(10, 10, 10, 25)
+        statusText.setPadding(10, 10, 10, 20)
 
+        // ORB
         val orb = TextView(this)
 
         orb.text = "◉"
-        orb.textSize = 100f
+        orb.textSize = 95f
         orb.setTextColor(Color.rgb(0, 220, 255))
         orb.gravity = Gravity.CENTER
 
         orb.setOnClickListener {
-            startContinuousMode()
+            toggleAURIX()
         }
 
+        // RESULT BOX
         resultText = TextView(this)
 
-        resultText.text =
-            "Say:\n\"Hey AURIX\""
+        resultText.text = "Say:\n\"Hello\""
 
-        resultText.textSize = 18f
+        resultText.textSize = 17f
         resultText.setTextColor(Color.WHITE)
         resultText.gravity = Gravity.CENTER
-        resultText.setPadding(25, 30, 25, 30)
+        resultText.setPadding(20, 25, 20, 25)
 
         val resultBackground = GradientDrawable()
-        resultBackground.setColor(Color.rgb(8, 25, 42))
-        resultBackground.cornerRadius = 30f
+
+        resultBackground.setColor(
+            Color.rgb(7, 24, 42)
+        )
+
+        resultBackground.cornerRadius = 28f
+
         resultBackground.setStroke(
             1,
-            Color.rgb(0, 150, 190)
+            Color.rgb(0, 145, 190)
         )
 
         resultText.background = resultBackground
@@ -125,65 +148,76 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             LinearLayout.LayoutParams.WRAP_CONTENT
         )
 
-        resultParams.setMargins(15, 20, 15, 30)
+        resultParams.setMargins(
+            10,
+            15,
+            10,
+            25
+        )
+
+        // ACTIVATE BUTTON
+        speakButton = Button(this)
+
+        speakButton.text = "ACTIVATE AURIX"
+
+        // Clipping fix
+        speakButton.textSize = 15f
+        speakButton.isAllCaps = false
+        speakButton.gravity = Gravity.CENTER
+        speakButton.setSingleLine(true)
+        speakButton.setPadding(0, 0, 0, 0)
+        speakButton.minimumHeight = 0
+        speakButton.minHeight = 0
+        speakButton.setTextColor(Color.WHITE)
+
+        val buttonBackground = GradientDrawable()
+
+        buttonBackground.setColor(
+            Color.rgb(0, 115, 170)
+        )
+
+        buttonBackground.cornerRadius = 55f
+
+        buttonBackground.setStroke(
+            2,
+            Color.rgb(0, 225, 255)
+        )
+
+        speakButton.background = buttonBackground
+
+        speakButton.setOnClickListener {
+            toggleAURIX()
+        }
+
+        val buttonParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            72
+        )
+
+        buttonParams.setMargins(
+            20,
+            5,
+            20,
+            5
+        )
 
         root.addView(title)
+
         root.addView(subtitle)
+
         root.addView(statusText)
 
         root.addView(
             orb,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                150
+                140
             )
         )
 
         root.addView(
             resultText,
             resultParams
-        )
-
-        speakButton = Button(this)
-
-        speakButton.text = "🎙 ACTIVATE AURIX"
-        speakButton.textSize = 16f
-        speakButton.setTextColor(Color.WHITE)
-
-        val buttonBackground = GradientDrawable()
-
-        buttonBackground.setColor(
-            Color.rgb(0, 120, 170)
-        )
-
-        buttonBackground.cornerRadius = 60f
-
-        buttonBackground.setStroke(
-            2,
-            Color.rgb(0, 230, 255)
-        )
-
-        speakButton.background = buttonBackground
-
-        speakButton.setOnClickListener {
-
-            if (continuousMode) {
-                stopContinuousMode()
-            } else {
-                startContinuousMode()
-            }
-        }
-
-        val buttonParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            65
-        )
-
-        buttonParams.setMargins(
-            30,
-            10,
-            30,
-            10
         )
 
         root.addView(
@@ -194,582 +228,97 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         setContentView(root)
     }
 
-    private fun setupSpeechRecognizer() {
+    // =========================================================
+    // TEXT TO SPEECH
+    // =========================================================
 
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+    private fun setupTextToSpeech() {
 
-            Toast.makeText(
-                this,
-                "Speech recognition available nahi hai.",
-                Toast.LENGTH_LONG
-            ).show()
+        textToSpeech.setOnUtteranceProgressListener(
+            object : UtteranceProgressListener() {
 
-            return
-        }
+                override fun onStart(
+                    utteranceId: String?
+                ) {
+                    runOnUiThread {
+                        isSpeaking = true
+                        statusText.text =
+                            "● AURIX SPEAKING..."
+                    }
+                }
 
-        speechRecognizer =
-            SpeechRecognizer.createSpeechRecognizer(this)
-
-        speechRecognizer.setRecognitionListener(
-            object : RecognitionListener {
-
-                override fun onReadyForSpeech(
-                    params: Bundle?
+                override fun onDone(
+                    utteranceId: String?
                 ) {
 
-                    if (continuousMode) {
+                    runOnUiThread {
 
-                        statusText.text =
-                            "● LISTENING FOR \"HEY AURIX\""
+                        isSpeaking = false
 
-                        speakButton.text =
-                            "⏹ STOP AURIX"
-                    }
-                }
+                        if (continuousMode) {
 
-                override fun onBeginningOfSpeech() {
+                            statusText.text =
+                                "● LISTENING FOR \"HELLO\""
 
-                    statusText.text =
-                        "● HEARING YOU..."
-                }
+                            restartListening()
+                        } else {
 
-                override fun onRmsChanged(
-                    rmsdB: Float
-                ) {}
-
-                override fun onBufferReceived(
-                    buffer: ByteArray?
-                ) {}
-
-                override fun onEndOfSpeech() {
-
-                    if (continuousMode) {
-
-                        statusText.text =
-                            "● PROCESSING..."
-                    }
-                }
-
-                override fun onError(error: Int) {
-
-                    if (continuousMode) {
-
-                        when (error) {
-
-                            SpeechRecognizer.ERROR_NO_MATCH,
-                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
-                            SpeechRecognizer.ERROR_CLIENT -> {
-
-                                restartListening()
-                            }
-
-                            else -> {
-
-                                statusText.text =
-                                    "● LISTENING..."
-
-                                restartListening()
-                            }
+                            statusText.text =
+                                "● STANDBY"
                         }
-
-                    } else {
-
-                        statusText.text =
-                            "● STANDBY"
-
-                        speakButton.text =
-                            "🎙 ACTIVATE AURIX"
                     }
                 }
 
-                override fun onResults(
-                    results: Bundle?
+                override fun onError(
+                    utteranceId: String?
                 ) {
 
-                    val matches =
-                        results?.getStringArrayList(
-                            SpeechRecognizer.RESULTS_RECOGNITION
-                        )
+                    runOnUiThread {
 
-                    val command =
-                        matches?.firstOrNull()
+                        isSpeaking = false
 
-                    if (!command.isNullOrBlank()) {
-
-                        handleVoiceInput(command)
-                    }
-
-                    if (continuousMode) {
-                        restartListening()
+                        if (continuousMode) {
+                            restartListening()
+                        }
                     }
                 }
-
-                override fun onPartialResults(
-                    partialResults: Bundle?
-                ) {}
-
-                override fun onEvent(
-                    eventType: Int,
-                    params: Bundle?
-                ) {}
             }
         )
     }
 
-    private fun handleVoiceInput(
-        spokenText: String
-    ) {
+    private fun speak(text: String) {
 
-        val text =
-            spokenText
-                .lowercase(Locale.getDefault())
-                .trim()
+        try {
 
-        resultText.text =
-            "HEARD\n\n$spokenText"
-
-        // Wake word detection
-        val wakeWords = listOf(
-            "hey aurix",
-            "hey aurics",
-            "हाय ऑरिक्स",
-            "हे ऑरिक्स",
-            "हेलो ऑरिक्स",
-            "हेलो औरिक्स"
-        )
-
-        val wakeWordFound =
-            wakeWords.any {
-                text.contains(it)
+            if (::speechRecognizer.isInitialized) {
+                speechRecognizer.cancel()
             }
 
-        if (!wakeWordFound) {
+            isSpeaking = true
 
             statusText.text =
-                "● STANDBY — SAY \"HEY AURIX\""
+                "● AURIX SPEAKING..."
 
-            return
-        }
-
-        statusText.text =
-            "● AURIX ACTIVATED"
-
-        // Remove wake word
-        var command = text
-
-        for (wakeWord in wakeWords) {
-            command =
-                command.replace(
-                    wakeWord,
-                    ""
-                )
-        }
-
-        command = command.trim()
-
-        if (command.isEmpty()) {
-
-            speak(
-                "Yes, I'm listening."
-            )
-
-            return
-        }
-
-        resultText.text =
-            "COMMAND\n\n$command"
-
-        processCommand(command)
-    }
-
-    private fun startContinuousMode() {
-
-        if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(
-                    Manifest.permission.RECORD_AUDIO
-                ),
-                RECORD_AUDIO_REQUEST
-            )
-
-            return
-        }
-
-        continuousMode = true
-
-        statusText.text =
-            "● LISTENING FOR \"HEY AURIX\""
-
-        speakButton.text =
-            "⏹ STOP AURIX"
-
-        startListening()
-    }
-
-    private fun stopContinuousMode() {
-
-        continuousMode = false
-
-        try {
-            speechRecognizer.cancel()
-        } catch (e: Exception) {
-        }
-
-        statusText.text =
-            "● STANDBY"
-
-        speakButton.text =
-            "🎙 ACTIVATE AURIX"
-
-        resultText.text =
-            "Say:\n\"Hey AURIX\""
-    }
-
-    private fun startListening() {
-
-        if (!continuousMode) {
-            return
-        }
-
-        try {
-
-            speechRecognizer.cancel()
-
-            val intent =
-                Intent(
-                    RecognizerIntent.ACTION_RECOGNIZE_SPEECH
-                )
-
-            intent.putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-            )
-
-            intent.putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE,
-                "hi-IN"
-            )
-
-            intent.putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
-                "hi-IN"
-            )
-
-            intent.putExtra(
-                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
-                false
-            )
-
-            intent.putExtra(
-                RecognizerIntent.EXTRA_MAX_RESULTS,
-                5
-            )
-
-            speechRecognizer.startListening(
-                intent
+            textToSpeech.speak(
+                text,
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                "AURIX_RESPONSE"
             )
 
         } catch (e: Exception) {
 
-            restartListening()
-        }
-    }
+            isSpeaking = false
 
-    private fun restartListening() {
-
-        if (!continuousMode || isSpeaking) {
-            return
-        }
-
-        window.decorView.postDelayed(
-            {
-                if (continuousMode && !isSpeaking) {
-                    startListening()
-                }
-            },
-            700
-        )
-    }
-
-    private fun processCommand(
-        command: String
-    ) {
-
-        val lowerCommand =
-            command
-                .lowercase(Locale.getDefault())
-                .trim()
-
-        // HELLO
-        if (
-            lowerCommand.contains("hello") ||
-            lowerCommand.contains("hi") ||
-            lowerCommand.contains("नमस्ते") ||
-            lowerCommand.contains("हेलो")
-        ) {
-
-            speak(
-                "Hello! Main AURIX hoon. Aapki command ke liye ready hoon."
-            )
-
-            return
-        }
-
-        // TIME
-        if (
-            lowerCommand.contains("time") ||
-            lowerCommand.contains("टाइम") ||
-            lowerCommand.contains("समय") ||
-            lowerCommand.contains("वक्त")
-        ) {
-
-            val time =
-                SimpleDateFormat(
-                    "hh:mm a",
-                    Locale.getDefault()
-                ).format(Date())
-
-            speak(
-                "Abhi time hai $time"
-            )
-
-            return
-        }
-
-        // DATE
-        if (
-            lowerCommand.contains("date") ||
-            lowerCommand.contains("तारीख") ||
-            lowerCommand.contains("आज कौन सा दिन")
-        ) {
-
-            val date =
-                SimpleDateFormat(
-                    "dd MMMM yyyy",
-                    Locale.getDefault()
-                ).format(Date())
-
-            speak(
-                "Aaj ki date hai $date"
-            )
-
-            return
-        }
-
-        // YOUTUBE
-        if (
-            lowerCommand.contains("open youtube") ||
-            lowerCommand.contains("youtube kholo") ||
-            lowerCommand.contains("youtube khol") ||
-            lowerCommand.contains("यूट्यूब खोलो") ||
-            lowerCommand.contains("यूट्यूब खोल")
-        ) {
-
-            speak(
-                "YouTube open kar raha hoon."
-            )
-
-            openApp(
-                "com.google.android.youtube",
-                "YouTube"
-            )
-
-            return
-        }
-
-        // CHROME
-        if (
-            lowerCommand.contains("open chrome") ||
-            lowerCommand.contains("chrome kholo") ||
-            lowerCommand.contains("chrome khol") ||
-            lowerCommand.contains("क्रोम खोलो") ||
-            lowerCommand.contains("क्रोम खोल")
-        ) {
-
-            speak(
-                "Chrome open kar raha hoon."
-            )
-
-            openApp(
-                "com.android.chrome",
-                "Chrome"
-            )
-
-            return
-        }
-
-        // GOOGLE SEARCH
-        if (
-            lowerCommand.contains("search") ||
-            lowerCommand.contains("google par") ||
-            lowerCommand.contains("google pe") ||
-            lowerCommand.contains("सर्च") ||
-            lowerCommand.contains("गूगल पर")
-        ) {
-
-            var searchText =
-                lowerCommand
-
-            searchText =
-                searchText
-                    .replace("google par", "")
-                    .replace("google pe", "")
-                    .replace("search", "")
-                    .replace("सर्च", "")
-                    .replace("गूगल पर", "")
-                    .replace("करो", "")
-                    .replace("karo", "")
-                    .trim()
-
-            if (searchText.isNotEmpty()) {
-
-                speak(
-                    "Google par $searchText search kar raha hoon."
-                )
-
-                val url =
-                    "https://www.google.com/search?q=" +
-                            Uri.encode(searchText)
-
-                startActivity(
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(url)
-                    )
-                )
-
-            } else {
-
-                speak(
-                    "Aap kya search karna chahte hain?"
-                )
+            if (continuousMode) {
+                restartListening()
             }
-
-            return
-        }
-
-        // SETTINGS
-        if (
-            lowerCommand.contains("settings") ||
-            lowerCommand.contains("setting") ||
-            lowerCommand.contains("सेटिंग")
-        ) {
-
-            speak(
-                "Settings open kar raha hoon."
-            )
-
-            try {
-
-                startActivity(
-                    Intent(
-                        Settings.ACTION_SETTINGS
-                    )
-                )
-
-            } catch (e: Exception) {
-
-                speak(
-                    "Settings open nahi ho paayi."
-                )
-            }
-
-            return
-        }
-
-        speak(
-            "Maine suna: $command. " +
-                    "Abhi ye command meri capabilities mein nahi hai."
-        )
-    }
-
-    private fun openApp(
-        packageName: String,
-        appName: String
-    ) {
-
-        try {
-
-            val intent =
-                packageManager
-                    .getLaunchIntentForPackage(
-                        packageName
-                    )
-
-            if (intent != null) {
-
-                startActivity(intent)
-
-            } else if (appName == "YouTube") {
-
-                startActivity(
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(
-                            "https://www.youtube.com"
-                        )
-                    )
-                )
-
-            } else {
-
-                speak(
-                    "$appName app installed nahi hai."
-                )
-            }
-
-        } catch (e: Exception) {
-
-            speak(
-                "$appName open nahi ho paaya."
-            )
         }
     }
 
-    private fun speak(
-        text: String
-    ) {
+    override fun onInit(status: Int) {
 
-        isSpeaking = true
-
-        statusText.text =
-            "● AURIX SPEAKING..."
-
-        textToSpeech.speak(
-            text,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "AURIX_RESPONSE"
-        )
-
-        window.decorView.postDelayed(
-            {
-                isSpeaking = false
-
-                if (continuousMode) {
-                    restartListening()
-                }
-
-            },
-            1800
-        )
-    }
-
-    override fun onInit(
-        status: Int
-    ) {
-
-        if (
-            status ==
-            TextToSpeech.SUCCESS
-        ) {
+        if (status == TextToSpeech.SUCCESS) {
 
             val result =
                 textToSpeech.setLanguage(
@@ -781,10 +330,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             )
 
             if (
-                result ==
-                TextToSpeech.LANG_MISSING_DATA ||
-                result ==
-                TextToSpeech.LANG_NOT_SUPPORTED
+                result == TextToSpeech.LANG_MISSING_DATA ||
+                result == TextToSpeech.LANG_NOT_SUPPORTED
             ) {
 
                 textToSpeech.language =
@@ -793,59 +340,5 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-
-        super.onRequestPermissionsResult(
-            requestCode,
-            permissions,
-            grantResults
-        )
-
-        if (
-            requestCode ==
-            RECORD_AUDIO_REQUEST
-        ) {
-
-            if (
-                grantResults.isNotEmpty() &&
-                grantResults[0] ==
-                PackageManager.PERMISSION_GRANTED
-            ) {
-
-                startContinuousMode()
-
-            } else {
-
-                Toast.makeText(
-                    this,
-                    "Microphone permission deni hogi.",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
-    override fun onDestroy() {
-
-        continuousMode = false
-
-        if (
-            ::speechRecognizer.isInitialized
-        ) {
-            speechRecognizer.destroy()
-        }
-
-        if (
-            ::textToSpeech.isInitialized
-        ) {
-            textToSpeech.stop()
-            textToSpeech.shutdown()
-        }
-
-        super.onDestroy()
-    }
-}
+    // =========================================================
+    // SPE
