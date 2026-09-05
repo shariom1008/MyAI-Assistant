@@ -26,15 +26,15 @@ jobs:
           unzip -q gradle.zip -d "$HOME/gradle"
           echo "$HOME/gradle/gradle-8.9/bin" >> "$GITHUB_PATH"
 
-      - name: Fix JVM target
+      - name: Fix JVM target and Java Version
         working-directory: MyAI_Assistant_V1
         run: |
-          find . -name "build.gradle" -exec sed -i "s/1.8/17/g" {} +
-          find . -name "build.gradle.kts" -exec sed -i "s/1.8/17/g" {} +
-          find . -name "build.gradle" -exec sed -i "s/VERSION_1_8/VERSION_17/g" {} +
-          find . -name "build.gradle.kts" -exec sed -i "s/VERSION_1_8/VERSION_17/g" {} +
-          
-          
+          find . -name "build.gradle" -o -name "build.gradle.kts" | while read file; do
+            sed -i 's/1.8/17/g' "$file"
+            sed -i 's/"1.8"/"17"/g' "$file"
+            sed -i "s/'1.8'/'17'/g" "$file"
+            sed -i 's/VERSION_1_8/VERSION_17/g' "$file"
+          - done
 
       - name: Build APK
         working-directory: MyAI_Assistant_V1
