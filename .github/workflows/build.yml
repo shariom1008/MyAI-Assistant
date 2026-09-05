@@ -53,7 +53,7 @@ jobs:
                 mavenCentral()
               }
           }
-          rootProject.name = "My AI Assistant"
+          rootProject.name = "AURIX"
           include(":app")
           EOF
 
