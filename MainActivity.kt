@@ -35,6 +35,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     private val RECORD_AUDIO_REQUEST = 1001
 
+    private var continuousMode = false
+    private var isSpeaking = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -63,34 +66,29 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         root.background = background
 
-        // AURIX title
         val title = TextView(this)
 
         title.text = "A U R I X"
         title.textSize = 34f
         title.setTextColor(Color.rgb(0, 220, 255))
         title.gravity = Gravity.CENTER
-        title.setPadding(0, 0, 0, 5)
 
-        // Subtitle
         val subtitle = TextView(this)
 
-        subtitle.text = "ADVANCED VOICE INTELLIGENCE"
+        subtitle.text = "VOICE INTELLIGENCE SYSTEM"
         subtitle.textSize = 12f
         subtitle.setTextColor(Color.rgb(130, 210, 230))
         subtitle.gravity = Gravity.CENTER
         subtitle.setPadding(0, 0, 0, 35)
 
-        // Status
         statusText = TextView(this)
 
-        statusText.text = "● SYSTEM READY"
+        statusText.text = "● STANDBY"
         statusText.textSize = 16f
         statusText.setTextColor(Color.rgb(0, 255, 200))
         statusText.gravity = Gravity.CENTER
         statusText.setPadding(10, 10, 10, 25)
 
-        // Futuristic Orb
         val orb = TextView(this)
 
         orb.text = "◉"
@@ -99,13 +97,14 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         orb.gravity = Gravity.CENTER
 
         orb.setOnClickListener {
-            startListening()
+            startContinuousMode()
         }
 
-        // Command display
         resultText = TextView(this)
 
-        resultText.text = "Awaiting command..."
+        resultText.text =
+            "Say:\n\"Hey AURIX\""
+
         resultText.textSize = 18f
         resultText.setTextColor(Color.WHITE)
         resultText.gravity = Gravity.CENTER
@@ -114,7 +113,10 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         val resultBackground = GradientDrawable()
         resultBackground.setColor(Color.rgb(8, 25, 42))
         resultBackground.cornerRadius = 30f
-        resultBackground.setStroke(1, Color.rgb(0, 150, 190))
+        resultBackground.setStroke(
+            1,
+            Color.rgb(0, 150, 190)
+        )
 
         resultText.background = resultBackground
 
@@ -128,6 +130,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         root.addView(title)
         root.addView(subtitle)
         root.addView(statusText)
+
         root.addView(
             orb,
             LinearLayout.LayoutParams(
@@ -135,24 +138,40 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 150
             )
         )
-        root.addView(resultText, resultParams)
 
-        // Speak button
+        root.addView(
+            resultText,
+            resultParams
+        )
+
         speakButton = Button(this)
 
-        speakButton.text = "🎙  ACTIVATE AURIX"
+        speakButton.text = "🎙 ACTIVATE AURIX"
         speakButton.textSize = 16f
         speakButton.setTextColor(Color.WHITE)
 
         val buttonBackground = GradientDrawable()
-        buttonBackground.setColor(Color.rgb(0, 120, 170))
+
+        buttonBackground.setColor(
+            Color.rgb(0, 120, 170)
+        )
+
         buttonBackground.cornerRadius = 60f
-        buttonBackground.setStroke(2, Color.rgb(0, 230, 255))
+
+        buttonBackground.setStroke(
+            2,
+            Color.rgb(0, 230, 255)
+        )
 
         speakButton.background = buttonBackground
 
         speakButton.setOnClickListener {
-            startListening()
+
+            if (continuousMode) {
+                stopContinuousMode()
+            } else {
+                startContinuousMode()
+            }
         }
 
         val buttonParams = LinearLayout.LayoutParams(
@@ -160,9 +179,17 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             65
         )
 
-        buttonParams.setMargins(30, 10, 30, 10)
+        buttonParams.setMargins(
+            30,
+            10,
+            30,
+            10
+        )
 
-        root.addView(speakButton, buttonParams)
+        root.addView(
+            speakButton,
+            buttonParams
+        )
 
         setContentView(root)
     }
@@ -186,57 +213,95 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         speechRecognizer.setRecognitionListener(
             object : RecognitionListener {
 
-                override fun onReadyForSpeech(params: Bundle?) {
-                    statusText.text = "● LISTENING..."
-                    speakButton.text = "🎙  LISTENING..."
+                override fun onReadyForSpeech(
+                    params: Bundle?
+                ) {
+
+                    if (continuousMode) {
+
+                        statusText.text =
+                            "● LISTENING FOR \"HEY AURIX\""
+
+                        speakButton.text =
+                            "⏹ STOP AURIX"
+                    }
                 }
 
                 override fun onBeginningOfSpeech() {
-                    statusText.text = "● AURIX IS LISTENING"
+
+                    statusText.text =
+                        "● HEARING YOU..."
                 }
 
-                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onRmsChanged(
+                    rmsdB: Float
+                ) {}
 
-                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onBufferReceived(
+                    buffer: ByteArray?
+                ) {}
 
                 override fun onEndOfSpeech() {
-                    statusText.text = "● PROCESSING..."
-                    speakButton.text = "PROCESSING..."
+
+                    if (continuousMode) {
+
+                        statusText.text =
+                            "● PROCESSING..."
+                    }
                 }
 
                 override fun onError(error: Int) {
 
-                    statusText.text = "● VOICE ERROR"
-                    speakButton.text = "🎙  ACTIVATE AURIX"
+                    if (continuousMode) {
 
-                    Toast.makeText(
-                        this@MainActivity,
-                        getErrorMessage(error),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                        when (error) {
+
+                            SpeechRecognizer.ERROR_NO_MATCH,
+                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
+                            SpeechRecognizer.ERROR_CLIENT -> {
+
+                                restartListening()
+                            }
+
+                            else -> {
+
+                                statusText.text =
+                                    "● LISTENING..."
+
+                                restartListening()
+                            }
+                        }
+
+                    } else {
+
+                        statusText.text =
+                            "● STANDBY"
+
+                        speakButton.text =
+                            "🎙 ACTIVATE AURIX"
+                    }
                 }
 
-                override fun onResults(results: Bundle?) {
+                override fun onResults(
+                    results: Bundle?
+                ) {
 
                     val matches =
                         results?.getStringArrayList(
                             SpeechRecognizer.RESULTS_RECOGNITION
                         )
 
-                    val command = matches?.firstOrNull()
+                    val command =
+                        matches?.firstOrNull()
 
                     if (!command.isNullOrBlank()) {
 
-                        resultText.text =
-                            "COMMAND RECEIVED\n\n$command"
-
-                        statusText.text =
-                            "● COMMAND RECEIVED"
-
-                        processCommand(command)
+                        handleVoiceInput(command)
                     }
 
-                    speakButton.text = "🎙  ACTIVATE AURIX"
+                    if (continuousMode) {
+                        restartListening()
+                    }
                 }
 
                 override fun onPartialResults(
@@ -251,7 +316,73 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         )
     }
 
-    private fun startListening() {
+    private fun handleVoiceInput(
+        spokenText: String
+    ) {
+
+        val text =
+            spokenText
+                .lowercase(Locale.getDefault())
+                .trim()
+
+        resultText.text =
+            "HEARD\n\n$spokenText"
+
+        // Wake word detection
+        val wakeWords = listOf(
+            "hey aurix",
+            "hey aurics",
+            "हाय ऑरिक्स",
+            "हे ऑरिक्स",
+            "हेलो ऑरिक्स",
+            "हेलो औरिक्स"
+        )
+
+        val wakeWordFound =
+            wakeWords.any {
+                text.contains(it)
+            }
+
+        if (!wakeWordFound) {
+
+            statusText.text =
+                "● STANDBY — SAY \"HEY AURIX\""
+
+            return
+        }
+
+        statusText.text =
+            "● AURIX ACTIVATED"
+
+        // Remove wake word
+        var command = text
+
+        for (wakeWord in wakeWords) {
+            command =
+                command.replace(
+                    wakeWord,
+                    ""
+                )
+        }
+
+        command = command.trim()
+
+        if (command.isEmpty()) {
+
+            speak(
+                "Yes, I'm listening."
+            )
+
+            return
+        }
+
+        resultText.text =
+            "COMMAND\n\n$command"
+
+        processCommand(command)
+    }
+
+    private fun startContinuousMode() {
 
         if (
             ContextCompat.checkSelfPermission(
@@ -262,50 +393,121 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.RECORD_AUDIO),
+                arrayOf(
+                    Manifest.permission.RECORD_AUDIO
+                ),
                 RECORD_AUDIO_REQUEST
             )
 
             return
         }
 
-        val intent =
-            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        continuousMode = true
 
-        intent.putExtra(
-            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-        )
+        statusText.text =
+            "● LISTENING FOR \"HEY AURIX\""
 
-        intent.putExtra(
-            RecognizerIntent.EXTRA_LANGUAGE,
-            "hi-IN"
-        )
+        speakButton.text =
+            "⏹ STOP AURIX"
 
-        intent.putExtra(
-            RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
-            "hi-IN"
-        )
-
-        intent.putExtra(
-            RecognizerIntent.EXTRA_PARTIAL_RESULTS,
-            true
-        )
-
-        intent.putExtra(
-            RecognizerIntent.EXTRA_MAX_RESULTS,
-            5
-        )
-
-        speechRecognizer.startListening(intent)
+        startListening()
     }
 
-    private fun processCommand(command: String) {
+    private fun stopContinuousMode() {
+
+        continuousMode = false
+
+        try {
+            speechRecognizer.cancel()
+        } catch (e: Exception) {
+        }
+
+        statusText.text =
+            "● STANDBY"
+
+        speakButton.text =
+            "🎙 ACTIVATE AURIX"
+
+        resultText.text =
+            "Say:\n\"Hey AURIX\""
+    }
+
+    private fun startListening() {
+
+        if (!continuousMode) {
+            return
+        }
+
+        try {
+
+            speechRecognizer.cancel()
+
+            val intent =
+                Intent(
+                    RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+                )
+
+            intent.putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+
+            intent.putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE,
+                "hi-IN"
+            )
+
+            intent.putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
+                "hi-IN"
+            )
+
+            intent.putExtra(
+                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                false
+            )
+
+            intent.putExtra(
+                RecognizerIntent.EXTRA_MAX_RESULTS,
+                5
+            )
+
+            speechRecognizer.startListening(
+                intent
+            )
+
+        } catch (e: Exception) {
+
+            restartListening()
+        }
+    }
+
+    private fun restartListening() {
+
+        if (!continuousMode || isSpeaking) {
+            return
+        }
+
+        window.decorView.postDelayed(
+            {
+                if (continuousMode && !isSpeaking) {
+                    startListening()
+                }
+            },
+            700
+        )
+    }
+
+    private fun processCommand(
+        command: String
+    ) {
 
         val lowerCommand =
-            command.lowercase(Locale.getDefault()).trim()
+            command
+                .lowercase(Locale.getDefault())
+                .trim()
 
-        // Greeting
+        // HELLO
         if (
             lowerCommand.contains("hello") ||
             lowerCommand.contains("hi") ||
@@ -320,7 +522,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        // Time
+        // TIME
         if (
             lowerCommand.contains("time") ||
             lowerCommand.contains("टाइम") ||
@@ -334,12 +536,14 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     Locale.getDefault()
                 ).format(Date())
 
-            speak("Abhi time hai $time")
+            speak(
+                "Abhi time hai $time"
+            )
 
             return
         }
 
-        // Date
+        // DATE
         if (
             lowerCommand.contains("date") ||
             lowerCommand.contains("तारीख") ||
@@ -352,12 +556,14 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     Locale.getDefault()
                 ).format(Date())
 
-            speak("Aaj ki date hai $date")
+            speak(
+                "Aaj ki date hai $date"
+            )
 
             return
         }
 
-        // YouTube
+        // YOUTUBE
         if (
             lowerCommand.contains("open youtube") ||
             lowerCommand.contains("youtube kholo") ||
@@ -366,7 +572,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             lowerCommand.contains("यूट्यूब खोल")
         ) {
 
-            speak("YouTube open kar raha hoon.")
+            speak(
+                "YouTube open kar raha hoon."
+            )
 
             openApp(
                 "com.google.android.youtube",
@@ -376,7 +584,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        // Chrome
+        // CHROME
         if (
             lowerCommand.contains("open chrome") ||
             lowerCommand.contains("chrome kholo") ||
@@ -385,7 +593,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             lowerCommand.contains("क्रोम खोल")
         ) {
 
-            speak("Chrome open kar raha hoon.")
+            speak(
+                "Chrome open kar raha hoon."
+            )
 
             openApp(
                 "com.android.chrome",
@@ -395,7 +605,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        // Google search
+        // GOOGLE SEARCH
         if (
             lowerCommand.contains("search") ||
             lowerCommand.contains("google par") ||
@@ -404,17 +614,19 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             lowerCommand.contains("गूगल पर")
         ) {
 
-            var searchText = lowerCommand
+            var searchText =
+                lowerCommand
 
-            searchText = searchText
-                .replace("google par", "")
-                .replace("google pe", "")
-                .replace("search", "")
-                .replace("सर्च", "")
-                .replace("गूगल पर", "")
-                .replace("करो", "")
-                .replace("karo", "")
-                .trim()
+            searchText =
+                searchText
+                    .replace("google par", "")
+                    .replace("google pe", "")
+                    .replace("search", "")
+                    .replace("सर्च", "")
+                    .replace("गूगल पर", "")
+                    .replace("करो", "")
+                    .replace("karo", "")
+                    .trim()
 
             if (searchText.isNotEmpty()) {
 
@@ -443,24 +655,30 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        // Settings
+        // SETTINGS
         if (
             lowerCommand.contains("settings") ||
             lowerCommand.contains("setting") ||
             lowerCommand.contains("सेटिंग")
         ) {
 
-            speak("Settings open kar raha hoon.")
+            speak(
+                "Settings open kar raha hoon."
+            )
 
             try {
 
                 startActivity(
-                    Intent(Settings.ACTION_SETTINGS)
+                    Intent(
+                        Settings.ACTION_SETTINGS
+                    )
                 )
 
             } catch (e: Exception) {
 
-                speak("Settings open nahi ho paayi.")
+                speak(
+                    "Settings open nahi ho paayi."
+                )
             }
 
             return
@@ -480,9 +698,10 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         try {
 
             val intent =
-                packageManager.getLaunchIntentForPackage(
-                    packageName
-                )
+                packageManager
+                    .getLaunchIntentForPackage(
+                        packageName
+                    )
 
             if (intent != null) {
 
@@ -493,7 +712,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 startActivity(
                     Intent(
                         Intent.ACTION_VIEW,
-                        Uri.parse("https://www.youtube.com")
+                        Uri.parse(
+                            "https://www.youtube.com"
+                        )
                     )
                 )
 
@@ -512,9 +733,14 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun speak(text: String) {
+    private fun speak(
+        text: String
+    ) {
 
-        statusText.text = "● AURIX SPEAKING..."
+        isSpeaking = true
+
+        statusText.text =
+            "● AURIX SPEAKING..."
 
         textToSpeech.speak(
             text,
@@ -522,53 +748,48 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             null,
             "AURIX_RESPONSE"
         )
+
+        window.decorView.postDelayed(
+            {
+                isSpeaking = false
+
+                if (continuousMode) {
+                    restartListening()
+                }
+
+            },
+            1800
+        )
     }
 
-    override fun onInit(status: Int) {
+    override fun onInit(
+        status: Int
+    ) {
 
-        if (status == TextToSpeech.SUCCESS) {
+        if (
+            status ==
+            TextToSpeech.SUCCESS
+        ) {
 
             val result =
                 textToSpeech.setLanguage(
                     Locale("hi", "IN")
                 )
 
-            textToSpeech.setSpeechRate(0.95f)
+            textToSpeech.setSpeechRate(
+                0.95f
+            )
 
             if (
-                result == TextToSpeech.LANG_MISSING_DATA ||
-                result == TextToSpeech.LANG_NOT_SUPPORTED
+                result ==
+                TextToSpeech.LANG_MISSING_DATA ||
+                result ==
+                TextToSpeech.LANG_NOT_SUPPORTED
             ) {
 
-                textToSpeech.language = Locale.US
+                textToSpeech.language =
+                    Locale.US
             }
-        }
-    }
-
-    private fun getErrorMessage(error: Int): String {
-
-        return when (error) {
-
-            SpeechRecognizer.ERROR_AUDIO ->
-                "Microphone error"
-
-            SpeechRecognizer.ERROR_NETWORK ->
-                "Network error"
-
-            SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
-                "Network timeout"
-
-            SpeechRecognizer.ERROR_NO_MATCH ->
-                "Kuch samajh nahi aaya, dobara bolo."
-
-            SpeechRecognizer.ERROR_SPEECH_TIMEOUT ->
-                "Aapne kuch bola nahi."
-
-            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
-                "Microphone permission required."
-
-            else ->
-                "Voice recognition error"
         }
     }
 
@@ -584,7 +805,10 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             grantResults
         )
 
-        if (requestCode == RECORD_AUDIO_REQUEST) {
+        if (
+            requestCode ==
+            RECORD_AUDIO_REQUEST
+        ) {
 
             if (
                 grantResults.isNotEmpty() &&
@@ -592,7 +816,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 PackageManager.PERMISSION_GRANTED
             ) {
 
-                startListening()
+                startContinuousMode()
 
             } else {
 
@@ -607,11 +831,17 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     override fun onDestroy() {
 
-        if (::speechRecognizer.isInitialized) {
+        continuousMode = false
+
+        if (
+            ::speechRecognizer.isInitialized
+        ) {
             speechRecognizer.destroy()
         }
 
-        if (::textToSpeech.isInitialized) {
+        if (
+            ::textToSpeech.isInitialized
+        ) {
             textToSpeech.stop()
             textToSpeech.shutdown()
         }
