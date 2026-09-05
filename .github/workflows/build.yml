@@ -34,7 +34,7 @@ jobs:
             sed -i 's/"1.8"/"17"/g' "$file"
             sed -i "s/'1.8'/'17'/g" "$file"
             sed -i 's/VERSION_1_8/VERSION_17/g' "$file"
-          - done
+          done
 
       - name: Build APK
         working-directory: MyAI_Assistant_V1
@@ -45,3 +45,4 @@ jobs:
         with:
           name: MyAI-Assistant-debug
           path: MyAI_Assistant_V1/app/build/outputs/apk/debug/app-debug.apk
+          
