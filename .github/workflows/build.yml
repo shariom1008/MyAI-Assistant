@@ -26,36 +26,27 @@ jobs:
           unzip -q gradle.zip -d "$HOME/gradle"
           echo "$HOME/gradle/gradle-8.9/bin" >> "$GITHUB_PATH"
 
-      - name: Fix JVM target and Java Version with Python Regex
+      - name: Force JVM Toolchain via Python
         working-directory: MyAI_Assistant_V1
         run: |
           python3 -c '
-          import os, re
-          for root, dirs, files in os.walk("."):
-              for file in files:
-                  if file.endswith((".gradle", ".gradle.kts", ".kts", ".properties")):
-                      path = os.path.join(root, file)
-                      try:
-                          with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                              content = f.read()
-                          
-                          # Regex replacements for compatibility options
-                          new_content = re.sub(r"sourceCompatibility\s*=\s*.*", "sourceCompatibility = JavaVersion.VERSION_17", content)
-                          new_content = re.sub(r"targetCompatibility\s*=\s*.*", "targetCompatibility = JavaVersion.VERSION_17", new_content)
-                          
-                          # General string replacements
-                          new_content = new_content.replace("VERSION_1_8", "VERSION_17")
-                          new_content = new_content.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_17")
-                          new_content = new_content.replace("\"1.8\"", "\"17\"")
-                          new_content = new_content.replace("\x271.8\x27", "\x2717\x27")
-                          new_content = new_content.replace("1.8", "17")
-                          
-                          if content != new_content:
-                              with open(path, "w", encoding="utf-8") as f:
-                                  f.write(new_content)
-                              print(f"Successfully fixed compatibility in: {path}")
-                      except Exception as e:
-                          print(f"Error processing {path}: {e}")
+          import os
+          app_gradle = "app/build.gradle"
+          if os.path.exists(app_gradle):
+              with open(app_gradle, "r", encoding="utf-8") as f:
+                  content = f.read()
+              
+              # Inject kotlin compiler options toolchain to force java 17
+              injection = """
+              kotlin {
+                  jvmToolchain(17)
+              }
+              """
+              content = content + "\n" + injection
+              
+              with open(app_gradle, "w", encoding="utf-8") as f:
+                  f.write(content)
+              print("Injected JVM toolchain 17 into app/build.gradle")
           '
 
       - name: Build APK
