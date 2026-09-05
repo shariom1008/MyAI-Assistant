@@ -183,13 +183,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     params: Bundle?
                 ) {}
 
-                override fun onLanguageDetection(
-                    event: Bundle?
-                ) {}
-            }
-        )
-    }
-
     private fun startListening() {
 
         if (
