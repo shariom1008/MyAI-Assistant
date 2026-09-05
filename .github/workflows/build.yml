@@ -29,9 +29,11 @@ jobs:
       - name: Fix JVM target
         working-directory: MyAI_Assistant_V1
         run: |
-          find . -name "*.gradle*" -type f -exec sed -i "s/'1.8'/'17'/g" {} +
-          find . -name "*.gradle*" -type f -exec sed -i 's/"1.8"/"17"/g' {} +
-          find . -name "*.gradle*" -type f -exec sed -i 's/VERSION_1_8/VERSION_17/g' {} +
+          find . -name "build.gradle" -exec sed -i "s/1.8/17/g" {} +
+          find . -name "build.gradle.kts" -exec sed -i "s/1.8/17/g" {} +
+          find . -name "build.gradle" -exec sed -i "s/VERSION_1_8/VERSION_17/g" {} +
+          find . -name "build.gradle.kts" -exec sed -i "s/VERSION_1_8/VERSION_17/g" {} +
+          
           
 
       - name: Build APK
