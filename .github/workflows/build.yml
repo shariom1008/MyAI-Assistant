@@ -17,45 +17,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Extract project
-        run: unzip -q MyAI_Assistant_V1_PHONE_BUILD.zip
-
       - name: Install Gradle
         run: |
           curl -L -o gradle.zip https://services.gradle.org/distributions/gradle-8.9-bin.zip
           unzip -q gradle.zip -d "$HOME/gradle"
           echo "$HOME/gradle/gradle-8.9/bin" >> "$GITHUB_PATH"
 
-      - name: Force JVM Toolchain via Python
-        working-directory: MyAI_Assistant_V1
-        run: |
-          python3 -c '
-          import os
-          app_gradle = "app/build.gradle"
-          if os.path.exists(app_gradle):
-              with open(app_gradle, "r", encoding="utf-8") as f:
-                  content = f.read()
-              
-              # Inject kotlin compiler options toolchain to force java 17
-              injection = """
-              kotlin {
-                  jvmToolchain(17)
-              }
-              """
-              content = content + "\n" + injection
-              
-              with open(app_gradle, "w", encoding="utf-8") as f:
-                  f.write(content)
-              print("Injected JVM toolchain 17 into app/build.gradle")
-          '
-
       - name: Build APK
-        working-directory: MyAI_Assistant_V1
         run: gradle --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MyAI-Assistant-debug
-          path: MyAI_Assistant_V1/app/build/outputs/apk/debug/app-debug.apk
-          
+          path: app/build/outputs/apk/debug/app-debug.apk
