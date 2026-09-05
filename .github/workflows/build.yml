@@ -31,24 +31,30 @@ jobs:
         run: |
           python3 -c '
           import os
-          found = False
-          for root, dirs, files in os.walk("."):
-              for file in files:
-                  if "build.gradle" in file:
-                      path = os.path.join(root, file)
-                      print(f"Checking: {path}")
-                      with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                          content = f.read()
-                      
-                      new_content = content.replace("1.8", "17")
-                      new_content = new_content.replace("VERSION_1_8", "VERSION_17")
-                      
-                      with open(path, "w", encoding="utf-8") as f:
-                          f.write(new_content)
-                      print(f"Successfully updated: {path}")
-                      found = True
-          if not found:
-              print("WARNING: No build.gradle files found!")
+          target_file = "app/build.gradle"
+          if os.path.exists(target_file):
+              print(f"Found {target_file} directly!")
+              with open(target_file, "r", encoding="utf-8") as f:
+                  content = f.read()
+              
+              content = content.replace("VERSION_1_8", "VERSION_17")
+              content = content.replace("1.8", "17")
+              
+              with open(target_file, "w", encoding="utf-8") as f:
+                  f.write(content)
+              print("Successfully updated app/build.gradle!")
+          else:
+              print("Searching all files...")
+              for root, dirs, files in os.walk("."):
+                  for file in files:
+                      if file == "build.gradle" or file == "build.gradle.kts":
+                          path = os.path.join(root, file)
+                          print(f"Updating: {path}")
+                          with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                              c = f.read()
+                          c = c.replace("VERSION_1_8", "VERSION_17").replace("1.8", "17")
+                          with open(path, "w", encoding="utf-8") as f:
+                              f.write(c)
           '
 
       - name: Build APK
@@ -60,3 +66,4 @@ jobs:
         with:
           name: MyAI-Assistant-debug
           path: MyAI_Assistant_V1/app/build/outputs/apk/debug/app-debug.apk
+          
