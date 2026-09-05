@@ -5,11 +5,13 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
@@ -48,53 +50,119 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         root.orientation = LinearLayout.VERTICAL
         root.gravity = Gravity.CENTER
-        root.setPadding(35, 40, 35, 40)
-        root.setBackgroundColor(Color.rgb(250, 245, 250))
+        root.setPadding(30, 50, 30, 40)
 
+        val background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(
+                Color.rgb(3, 8, 20),
+                Color.rgb(5, 18, 35),
+                Color.rgb(2, 5, 15)
+            )
+        )
+
+        root.background = background
+
+        // AURIX title
         val title = TextView(this)
 
-        title.text = "MY AI"
-        title.textSize = 38f
-        title.setTextColor(Color.rgb(30, 30, 30))
+        title.text = "A U R I X"
+        title.textSize = 34f
+        title.setTextColor(Color.rgb(0, 220, 255))
         title.gravity = Gravity.CENTER
+        title.setPadding(0, 0, 0, 5)
 
+        // Subtitle
         val subtitle = TextView(this)
 
-        subtitle.text =
-            "Aap jo bolenge, MY AI us command ko samajhne ki koshish karega."
-
-        subtitle.textSize = 18f
+        subtitle.text = "ADVANCED VOICE INTELLIGENCE"
+        subtitle.textSize = 12f
+        subtitle.setTextColor(Color.rgb(130, 210, 230))
         subtitle.gravity = Gravity.CENTER
-        subtitle.setPadding(10, 25, 10, 30)
+        subtitle.setPadding(0, 0, 0, 35)
 
+        // Status
         statusText = TextView(this)
 
-        statusText.text = "Ready"
+        statusText.text = "● SYSTEM READY"
         statusText.textSize = 16f
+        statusText.setTextColor(Color.rgb(0, 255, 200))
         statusText.gravity = Gravity.CENTER
-        statusText.setPadding(10, 10, 10, 15)
+        statusText.setPadding(10, 10, 10, 25)
 
+        // Futuristic Orb
+        val orb = TextView(this)
+
+        orb.text = "◉"
+        orb.textSize = 100f
+        orb.setTextColor(Color.rgb(0, 220, 255))
+        orb.gravity = Gravity.CENTER
+
+        orb.setOnClickListener {
+            startListening()
+        }
+
+        // Command display
         resultText = TextView(this)
 
-        resultText.text = "Command yahan dikhega"
-        resultText.textSize = 19f
+        resultText.text = "Awaiting command..."
+        resultText.textSize = 18f
+        resultText.setTextColor(Color.WHITE)
         resultText.gravity = Gravity.CENTER
-        resultText.setPadding(20, 10, 20, 20)
+        resultText.setPadding(25, 30, 25, 30)
 
+        val resultBackground = GradientDrawable()
+        resultBackground.setColor(Color.rgb(8, 25, 42))
+        resultBackground.cornerRadius = 30f
+        resultBackground.setStroke(1, Color.rgb(0, 150, 190))
+
+        resultText.background = resultBackground
+
+        val resultParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+
+        resultParams.setMargins(15, 20, 15, 30)
+
+        root.addView(title)
+        root.addView(subtitle)
+        root.addView(statusText)
+        root.addView(
+            orb,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                150
+            )
+        )
+        root.addView(resultText, resultParams)
+
+        // Speak button
         speakButton = Button(this)
 
-        speakButton.text = "🎙️  Speak"
-        speakButton.textSize = 18f
+        speakButton.text = "🎙  ACTIVATE AURIX"
+        speakButton.textSize = 16f
+        speakButton.setTextColor(Color.WHITE)
+
+        val buttonBackground = GradientDrawable()
+        buttonBackground.setColor(Color.rgb(0, 120, 170))
+        buttonBackground.cornerRadius = 60f
+        buttonBackground.setStroke(2, Color.rgb(0, 230, 255))
+
+        speakButton.background = buttonBackground
 
         speakButton.setOnClickListener {
             startListening()
         }
 
-        root.addView(title)
-        root.addView(subtitle)
-        root.addView(statusText)
-        root.addView(resultText)
-        root.addView(speakButton)
+        val buttonParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            65
+        )
+
+        buttonParams.setMargins(30, 10, 30, 10)
+
+        root.addView(speakButton, buttonParams)
 
         setContentView(root)
     }
@@ -119,12 +187,12 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             object : RecognitionListener {
 
                 override fun onReadyForSpeech(params: Bundle?) {
-                    statusText.text = "🎙️ Listening..."
-                    speakButton.text = "🎙️ Listening..."
+                    statusText.text = "● LISTENING..."
+                    speakButton.text = "🎙  LISTENING..."
                 }
 
                 override fun onBeginningOfSpeech() {
-                    statusText.text = "🔴 Sun raha hoon..."
+                    statusText.text = "● AURIX IS LISTENING"
                 }
 
                 override fun onRmsChanged(rmsdB: Float) {}
@@ -132,14 +200,14 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 override fun onBufferReceived(buffer: ByteArray?) {}
 
                 override fun onEndOfSpeech() {
-                    statusText.text = "⏳ Processing..."
-                    speakButton.text = "🎙️ Speak"
+                    statusText.text = "● PROCESSING..."
+                    speakButton.text = "PROCESSING..."
                 }
 
                 override fun onError(error: Int) {
 
-                    statusText.text = "❌ Voice error"
-                    speakButton.text = "🎙️ Speak"
+                    statusText.text = "● VOICE ERROR"
+                    speakButton.text = "🎙  ACTIVATE AURIX"
 
                     Toast.makeText(
                         this@MainActivity,
@@ -160,15 +228,15 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     if (!command.isNullOrBlank()) {
 
                         resultText.text =
-                            "You said:\n$command"
+                            "COMMAND RECEIVED\n\n$command"
 
                         statusText.text =
-                            "✅ Command received"
+                            "● COMMAND RECEIVED"
 
                         processCommand(command)
                     }
 
-                    speakButton.text = "🎙️ Speak"
+                    speakButton.text = "🎙  ACTIVATE AURIX"
                 }
 
                 override fun onPartialResults(
@@ -237,6 +305,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         val lowerCommand =
             command.lowercase(Locale.getDefault()).trim()
 
+        // Greeting
         if (
             lowerCommand.contains("hello") ||
             lowerCommand.contains("hi") ||
@@ -245,12 +314,13 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         ) {
 
             speak(
-                "Hello! Main aapka MY AI assistant hoon."
+                "Hello! Main AURIX hoon. Aapki command ke liye ready hoon."
             )
 
             return
         }
 
+        // Time
         if (
             lowerCommand.contains("time") ||
             lowerCommand.contains("टाइम") ||
@@ -269,6 +339,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        // Date
         if (
             lowerCommand.contains("date") ||
             lowerCommand.contains("तारीख") ||
@@ -286,6 +357,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        // YouTube
         if (
             lowerCommand.contains("open youtube") ||
             lowerCommand.contains("youtube kholo") ||
@@ -304,6 +376,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        // Chrome
         if (
             lowerCommand.contains("open chrome") ||
             lowerCommand.contains("chrome kholo") ||
@@ -322,6 +395,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        // Google search
         if (
             lowerCommand.contains("search") ||
             lowerCommand.contains("google par") ||
@@ -352,13 +426,12 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     "https://www.google.com/search?q=" +
                             Uri.encode(searchText)
 
-                val intent =
+                startActivity(
                     Intent(
                         Intent.ACTION_VIEW,
                         Uri.parse(url)
                     )
-
-                startActivity(intent)
+                )
 
             } else {
 
@@ -370,6 +443,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        // Settings
         if (
             lowerCommand.contains("settings") ||
             lowerCommand.contains("setting") ||
@@ -380,12 +454,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
             try {
 
-                val intent =
-                    Intent(
-                        android.provider.Settings.ACTION_SETTINGS
-                    )
-
-                startActivity(intent)
+                startActivity(
+                    Intent(Settings.ACTION_SETTINGS)
+                )
 
             } catch (e: Exception) {
 
@@ -397,7 +468,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         speak(
             "Maine suna: $command. " +
-                    "Abhi main is command ko directly perform nahi kar sakta."
+                    "Abhi ye command meri capabilities mein nahi hai."
         )
     }
 
@@ -417,6 +488,15 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
                 startActivity(intent)
 
+            } else if (appName == "YouTube") {
+
+                startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://www.youtube.com")
+                    )
+                )
+
             } else {
 
                 speak(
@@ -434,13 +514,13 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
     private fun speak(text: String) {
 
-        statusText.text = "🔊 Speaking..."
+        statusText.text = "● AURIX SPEAKING..."
 
         textToSpeech.speak(
             text,
             TextToSpeech.QUEUE_FLUSH,
             null,
-            "MY_AI_RESPONSE"
+            "AURIX_RESPONSE"
         )
     }
 
