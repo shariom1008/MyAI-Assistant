@@ -25,11 +25,13 @@ jobs:
           curl -L -o gradle.zip https://services.gradle.org/distributions/gradle-8.9-bin.zip
           unzip -q gradle.zip -d "$HOME/gradle"
           echo "$HOME/gradle/gradle-8.9/bin" >> "$GITHUB_PATH"
-
+               
       - name: Fix JVM target
         working-directory: MyAI_Assistant_V1
         run: |
-          find . -name "*.gradle.kts" -type f -exec sed -i 's/jvmTarget = "1.8"/jvmTarget = "17"/g' {} +
+          find . -name "*.gradle*" -type f -exec sed -i 's/jvmTarget = "1.8"/jvmTarget = "17"/g' {} +
+          find . -name "*.gradle*" -type f -exec sed -i 's/VERSION_1_8/VERSION_17/g' {} +
+          
 
       - name: Build APK
         working-directory: MyAI_Assistant_V1
