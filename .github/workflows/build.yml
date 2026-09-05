@@ -33,7 +33,7 @@ jobs:
           import os
           for root, dirs, files in os.walk("."):
               for file in files:
-                  if file.endswith(".gradle") or file.endswith(".gradle.kts") or file.endswith(".kts") or file.endswith(".properties"):
+                  if file.endswith((".gradle", ".gradle.kts", ".kts", ".properties")):
                       path = os.path.join(root, file)
                       try:
                           with open(path, "r", encoding="utf-8", errors="ignore") as f:
@@ -42,12 +42,12 @@ jobs:
                           new_content = content
                           new_content = new_content.replace("1.8", "17")
                           new_content = new_content.replace("VERSION_1_8", "VERSION_17")
-                          new_content = new_content.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_1_7")
+                          new_content = new_content.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_17")
                           
                           if content != new_content:
                               with open(path, "w", encoding="utf-8") as f:
                                   f.write(new_content)
-                              print(f"Updated: {path}")
+                              print(f"Updated successfully: {path}")
                       except Exception as e:
                           pass
           '
@@ -61,3 +61,4 @@ jobs:
         with:
           name: MyAI-Assistant-debug
           path: MyAI_Assistant_V1/app/build/outputs/apk/debug/app-debug.apk
+          
