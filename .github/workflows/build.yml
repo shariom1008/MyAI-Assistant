@@ -26,15 +26,23 @@ jobs:
           unzip -q gradle.zip -d "$HOME/gradle"
           echo "$HOME/gradle/gradle-8.9/bin" >> "$GITHUB_PATH"
 
-      - name: Fix JVM target and Java Version
+      - name: Fix JVM target and Java Version with Python
         working-directory: MyAI_Assistant_V1
         run: |
-          find . -name "build.gradle" -o -name "build.gradle.kts" | while read file; do
-            sed -i 's/1.8/17/g' "$file"
-            sed -i 's/"1.8"/"17"/g' "$file"
-            sed -i "s/'1.8'/'17'/g" "$file"
-            sed -i 's/VERSION_1_8/VERSION_17/g' "$file"
-          done
+          python3 -c '
+          import os
+          for root, dirs, files in os.walk("."):
+              for file in files:
+                  if file.endswith(".gradle") or file.endswith(".gradle.kts"):
+                      path = os.path.join(root, file)
+                      with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                          content = f.read()
+                      content = content.replace("1.8", "17")
+                      content = content.replace("VERSION_1_8", "VERSION_17")
+                      with open(path, "w", encoding="utf-8") as f:
+                          f.write(content)
+          print("Gradle files updated successfully!")
+          '
 
       - name: Build APK
         working-directory: MyAI_Assistant_V1
@@ -45,4 +53,3 @@ jobs:
         with:
           name: MyAI-Assistant-debug
           path: MyAI_Assistant_V1/app/build/outputs/apk/debug/app-debug.apk
-          
