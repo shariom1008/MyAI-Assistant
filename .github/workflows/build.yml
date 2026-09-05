@@ -19,16 +19,86 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Organize Android Structure
+      - name: Create Proper Android Structure
         run: |
           mkdir -p app/src/main/java/com/example/myaiassistant
           mkdir -p app/src/main/res/values
-          
-          # Move files to correct Android paths if they are in root
+
+          # Move files to correct paths if they are in root
           [ -f MainActivity.kt ] && mv MainActivity.kt app/src/main/java/com/example/myaiassistant/
           [ -f AndroidManifest.xml ] && mv AndroidManifest.xml app/src/main/
           [ -f styles.xml ] && mv styles.xml app/src/main/res/values/
-          [ -f build.gradle.kts ] && cp build.gradle.kts app/
+
+          # Create root build.gradle.kts
+          cat << 'EOF' > build.gradle.kts
+          plugins {
+              id("com.android.application") version "8.2.0" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.0" apply false
+          }
+          EOF
+
+          # Create settings.gradle.kts
+          cat << 'EOF' > settings.gradle.kts
+          pluginManagement {
+              repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                google()
+                mavenCentral()
+              }
+          }
+          rootProject.name = "My AI Assistant"
+          include(":app")
+          EOF
+
+          # Create app/build.gradle.kts
+          cat << 'EOF' > app/build.gradle.kts
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.example.myaiassistant"
+              compileSdk = 34
+
+              defaultConfig {
+                  applicationId = "com.example.myaiassistant"
+                  minSdk = 24
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      isMinifyEnabled = false
+                      proguardFiles(
+                          getDefaultProguardFile("proguard-android-optimize.txt"),
+                          "proguard-rules.pro"
+                      )
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+
+          dependencies {
+              implementation("androidx.core:core-ktx:1.12.0")
+              implementation("androidx.activity:activity-ktx:1.8.2")
+          }
+          EOF
 
       - name: Install Gradle
         run: |
