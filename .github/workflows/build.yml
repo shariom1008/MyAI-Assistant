@@ -30,14 +30,20 @@ jobs:
         working-directory: MyAI_Assistant_V1
         run: |
           python3 -c '
-          import os
+          import os, re
           for root, dirs, files in os.walk("."):
               for file in files:
-                  if file.endswith((".gradle", ".gradle.kts", ".kts", ".properties")):
+                  if file.endswith((".gradle", ".gradle.kts", ".kts", ".properties", ".xml")):
                       path = os.path.join(root, file)
                       try:
                           with open(path, "r", encoding="utf-8", errors="ignore") as f:
                               content = f.read()
+                          
+                          if "1.8" in content or "VERSION_1_8" in content:
+                              print(f"Found in {path}:")
+                              for line in content.splitlines():
+                                  if "1.8" in line or "VERSION_1_8" in line:
+                                      print(f"   --> {line.strip()}")
                           
                           new_content = content
                           new_content = new_content.replace("1.8", "17")
@@ -47,7 +53,7 @@ jobs:
                           if content != new_content:
                               with open(path, "w", encoding="utf-8") as f:
                                   f.write(new_content)
-                              print(f"Updated successfully: {path}")
+                              print(f"-> Successfully updated: {path}")
                       except Exception as e:
                           pass
           '
