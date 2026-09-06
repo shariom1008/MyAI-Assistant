@@ -3,36 +3,57 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Microphone -->
+    <!-- ===================================================== -->
+    <!-- MICROPHONE -->
+    <!-- ===================================================== -->
+
     <uses-permission
         android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- Foreground Service -->
+    <!-- ===================================================== -->
+    <!-- FOREGROUND SERVICE -->
+    <!-- ===================================================== -->
+
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <!-- Android 14 microphone foreground service -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
-    <!-- Notifications -->
+    <!-- ===================================================== -->
+    <!-- NOTIFICATION -->
+    <!-- ===================================================== -->
+
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Camera -->
+    <!-- ===================================================== -->
+    <!-- CAMERA -->
+    <!-- ===================================================== -->
+
     <uses-permission
         android:name="android.permission.CAMERA" />
 
-    <!-- Location -->
+    <!-- ===================================================== -->
+    <!-- LOCATION -->
+    <!-- ===================================================== -->
+
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <uses-permission
         android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Alarm scheduling -->
+    <!-- ===================================================== -->
+    <!-- EXACT ALARM -->
+    <!-- ===================================================== -->
+
     <uses-permission
         android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- ===================================================== -->
+    <!-- APPLICATION -->
+    <!-- ===================================================== -->
 
     <application
         android:theme="@style/Theme.MyAI"
@@ -42,7 +63,10 @@
         android:usesCleartextTraffic="true"
         android:icon="@drawable/aurix_logo">
 
-        <!-- Main AURIX UI -->
+        <!-- ================================================= -->
+        <!-- MAIN ACTIVITY -->
+        <!-- ================================================= -->
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -59,13 +83,19 @@
 
         </activity>
 
-        <!-- Background Voice Service -->
+        <!-- ================================================= -->
+        <!-- AURIX VOICE SERVICE -->
+        <!-- ================================================= -->
+
         <service
             android:name=".AurixService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
-        <!-- AURIX Timer / Alarm Receiver -->
+        <!-- ================================================= -->
+        <!-- AURIX TIMER / ALARM RECEIVER -->
+        <!-- ================================================= -->
+
         <receiver
             android:name=".AlarmReceiver"
             android:exported="false" />
