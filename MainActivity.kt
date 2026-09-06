@@ -547,18 +547,168 @@ if (
     return
 }
 
-// =========================
-// NOTES
-// =========================
+        // =========================
+        // NOTES
+        // =========================
 
-if (
-    command.contains("notes") ||
-    command.contains("note") ||
-    command.contains("notepad") ||
-    command.contains("notes kholo")
-) {
+        if (
+            command.contains("notes") ||
+            command.contains("note") ||
+            command.contains("notepad") ||
+            command.contains("notes kholo")
+        ) {
 
-    openNotes()
+            openNotes()
 
-    return
+            return
+        }
+
+        // =========================
+        // UNKNOWN COMMAND
+        // =========================
+
+        speak(
+            "I don't know that command yet."
+        )
+    }
+
+    // =========================
+    // TIMER
+    // =========================
+
+    private fun setTimer(minutes: Long) {
+
+        try {
+
+            val intent =
+                Intent(AlarmClock.ACTION_SET_TIMER)
+
+            intent.putExtra(
+                AlarmClock.EXTRA_LENGTH,
+                (minutes * 60).toInt()
+            )
+
+            intent.putExtra(
+                AlarmClock.EXTRA_MESSAGE,
+                "AURIX Timer"
+            )
+
+            startActivity(intent)
+
+            speak(
+                "Timer set for $minutes minutes."
+            )
+
+        } catch (e: Exception) {
+
+            speak(
+                "I could not set the timer."
+            )
+        }
+    }
+
+    // =========================
+    // GALLERY
+    // =========================
+
+    private fun openGallery() {
+
+        try {
+
+            val intent =
+                Intent(Intent.ACTION_VIEW)
+
+            intent.type = "image/*"
+
+            startActivity(intent)
+
+            speak(
+                "Opening gallery."
+            )
+
+        } catch (e: Exception) {
+
+            speak(
+                "I could not open the gallery."
+            )
+        }
+    }
+
+    // =========================
+    // MUSIC
+    // =========================
+
+    private fun openMusic() {
+
+        try {
+
+            val intent =
+                Intent(Intent.ACTION_MAIN)
+
+            intent.addCategory(
+                Intent.CATEGORY_APP_MUSIC
+            )
+
+            startActivity(intent)
+
+            speak(
+                "Opening music."
+            )
+
+        } catch (e: Exception) {
+
+            try {
+
+                val intent =
+                    Intent(Intent.ACTION_VIEW)
+
+                intent.type = "audio/*"
+
+                startActivity(intent)
+
+                speak(
+                    "Opening music."
+                )
+
+            } catch (e2: Exception) {
+
+                speak(
+                    "I could not find a music app."
+                )
+            }
+        }
+    }
+
+    // =========================
+    // NOTES
+    // =========================
+
+    private fun openNotes() {
+
+        try {
+
+            val intent =
+                Intent(Intent.ACTION_CREATE_DOCUMENT)
+
+            intent.type = "text/plain"
+
+            intent.putExtra(
+                Intent.EXTRA_TITLE,
+                "AURIX Note.txt"
+            )
+
+            startActivity(intent)
+
+            speak(
+                "Opening notes."
+            )
+
+        } catch (e: Exception) {
+
+            speak(
+                "I could not open notes."
+            )
+        }
+    }
+
 }
