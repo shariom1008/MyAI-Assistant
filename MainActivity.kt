@@ -532,8 +532,33 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
 
         // =========================
-        // MUSIC
-        // =========================
+// MUSIC
+// =========================
 
-        if (
-            command.contains("
+if (
+    command.contains("music") ||
+    command.contains("song") ||
+    command.contains("music player") ||
+    command.contains("gaane")
+) {
+
+    openMusic()
+
+    return
+}
+
+// =========================
+// NOTES
+// =========================
+
+if (
+    command.contains("notes") ||
+    command.contains("note") ||
+    command.contains("notepad") ||
+    command.contains("notes kholo")
+) {
+
+    openNotes()
+
+    return
+}
