@@ -1925,15 +1925,43 @@ class AurixService :
 
     private fun goHome() {
 
+    try {
+
+        val intent =
+            Intent(
+                Intent.ACTION_MAIN
+            ).apply {
+
+                addCategory(
+                    Intent.CATEGORY_HOME
+                )
+
+                addCategory(
+                    Intent.CATEGORY_DEFAULT
+                )
+
+                flags =
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+
+        startActivity(intent)
+
+    } catch (_: Exception) {
+
         try {
 
             val intent =
                 Intent(
-                    Intent.ACTION_MAIN
+                    "android.intent.action.MAIN"
                 ).apply {
 
                     addCategory(
-                        Intent.CATEGORY_HOME
+                        "android.intent.category.HOME"
+                    )
+
+                    addCategory(
+                        "android.intent.category.DEFAULT"
                     )
 
                     addFlags(
@@ -1943,10 +1971,14 @@ class AurixService :
 
             startActivity(intent)
 
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
 
-        speak("Closing")
+            speak(
+                "Unable to go to home"
+            )
+        }
     }
+}
 
     // =========================================================
     // TTS
