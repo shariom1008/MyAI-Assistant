@@ -2,81 +2,208 @@ package com.example.myaiassistant
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 
 class AlarmReceiver : BroadcastReceiver() {
 
     companion object {
-        const val CHANNEL_ID = "aurix_alerts"
-        const val EXTRA_TYPE = "type"
-        const val EXTRA_MESSAGE = "message"
+
+        const val EXTRA_TYPE =
+            "alarm_type"
+
+        const val EXTRA_MESSAGE =
+            "alarm_message"
+
+        private const val CHANNEL_ID =
+            "aurix_alarm_channel"
+
+        private const val NOTIFICATION_ID =
+            9001
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent?
+    ) {
 
-        val type = intent.getStringExtra(EXTRA_TYPE) ?: "alarm"
-        val message = intent.getStringExtra(EXTRA_MESSAGE)
-            ?: if (type == "timer") "Timer finished" else "Alarm"
+        val message =
+            intent?.getStringExtra(
+                EXTRA_MESSAGE
+            ) ?: "Your AURIX alarm is ringing."
 
-        val notificationManager =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "AURIX Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            )
-
-            channel.description = "AURIX Timer and Alarm notifications"
-            channel.enableVibration(true)
-
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val openIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-
-        val pendingIntent = PendingIntent.getActivity(
+        showNotification(
             context,
-            9001,
-            openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                        PendingIntent.FLAG_IMMUTABLE
-                    else 0
+            message
         )
 
-        val builder =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                android.app.Notification.Builder(context, CHANNEL_ID)
+        playAlarmSound(
+            context
+        )
+
+        speak(
+            context,
+            message
+        )
+    }
+
+    private fun showNotification(
+        context: Context,
+        message: String
+    ) {
+
+        val manager =
+            context.getSystemService(
+                Context.NOTIFICATION_SERVICE
+            ) as NotificationManager
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
+
+            val channel =
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "AURIX Timer and Alarm",
+                    NotificationManager.IMPORTANCE_HIGH
+                )
+
+            manager.createNotificationChannel(
+                channel
+            )
+        }
+
+        val notification =
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O
+            ) {
+
+                android.app.Notification.Builder(
+                    context,
+                    CHANNEL_ID
+                )
+                    .setContentTitle("AURIX")
+                    .setContentText(message)
+                    .setSmallIcon(
+                        android.R.drawable.ic_lock_idle_alarm
+                    )
+                    .setAutoCancel(true)
+                    .setPriority(
+                        android.app.Notification.PRIORITY_HIGH
+                    )
+                    .build()
+
             } else {
-                android.app.Notification.Builder(context)
+
+                android.app.Notification.Builder(
+                    context
+                )
+                    .setContentTitle("AURIX")
+                    .setContentText(message)
+                    .setSmallIcon(
+                        android.R.drawable.ic_lock_idle_alarm
+                    )
+                    .setAutoCancel(true)
+                    .setPriority(
+                        android.app.Notification.PRIORITY_HIGH
+                    )
+                    .build()
             }
 
-        builder
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle(
-                if (type == "timer") "AURIX Timer" else "AURIX Alarm"
-            )
-            .setContentText(message)
-            .setStyle(
-                android.app.Notification.BigTextStyle()
-                    .bigText(message)
-            )
-            .setPriority(android.app.Notification.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-
-        notificationManager.notify(
-            if (type == "timer") 7001 else 7002,
-            builder.build()
+        manager.notify(
+            NOTIFICATION_ID,
+            notification
         )
+    }
+
+    private fun playAlarmSound(
+        context: Context
+    ) {
+
+        try {
+
+            val uri =
+                RingtoneManager.getDefaultUri(
+                    RingtoneManager.TYPE_ALARM
+                )
+
+            val ringtone =
+                RingtoneManager.getRingtone(
+                    context,
+                    uri
+                )
+
+            ringtone.play()
+
+            Handler(
+                Looper.getMainLooper()
+            ).postDelayed({
+
+                try {
+                    if (ringtone.isPlaying) {
+                        ringtone.stop()
+                    }
+                } catch (_: Exception) {}
+
+            }, 10000L)
+
+        } catch (_: Exception) {}
+    }
+
+    private fun speak(
+        context: Context,
+        message: String
+    ) {
+
+        try {
+
+            val tts =
+                TextToSpeech(
+                    context
+                ) { status ->
+
+                    if (
+                        status ==
+                        TextToSpeech.SUCCESS
+                    ) {
+
+                        ttsLanguage(
+                            tts,
+                            message
+                        )
+                    }
+                }
+
+        } catch (_: Exception) {}
+    }
+
+    private fun ttsLanguage(
+        tts: TextToSpeech,
+        message: String
+    ) {
+
+        try {
+
+            tts.language =
+                Locale.US
+
+            tts.speak(
+                message,
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                "AURIX_ALARM"
+            )
+
+        } catch (_: Exception) {}
     }
 }
