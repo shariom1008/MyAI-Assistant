@@ -7,7 +7,9 @@ on:
       - main
 
 jobs:
+
   build:
+
     runs-on: ubuntu-latest
 
     steps:
@@ -27,17 +29,31 @@ jobs:
 
           mkdir -p app/src/main/java/com/example/myaiassistant
           mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/drawable
 
           if [ -f MainActivity.kt ]; then
-            cp MainActivity.kt app/src/main/java/com/example/myaiassistant/MainActivity.kt
+            cp MainActivity.kt \
+            app/src/main/java/com/example/myaiassistant/MainActivity.kt
+          fi
+
+          if [ -f AurixService.kt ]; then
+            cp AurixService.kt \
+            app/src/main/java/com/example/myaiassistant/AurixService.kt
           fi
 
           if [ -f AndroidManifest.xml ]; then
-            cp AndroidManifest.xml app/src/main/AndroidManifest.xml
+            cp AndroidManifest.xml \
+            app/src/main/AndroidManifest.xml
           fi
 
           if [ -f styles.xml ]; then
-            cp styles.xml app/src/main/res/values/styles.xml
+            cp styles.xml \
+            app/src/main/res/values/styles.xml
+          fi
+
+          if [ -f aurix_logo.xml ]; then
+            cp aurix_logo.xml \
+            app/src/main/res/drawable/aurix_logo.xml
           fi
 
           cat > settings.gradle.kts <<'EOF'
@@ -77,21 +93,29 @@ jobs:
           }
 
           android {
+
               namespace = "com.example.myaiassistant"
 
               compileSdk = 34
 
               defaultConfig {
-                  applicationId = "com.example.myaiassistant"
+
+                  applicationId =
+                      "com.example.myaiassistant"
+
                   minSdk = 24
+
                   targetSdk = 34
 
-                  versionCode = 3
-                  versionName = "3.0"
+                  versionCode = 6
+
+                  versionName = "6.0"
               }
 
               buildTypes {
+
                   release {
+
                       isMinifyEnabled = false
 
                       proguardFiles(
@@ -104,18 +128,29 @@ jobs:
               }
 
               compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
+
+                  sourceCompatibility =
+                      JavaVersion.VERSION_17
+
+                  targetCompatibility =
+                      JavaVersion.VERSION_17
               }
 
               kotlinOptions {
+
                   jvmTarget = "17"
               }
           }
 
           dependencies {
-              implementation("androidx.core:core-ktx:1.12.0")
-              implementation("androidx.activity:activity-ktx:1.8.2")
+
+              implementation(
+                  "androidx.core:core-ktx:1.12.0"
+              )
+
+              implementation(
+                  "androidx.activity:activity-ktx:1.8.2"
+              )
           }
           EOF
 
@@ -126,9 +161,11 @@ jobs:
             -o gradle.zip \
             https://services.gradle.org/distributions/gradle-8.9-bin.zip
 
-          unzip -q gradle.zip -d "$HOME/gradle"
+          unzip -q gradle.zip \
+            -d "$HOME/gradle"
 
-          echo "$HOME/gradle/gradle-8.9/bin" >> "$GITHUB_PATH"
+          echo "$HOME/gradle/gradle-8.9/bin" \
+            >> "$GITHUB_PATH"
 
       - name: Build APK
         run: |
@@ -140,6 +177,10 @@ jobs:
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
+
         with:
-          name: AURIX-v3
-          path: app/build/outputs/apk/debug/app-debug.apk
+
+          name: AURIX-v6
+
+          path:
+            app/build/outputs/apk/debug/app-debug.apk
