@@ -1555,72 +1555,63 @@ class AurixService :
 
     private fun openCalculator() {
 
-        val packages =
-            arrayOf(
-                "com.miui.calculator",
-                "com.android.calculator2",
-                "com.google.android.calculator"
-            )
+    val calculatorPackages = arrayOf(
+        "com.miui.calculator",
+        "com.android.calculator2",
+        "com.google.android.calculator"
+    )
 
-        for (
-            packageName in packages
-        ) {
-
-            try {
-
-                val intent =
-                    packageManager
-                        .getLaunchIntentForPackage(
-                            packageName
-                        )
-
-                if (intent != null) {
-
-                    intent.addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-
-                    startActivity(intent)
-                    return
-                }
-
-            } catch (_: Exception) {}
-        }
+    for (packageName in calculatorPackages) {
 
         try {
 
-            val intent =
-                Intent(
-                    Intent.ACTION_MAIN
-                ).apply {
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage(
+                    packageName
+                )
 
-                    addCategory(
-                        "android.intent.category.APP_CALCULATOR"
-                    )
+            if (launchIntent != null) {
 
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
+                launchIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
 
-            if (
-                packageManager
-                    .queryIntentActivities(
-                        intent,
-                        PackageManager.MATCH_DEFAULT_ONLY
-                    )
-                    .isNotEmpty()
-            ) {
+                startActivity(launchIntent)
 
-                startActivity(intent)
+                speak("Opening calculator")
                 return
             }
 
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
+    }
 
-        speak(
-            "Calculator is not available"
-        )
+    try {
+
+        val intent =
+            Intent().apply {
+
+                action =
+                    Intent.ACTION_MAIN
+
+                addCategory(
+                    "android.intent.category.APP_CALCULATOR"
+                )
+
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+            }
+
+        startActivity(intent)
+
+        speak("Opening calculator")
+        return
+
+    } catch (_: Exception) {
+    }
+
+    speak("Calculator is not available")
     }
 
     // =========================================================
