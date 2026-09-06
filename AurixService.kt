@@ -770,26 +770,126 @@ class AurixService : Service(),
 
     private fun openCamera() {
 
-        try {
+    // Method 1: Standard Android camera
+    try {
 
-            val intent =
-                Intent(
-                    MediaStore.ACTION_IMAGE_CAPTURE
-                )
-
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
+        val intent =
+            Intent(
+                "android.media.action.IMAGE_CAPTURE"
             )
 
+        intent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+        )
+
+        if (
+            packageManager.queryIntentActivities(
+                intent,
+                PackageManager.MATCH_DEFAULT_ONLY
+            ).isNotEmpty()
+        ) {
+
+            startActivity(intent)
+            return
+        }
+
+    } catch (_: Exception) {
+    }
+
+    // Method 2: Generic camera category
+    try {
+
+        val intent =
+            Intent(
+                Intent.ACTION_MAIN
+            )
+
+        intent.addCategory(
+            Intent.CATEGORY_APP_CAMERA
+        )
+
+        intent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+        )
+
+        if (
+            packageManager.queryIntentActivities(
+                intent,
+                PackageManager.MATCH_DEFAULT_ONLY
+            ).isNotEmpty()
+        ) {
+
+            startActivity(intent)
+            return
+        }
+
+    } catch (_: Exception) {
+    }
+
+    // Method 3: Xiaomi / Redmi Camera
+    val xiaomiPackages =
+        arrayOf(
+            "com.android.camera",
+            "com.android.camera2",
+            "com.miui.camera"
+        )
+
+    for (
+        packageName in xiaomiPackages
+    ) {
+
+        try {
+
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage(
+                    packageName
+                )
+
             if (
-                intent.resolveActivity(
-                    packageManager
-                ) != null
+                launchIntent != null
             ) {
 
-                startActivity(intent)
+                launchIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+
+                startActivity(
+                    launchIntent
+                )
+
                 return
             }
+
+        } catch (_: Exception) {
+        }
+    }
+
+    // Final fallback
+    try {
+
+        val intent =
+            Intent(
+                Intent.ACTION_VIEW
+            )
+
+        intent.data =
+            Uri.parse(
+                "https://www.google.com/search?q=android+camera"
+            )
+
+        intent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+        )
+
+        startActivity(intent)
+
+    } catch (_: Exception) {
+
+        speak(
+            "I could not open the camera"
+        )
+    }
+}
 
         } catch (_: Exception) {
         }
