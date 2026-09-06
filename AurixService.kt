@@ -236,7 +236,8 @@ class AurixService :
         }
 
         if (
-            !SpeechRecognizer.isRecognitionAvailable(this)
+            !SpeechRecognizer
+                .isRecognitionAvailable(this)
         ) {
 
             sendStatus(
@@ -253,7 +254,8 @@ class AurixService :
         }
 
         speechRecognizer =
-            SpeechRecognizer.createSpeechRecognizer(this)
+            SpeechRecognizer
+                .createSpeechRecognizer(this)
 
         speechRecognizer?.setRecognitionListener(
             object : RecognitionListener {
@@ -320,16 +322,22 @@ class AurixService :
                                 Locale.getDefault()
                             )
 
-                    if (!command.isNullOrBlank()) {
+                    if (
+                        !command.isNullOrBlank()
+                    ) {
 
                         sendCommand(command)
-
                         processCommand(command)
                     }
 
                     listening = false
 
-                    restartListening()
+                    if (
+                        isRunning &&
+                        !serviceDestroyed
+                    ) {
+                        restartListening()
+                    }
                 }
 
                 override fun onPartialResults(
@@ -457,7 +465,7 @@ class AurixService :
         }
 
         // -----------------------------------------------------
-        // FLASHLIGHT ON
+        // FLASHLIGHT
         // -----------------------------------------------------
 
         if (
@@ -472,10 +480,6 @@ class AurixService :
             setFlashlight(true)
             return
         }
-
-        // -----------------------------------------------------
-        // FLASHLIGHT OFF
-        // -----------------------------------------------------
 
         if (
             command.contains("turn off flashlight") ||
@@ -527,7 +531,6 @@ class AurixService :
                 ).format(Date())
 
             speak("Today is $date")
-
             return
         }
 
@@ -548,7 +551,6 @@ class AurixService :
                 ).format(Date())
 
             speak("Today is $day")
-
             return
         }
 
@@ -573,7 +575,6 @@ class AurixService :
                 ).format(Date())
 
             speak("The time is $time")
-
             return
         }
 
@@ -611,27 +612,10 @@ class AurixService :
         if (
             command == "music" ||
             command.contains("open music") ||
-            command.contains("music app") ||
-            command.contains("play music")
+            command.contains("music app")
         ) {
 
             openMusic()
-            return
-        }
-
-        // -----------------------------------------------------
-        // MEDIA PLAY / PAUSE
-        // -----------------------------------------------------
-
-        if (
-            command.contains("play music") ||
-            command.contains("pause music") ||
-            command.contains("resume music") ||
-            command == "play" ||
-            command == "pause"
-        ) {
-
-            controlMedia()
             return
         }
 
@@ -673,18 +657,9 @@ class AurixService :
 
             val query =
                 command
-                    .replaceFirst(
-                        "search youtube",
-                        ""
-                    )
-                    .replaceFirst(
-                        "youtube search",
-                        ""
-                    )
-                    .replaceFirst(
-                        "youtube par",
-                        ""
-                    )
+                    .replaceFirst("search youtube", "")
+                    .replaceFirst("youtube search", "")
+                    .replaceFirst("youtube par", "")
                     .trim()
 
             if (query.isNotBlank()) {
@@ -717,27 +692,14 @@ class AurixService :
         if (
             command.startsWith("search maps") ||
             command.startsWith("maps search") ||
-            command.startsWith("navigate to") ||
-            (
-                command.startsWith("find ") &&
-                        command.contains(" maps")
-                )
+            command.startsWith("navigate to")
         ) {
 
             val query =
                 command
-                    .replaceFirst(
-                        "search maps",
-                        ""
-                    )
-                    .replaceFirst(
-                        "maps search",
-                        ""
-                    )
-                    .replaceFirst(
-                        "navigate to",
-                        ""
-                    )
+                    .replaceFirst("search maps", "")
+                    .replaceFirst("maps search", "")
+                    .replaceFirst("navigate to", "")
                     .trim()
 
             if (query.isNotBlank()) {
@@ -764,7 +726,7 @@ class AurixService :
         }
 
         // -----------------------------------------------------
-        // CHROME / BROWSER
+        // CHROME
         // -----------------------------------------------------
 
         if (
@@ -834,16 +796,14 @@ class AurixService :
         // NOTIFICATION SETTINGS
         // -----------------------------------------------------
 
-        if (
-            command.contains("notification settings")
-        ) {
+        if (command.contains("notification settings")) {
 
             openNotificationSettings()
             return
         }
 
         // -----------------------------------------------------
-        // VOLUME UP
+        // VOLUME
         // -----------------------------------------------------
 
         if (
@@ -855,10 +815,6 @@ class AurixService :
             changeVolume(true)
             return
         }
-
-        // -----------------------------------------------------
-        // VOLUME DOWN
-        // -----------------------------------------------------
 
         if (
             command.contains("volume down") ||
@@ -875,9 +831,12 @@ class AurixService :
         // -----------------------------------------------------
 
         if (
-            command.contains("play") ||
-            command.contains("pause") ||
-            command.contains("resume")
+            command == "play" ||
+            command == "pause" ||
+            command == "resume" ||
+            command.contains("play music") ||
+            command.contains("pause music") ||
+            command.contains("resume music")
         ) {
 
             controlMedia()
@@ -889,9 +848,7 @@ class AurixService :
         // -----------------------------------------------------
 
         if (
-            command.contains("battery") ||
-            command.contains("battery percentage") ||
-            command.contains("battery level")
+            command.contains("battery")
         ) {
 
             tellBattery()
@@ -934,6 +891,20 @@ class AurixService :
             return
         }
 
+        // =====================================================
+        // SMART APP CONTROL
+        // IMPORTANT: BEFORE GOOGLE FALLBACK
+        // =====================================================
+
+        if (isAppOpenCommand(command)) {
+
+            val appName =
+                extractAppName(command)
+
+            openInstalledApp(appName)
+            return
+        }
+
         // -----------------------------------------------------
         // GOOGLE SEARCH
         // -----------------------------------------------------
@@ -960,32 +931,11 @@ class AurixService :
             return
         }
 
-        // =====================================================
-        // SMART APP CONTROL
-        // =====================================================
-
-        if (isAppOpenCommand(command)) {
-
-            val appName =
-                extractAppName(command)
-
-            if (
-                appName.isNotBlank() &&
-                openInstalledApp(appName)
-            ) {
-                return
-            }
-
-            return
-        }
-
         // -----------------------------------------------------
         // UNKNOWN COMMAND
         // -----------------------------------------------------
 
-        if (command.isNotBlank()) {
-            googleSearch(command)
-        }
+        googleSearch(command)
     }
 
     // =========================================================
@@ -1100,6 +1050,10 @@ class AurixService :
                 requestedName
             )
 
+        // =====================================================
+        // KNOWN PACKAGES
+        // =====================================================
+
         val knownPackages =
             mapOf(
 
@@ -1114,22 +1068,6 @@ class AurixService :
 
                 "gmail" to listOf(
                     "com.google.android.gm"
-                ),
-
-                "youtube" to listOf(
-                    "com.google.android.youtube"
-                ),
-
-                "chrome" to listOf(
-                    "com.android.chrome"
-                ),
-
-                "maps" to listOf(
-                    "com.google.android.apps.maps"
-                ),
-
-                "googlemaps" to listOf(
-                    "com.google.android.apps.maps"
                 ),
 
                 "facebook" to listOf(
@@ -1194,6 +1132,18 @@ class AurixService :
 
                 "googlephotos" to listOf(
                     "com.google.android.apps.photos"
+                ),
+
+                "youtube" to listOf(
+                    "com.google.android.youtube"
+                ),
+
+                "chrome" to listOf(
+                    "com.android.chrome"
+                ),
+
+                "maps" to listOf(
+                    "com.google.android.apps.maps"
                 )
             )
 
@@ -1218,6 +1168,10 @@ class AurixService :
                             Intent.FLAG_ACTIVITY_NEW_TASK
                         )
 
+                        launchIntent.addFlags(
+                            Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                        )
+
                         startActivity(
                             launchIntent
                         )
@@ -1234,9 +1188,9 @@ class AurixService :
             }
         }
 
-        // -----------------------------------------------------
-        // Dynamic installed-app search
-        // -----------------------------------------------------
+        // =====================================================
+        // DYNAMIC INSTALLED APP SEARCH
+        // =====================================================
 
         try {
 
@@ -1258,20 +1212,21 @@ class AurixService :
                     )
 
             var bestActivity:
-                    android.content.pm.ActivityInfo? = null
+                    android.content.pm.ActivityInfo? =
+                null
 
             var bestScore = 0
 
-            for (info in apps) {
+            for (resolveInfo in apps) {
 
-                val activityInfo =
-                    info.activityInfo
+                val activity =
+                    resolveInfo.activityInfo
                         ?: continue
 
                 val label =
                     try {
 
-                        activityInfo
+                        activity
                             .loadLabel(
                                 packageManager
                             )
@@ -1287,43 +1242,37 @@ class AurixService :
                     continue
                 }
 
-                val packageName =
-                    activityInfo.packageName
-
                 val normalizedLabel =
                     normalizeAppName(
                         label
                     )
 
-                val normalizedPackage =
+                val packagePart =
                     normalizeAppName(
-                        packageName
+                        activity
+                            .packageName
                             .substringAfterLast(".")
                     )
 
+                // Exact label
                 if (
                     normalizedLabel ==
                     requested
                 ) {
 
-                    bestActivity =
-                        activityInfo
-
+                    bestActivity = activity
                     bestScore = 100
-
                     break
                 }
 
+                // Exact package part
                 if (
-                    normalizedPackage ==
+                    packagePart ==
                     requested
                 ) {
 
-                    bestActivity =
-                        activityInfo
-
+                    bestActivity = activity
                     bestScore = 95
-
                     break
                 }
 
@@ -1336,7 +1285,7 @@ class AurixService :
                 val packageScore =
                     similarityScore(
                         requested,
-                        normalizedPackage
+                        packagePart
                     )
 
                 val score =
@@ -1348,13 +1297,13 @@ class AurixService :
                 if (score > bestScore) {
 
                     bestScore = score
-                    bestActivity = activityInfo
+                    bestActivity = activity
                 }
             }
 
             if (
                 bestActivity != null &&
-                bestScore >= 65
+                bestScore >= 60
             ) {
 
                 val launchIntent =
@@ -1374,6 +1323,10 @@ class AurixService :
 
                         addFlags(
                             Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                         )
                     }
 
@@ -1396,9 +1349,9 @@ class AurixService :
         } catch (_: Exception) {
         }
 
-        // -----------------------------------------------------
-        // Direct package-name fallback
-        // -----------------------------------------------------
+        // =====================================================
+        // DIRECT PACKAGE FALLBACK
+        // =====================================================
 
         try {
 
@@ -1429,7 +1382,7 @@ class AurixService :
         }
 
         speak(
-            "I didn't find $requestedName on your phone."
+            "I couldn't find $requestedName on your phone."
         )
 
         return true
@@ -1477,10 +1430,10 @@ class AurixService :
         return (
             (
                 1.0 -
-                        distance.toDouble() /
-                        maxLength
-                ) * 100
-            ).toInt()
+                    distance.toDouble() /
+                    maxLength
+            ) * 100
+        ).toInt()
     }
 
     private fun levenshteinDistance(
@@ -1589,7 +1542,7 @@ class AurixService :
 
             text =
                 text.replace(
-                    word,
+                    Regex("\\b${Regex.escape(word)}\\b"),
                     number
                 )
         }
@@ -1628,7 +1581,7 @@ class AurixService :
 
             text =
                 text.replace(
-                    Regex("\\b$word\\b"),
+                    Regex("\\b${Regex.escape(word)}\\b"),
                     number
                 )
         }
@@ -1718,7 +1671,7 @@ class AurixService :
 
         val trigger =
             System.currentTimeMillis() +
-                    seconds * 1000L
+                seconds * 1000L
 
         scheduleAlert(
             trigger,
@@ -1897,14 +1850,14 @@ class AurixService :
 
         val flags =
             PendingIntent.FLAG_UPDATE_CURRENT or
-                    if (
-                        Build.VERSION.SDK_INT >=
-                        Build.VERSION_CODES.M
-                    ) {
-                        PendingIntent.FLAG_IMMUTABLE
-                    } else {
-                        0
-                    }
+                if (
+                    Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.M
+                ) {
+                    PendingIntent.FLAG_IMMUTABLE
+                } else {
+                    0
+                }
 
         val pendingIntent =
             PendingIntent.getBroadcast(
@@ -1923,12 +1876,11 @@ class AurixService :
 
                 try {
 
-                    alarmManager
-                        .setExactAndAllowWhileIdle(
-                            AlarmManager.RTC_WAKEUP,
-                            triggerTime,
-                            pendingIntent
-                        )
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTime,
+                        pendingIntent
+                    )
 
                 } catch (_: SecurityException) {
 
@@ -1983,9 +1935,7 @@ class AurixService :
             for (id in manager.cameraIdList) {
 
                 val characteristics =
-                    manager.getCameraCharacteristics(
-                        id
-                    )
+                    manager.getCameraCharacteristics(id)
 
                 val flash =
                     characteristics.get(
@@ -2235,13 +2185,11 @@ class AurixService :
 
             val intent =
                 Intent(
-                    Intent.ACTION_VIEW
+                    Intent.ACTION_VIEW,
+                    Uri.parse(
+                        "https://music.youtube.com"
+                    )
                 ).apply {
-
-                    data =
-                        Uri.parse(
-                            "https://music.youtube.com"
-                        )
 
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
@@ -2249,10 +2197,6 @@ class AurixService :
                 }
 
             startActivity(intent)
-
-            speak(
-                "Opening music"
-            )
 
         } catch (_: Exception) {
 
@@ -2275,14 +2219,14 @@ class AurixService :
                     Context.AUDIO_SERVICE
                 ) as AudioManager
 
-            val down =
+            val keyEvent =
                 android.view.KeyEvent(
                     android.view.KeyEvent.ACTION_DOWN,
                     android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
                 )
 
             audio.dispatchMediaKeyEvent(
-                down
+                keyEvent
             )
 
             val up =
@@ -2500,7 +2444,7 @@ class AurixService :
 
             val url =
                 "https://www.youtube.com/results?search_query=" +
-                        Uri.encode(query)
+                    Uri.encode(query)
 
             val intent =
                 Intent(
@@ -2638,10 +2582,6 @@ class AurixService :
 
                 startActivity(intent)
 
-                speak(
-                    "Opening Maps"
-                )
-
             } catch (_: Exception) {
 
                 speak(
@@ -2660,7 +2600,7 @@ class AurixService :
             val uri =
                 Uri.parse(
                     "geo:0,0?q=" +
-                            Uri.encode(query)
+                        Uri.encode(query)
                 )
 
             val intent =
@@ -2691,7 +2631,7 @@ class AurixService :
                 val uri =
                     Uri.parse(
                         "https://www.google.com/maps/search/?api=1&query=" +
-                                Uri.encode(query)
+                            Uri.encode(query)
                     )
 
                 val intent =
@@ -2730,9 +2670,7 @@ class AurixService :
                 ).apply {
 
                     data =
-                        Uri.parse(
-                            "tel:"
-                        )
+                        Uri.parse("tel:")
 
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
@@ -2929,7 +2867,8 @@ class AurixService :
 
             val level =
                 manager.getIntProperty(
-                    BatteryManager.BATTERY_PROPERTY_CAPACITY
+                    BatteryManager
+                        .BATTERY_PROPERTY_CAPACITY
                 )
 
             speak(
@@ -2956,7 +2895,7 @@ class AurixService :
 
             val url =
                 "https://www.google.com/search?q=" +
-                        Uri.encode(query)
+                    Uri.encode(query)
 
             val intent =
                 Intent(
@@ -2998,7 +2937,7 @@ class AurixService :
                 command == "go to home" ||
                 command == "home" ||
                 command == "home screen" ||
-                command == "open home" ||
+                command == "go to home screen" ||
                 command == "close app" ||
                 command == "close application" ||
                 command == "band app" ||
@@ -3024,6 +2963,10 @@ class AurixService :
 
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
                     )
                 }
 
@@ -3057,8 +3000,11 @@ class AurixService :
                             )
 
                         addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK or
-                                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP
                         )
                     }
 
