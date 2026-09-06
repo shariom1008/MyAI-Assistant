@@ -63,11 +63,8 @@ class AurixService :
             5001
     }
 
-    private var speechRecognizer:
-            SpeechRecognizer? = null
-
-    private var textToSpeech:
-            TextToSpeech? = null
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var textToSpeech: TextToSpeech? = null
 
     private var listening = false
     private var restarting = false
@@ -86,6 +83,7 @@ class AurixService :
 
         serviceDestroyed = false
         isRunning = true
+        restarting = false
 
         createNotificationChannel()
         startForegroundNotification()
@@ -108,7 +106,6 @@ class AurixService :
         when (intent?.action) {
 
             ACTION_STOP -> {
-
                 stopAurix()
                 return START_NOT_STICKY
             }
@@ -116,6 +113,7 @@ class AurixService :
             ACTION_START -> {
 
                 isRunning = true
+                restarting = false
 
                 if (!listening) {
                     startListening()
@@ -148,8 +146,11 @@ class AurixService :
 
         speechRecognizer = null
 
-        stopForeground(true)
+        try {
+            textToSpeech?.stop()
+        } catch (_: Exception) {}
 
+        stopForeground(true)
         stopSelf()
     }
 
@@ -179,9 +180,7 @@ class AurixService :
                     Context.NOTIFICATION_SERVICE
                 ) as NotificationManager
 
-            manager.createNotificationChannel(
-                channel
-            )
+            manager.createNotificationChannel(channel)
         }
     }
 
@@ -228,12 +227,15 @@ class AurixService :
     }
 
     // =========================================================
-    // SPEECH
+    // SPEECH ENGINE
     // =========================================================
 
     private fun startListening() {
 
-        if (serviceDestroyed || !isRunning) {
+        if (
+            serviceDestroyed ||
+            !isRunning
+        ) {
             return
         }
 
@@ -310,11 +312,13 @@ class AurixService :
 
                     val list =
                         results?.getStringArrayList(
-                            SpeechRecognizer.RESULTS_RECOGNITION
+                            SpeechRecognizer
+                                .RESULTS_RECOGNITION
                         )
 
                     val command =
-                        list?.firstOrNull()
+                        list
+                            ?.firstOrNull()
                             ?.trim()
                             ?.lowercase(
                                 Locale.getDefault()
@@ -324,13 +328,8 @@ class AurixService :
                         !command.isNullOrBlank()
                     ) {
 
-                        sendCommand(
-                            command
-                        )
-
-                        processCommand(
-                            command
-                        )
+                        sendCommand(command)
+                        processCommand(command)
                     }
 
                     listening = false
@@ -377,9 +376,7 @@ class AurixService :
 
         try {
 
-            speechRecognizer?.startListening(
-                intent
-            )
+            speechRecognizer?.startListening(intent)
 
         } catch (_: Exception) {
 
@@ -408,7 +405,6 @@ class AurixService :
                 isRunning &&
                 !serviceDestroyed
             ) {
-
                 startListening()
             }
 
@@ -416,7 +412,7 @@ class AurixService :
     }
 
     // =========================================================
-    // COMMAND PROCESSOR
+    // COMMAND ENGINE
     // =========================================================
 
     private fun processCommand(
@@ -432,12 +428,20 @@ class AurixService :
                     .trim()
             )
 
-        // STOP
+        if (command.isBlank()) {
+            return
+        }
+
+        // -----------------------------------------------------
+        // STOP AURIX
+        // -----------------------------------------------------
+
         if (
             command == "stop" ||
             command == "stop listening" ||
             command == "deactivate aurix" ||
-            command == "aurix stop"
+            command == "aurix stop" ||
+            command == "aurix deactivate"
         ) {
 
             speak("Stopping AURIX")
@@ -445,75 +449,78 @@ class AurixService :
             return
         }
 
-        // CLOSE / HOME
+        // -----------------------------------------------------
+        // HOME
+        // -----------------------------------------------------
+
         if (isCloseCommand(command)) {
 
             goHome()
             return
         }
 
+        // -----------------------------------------------------
         // FLASHLIGHT ON
+        // -----------------------------------------------------
+
         if (
-            command.contains(
-                "turn on flashlight"
-            ) ||
-            command.contains(
-                "switch on flashlight"
-            ) ||
-            command.contains(
-                "flashlight on"
-            ) ||
-            command.contains(
-                "torch on"
-            )
+            command.contains("turn on flashlight") ||
+            command.contains("switch on flashlight") ||
+            command.contains("flashlight on") ||
+            command.contains("torch on") ||
+            command.contains("torch chalao") ||
+            command.contains("flashlight chalao")
         ) {
 
             setFlashlight(true)
             return
         }
 
+        // -----------------------------------------------------
         // FLASHLIGHT OFF
+        // -----------------------------------------------------
+
         if (
-            command.contains(
-                "turn off flashlight"
-            ) ||
-            command.contains(
-                "switch off flashlight"
-            ) ||
-            command.contains(
-                "flashlight off"
-            ) ||
-            command.contains(
-                "torch off"
-            )
+            command.contains("turn off flashlight") ||
+            command.contains("switch off flashlight") ||
+            command.contains("flashlight off") ||
+            command.contains("torch off") ||
+            command.contains("torch band") ||
+            command.contains("flashlight band")
         ) {
 
             setFlashlight(false)
             return
         }
 
+        // -----------------------------------------------------
         // TIMER
-        if (
-            command.contains("timer")
-        ) {
+        // -----------------------------------------------------
+
+        if (command.contains("timer")) {
 
             setAurixTimer(command)
             return
         }
 
+        // -----------------------------------------------------
         // ALARM
-        if (
-            command.contains("alarm")
-        ) {
+        // -----------------------------------------------------
+
+        if (command.contains("alarm")) {
 
             setAurixAlarm(command)
             return
         }
 
+        // -----------------------------------------------------
         // DATE
+        // -----------------------------------------------------
+
         if (
             command.contains("date") ||
-            command.contains("today")
+            command.contains("today's date") ||
+            command.contains("today date")
         ) {
 
             val date =
@@ -529,7 +536,10 @@ class AurixService :
             return
         }
 
+        // -----------------------------------------------------
         // DAY
+        // -----------------------------------------------------
+
         if (
             command == "day" ||
             command.contains("what day") ||
@@ -549,24 +559,18 @@ class AurixService :
             return
         }
 
+        // -----------------------------------------------------
         // TIME
+        // -----------------------------------------------------
+
         if (
             command == "time" ||
-            command.contains(
-                "what is the time"
-            ) ||
-            command.contains(
-                "what's the time"
-            ) ||
-            command.contains(
-                "tell me the time"
-            ) ||
-            command.contains(
-                "current time"
-            ) ||
-            command.contains(
-                "what time is it"
-            )
+            command.contains("what is the time") ||
+            command.contains("what's the time") ||
+            command.contains("tell me the time") ||
+            command.contains("current time") ||
+            command.contains("what time is it") ||
+            command.contains("time kya hai")
         ) {
 
             val time =
@@ -582,49 +586,81 @@ class AurixService :
             return
         }
 
+        // -----------------------------------------------------
         // CAMERA
+        // -----------------------------------------------------
+
         if (
-            command.contains("camera")
+            command.contains("camera") ||
+            command.contains("take a photo")
         ) {
 
             openCamera()
             return
         }
 
+        // -----------------------------------------------------
         // GALLERY
+        // -----------------------------------------------------
+
         if (
             command.contains("gallery") ||
             command.contains("photos") ||
-            command.contains("photo")
+            command.contains("photo gallery")
         ) {
 
             openGallery()
             return
         }
 
+        // -----------------------------------------------------
         // MUSIC
+        // -----------------------------------------------------
+
         if (
-            command.contains("music") ||
-            command.contains("song") ||
-            command.contains("songs") ||
-            command.contains("gaane")
+            command == "music" ||
+            command.contains("open music") ||
+            command.contains("music app") ||
+            command.contains("play music")
         ) {
 
             openMusic()
             return
         }
 
+        // -----------------------------------------------------
+        // MEDIA PLAY / PAUSE
+        // -----------------------------------------------------
+
+        if (
+            command.contains("play music") ||
+            command.contains("pause music") ||
+            command.contains("resume music") ||
+            command == "play" ||
+            command == "pause"
+        ) {
+
+            controlMedia()
+            return
+        }
+
+        // -----------------------------------------------------
         // NOTES
+        // -----------------------------------------------------
+
         if (
             command.contains("notes") ||
-            command.contains("note")
+            command.contains("note app")
         ) {
 
             openNotes()
             return
         }
 
+        // -----------------------------------------------------
         // CALCULATOR
+        // -----------------------------------------------------
+
         if (
             command.contains("calculator") ||
             command.contains("calculate")
@@ -634,109 +670,252 @@ class AurixService :
             return
         }
 
-        // YOUTUBE
+        // -----------------------------------------------------
+        // YOUTUBE SEARCH
+        // -----------------------------------------------------
+
         if (
-            command.contains("youtube")
+            command.startsWith("search youtube") ||
+            command.startsWith("youtube search") ||
+            command.startsWith("youtube par")
+        ) {
+
+            val query =
+                command
+                    .replaceFirst(
+                        "search youtube",
+                        ""
+                    )
+                    .replaceFirst(
+                        "youtube search",
+                        ""
+                    )
+                    .replaceFirst(
+                        "youtube par",
+                        ""
+                    )
+                    .trim()
+
+            if (query.isNotBlank()) {
+                searchYouTube(query)
+            } else {
+                openYouTube()
+            }
+
+            return
+        }
+
+        // -----------------------------------------------------
+        // YOUTUBE
+        // -----------------------------------------------------
+
+        if (
+            command == "youtube" ||
+            command == "open youtube" ||
+            command == "launch youtube"
         ) {
 
             openYouTube()
             return
         }
 
-        // CHROME
+        // -----------------------------------------------------
+        // MAP SEARCH
+        // -----------------------------------------------------
+
         if (
-            command.contains("chrome") ||
-            command.contains("browser")
+            command.startsWith("search maps") ||
+            command.startsWith("maps search") ||
+            command.startsWith("navigate to") ||
+            command.startsWith("find ") && command.contains(" maps")
         ) {
 
-            openChrome()
+            val query =
+                command
+                    .replaceFirst(
+                        "search maps",
+                        ""
+                    )
+                    .replaceFirst(
+                        "maps search",
+                        ""
+                    )
+                    .replaceFirst(
+                        "navigate to",
+                        ""
+                    )
+                    .trim()
+
+            if (query.isNotBlank()) {
+                searchMaps(query)
+            } else {
+                openMaps()
+            }
+
             return
         }
 
+        // -----------------------------------------------------
         // MAPS
+        // -----------------------------------------------------
+
         if (
-            command.contains("maps") ||
-            command.contains("google maps")
+            command == "maps" ||
+            command == "open maps" ||
+            command == "google maps"
         ) {
 
             openMaps()
             return
         }
 
-        // PHONE
+        // -----------------------------------------------------
+        // CHROME / BROWSER
+        // -----------------------------------------------------
+
         if (
-            command.contains("phone") ||
-            command.contains("dialer") ||
-            command.contains("call")
+            command == "chrome" ||
+            command == "open chrome" ||
+            command == "browser" ||
+            command == "open browser"
+        ) {
+
+            openChrome()
+            return
+        }
+
+        // -----------------------------------------------------
+        // PHONE
+        // -----------------------------------------------------
+
+        if (
+            command == "phone" ||
+            command == "open phone" ||
+            command == "dialer" ||
+            command == "open dialer"
         ) {
 
             openPhone()
             return
         }
 
+        // -----------------------------------------------------
         // SETTINGS
+        // -----------------------------------------------------
+
         if (
-            command.contains("settings") ||
-            command.contains("setting")
+            command == "settings" ||
+            command == "open settings" ||
+            command == "phone settings"
         ) {
 
             openSettings()
             return
         }
 
+        // -----------------------------------------------------
+        // WI-FI
+        // -----------------------------------------------------
+
+        if (
+            command.contains("wifi") ||
+            command.contains("wi fi")
+        ) {
+
+            openWifiSettings()
+            return
+        }
+
+        // -----------------------------------------------------
+        // BLUETOOTH
+        // -----------------------------------------------------
+
+        if (
+            command.contains("bluetooth")
+        ) {
+
+            openBluetoothSettings()
+            return
+        }
+
+        // -----------------------------------------------------
+        // NOTIFICATION SETTINGS
+        // -----------------------------------------------------
+
+        if (
+            command.contains("notification settings")
+        ) {
+
+            openNotificationSettings()
+            return
+        }
+
+        // -----------------------------------------------------
         // VOLUME UP
+        // -----------------------------------------------------
+
         if (
             command.contains("volume up") ||
-            command.contains("increase volume")
+            command.contains("increase volume") ||
+            command.contains("volume badhao")
         ) {
 
             changeVolume(true)
             return
         }
 
+        // -----------------------------------------------------
         // VOLUME DOWN
+        // -----------------------------------------------------
+
         if (
             command.contains("volume down") ||
-            command.contains("decrease volume")
+            command.contains("decrease volume") ||
+            command.contains("volume kam")
         ) {
 
             changeVolume(false)
             return
         }
 
-        // BATTERY
+        // -----------------------------------------------------
+        // MEDIA
+        // -----------------------------------------------------
+
         if (
-            command.contains("battery")
+            command.contains("play") ||
+            command.contains("pause") ||
+            command.contains("resume")
         ) {
 
-            val manager =
-                getSystemService(
-                    Context.BATTERY_SERVICE
-                ) as BatteryManager
-
-            val level =
-                manager.getIntProperty(
-                    BatteryManager
-                        .BATTERY_PROPERTY_CAPACITY
-                )
-
-            speak(
-                "Battery is at $level percent"
-            )
-
+            controlMedia()
             return
         }
 
+        // -----------------------------------------------------
+        // BATTERY
+        // -----------------------------------------------------
+
+        if (
+            command.contains("battery") ||
+            command.contains("battery percentage") ||
+            command.contains("battery level")
+        ) {
+
+            tellBattery()
+            return
+        }
+
+        // -----------------------------------------------------
         // HELLO
+        // -----------------------------------------------------
+
         if (
             command == "hello" ||
             command == "hi" ||
-            command.contains(
-                "hello aurix"
-            ) ||
-            command.contains(
-                "hi aurix"
-            )
+            command == "hey aurix" ||
+            command == "hello aurix" ||
+            command == "hi aurix"
         ) {
 
             speak(
@@ -746,14 +925,14 @@ class AurixService :
             return
         }
 
+        // -----------------------------------------------------
         // IDENTITY
+        // -----------------------------------------------------
+
         if (
-            command.contains(
-                "who are you"
-            ) ||
-            command.contains(
-                "your name"
-            )
+            command.contains("who are you") ||
+            command.contains("your name") ||
+            command.contains("what are you")
         ) {
 
             speak(
@@ -763,19 +942,22 @@ class AurixService :
             return
         }
 
+        // -----------------------------------------------------
         // GOOGLE SEARCH
+        // -----------------------------------------------------
+
         if (
-            command.startsWith(
-                "search "
-            ) ||
-            command.startsWith(
-                "google "
-            )
+            command.startsWith("search ") ||
+            command.startsWith("google ") ||
+            command.startsWith("search for ") ||
+            command.startsWith("google search ")
         ) {
 
             val query =
                 command
+                    .removePrefix("search for ")
                     .removePrefix("search ")
+                    .removePrefix("google search ")
                     .removePrefix("google ")
                     .trim()
 
@@ -786,8 +968,275 @@ class AurixService :
             return
         }
 
+        // =====================================================
+        // SMART APP CONTROL
+        // =====================================================
+
+        if (
+            isAppOpenCommand(command)
+        ) {
+
+            val appName =
+                extractAppName(command)
+
+            if (
+                appName.isNotBlank() &&
+                openInstalledApp(appName)
+            ) {
+                return
+            }
+
+            speak(
+                "I couldn't find that app on your phone."
+            )
+
+            return
+        }
+
+        // -----------------------------------------------------
         // UNKNOWN
+        // -----------------------------------------------------
+
         googleSearch(command)
+    }
+
+    // =========================================================
+    // SMART APP CONTROL
+    // =========================================================
+
+    private fun isAppOpenCommand(
+        command: String
+    ): Boolean {
+
+        val prefixes =
+            listOf(
+                "open ",
+                "launch ",
+                "start ",
+                "run ",
+                "use ",
+                "show "
+            )
+
+        return prefixes.any {
+            command.startsWith(it)
+        }
+    }
+
+    private fun extractAppName(
+        command: String
+    ): String {
+
+        var result = command.trim()
+
+        val prefixes =
+            listOf(
+                "open ",
+                "launch ",
+                "start ",
+                "run ",
+                "use ",
+                "show "
+            )
+
+        for (prefix in prefixes) {
+
+            if (result.startsWith(prefix)) {
+
+                result =
+                    result.removePrefix(prefix)
+                break
+            }
+        }
+
+        result =
+            result
+                .removeSuffix(" app")
+                .removeSuffix(" application")
+                .trim()
+
+        return result
+    }
+
+    private fun openInstalledApp(
+        requestedName: String
+    ): Boolean {
+
+        val requested =
+            normalizeAppName(
+                requestedName
+            )
+
+        if (requested.isBlank()) {
+            return false
+        }
+
+        val launcherIntent =
+            Intent(
+                Intent.ACTION_MAIN
+            ).apply {
+
+                addCategory(
+                    Intent.CATEGORY_LAUNCHER
+                )
+            }
+
+        val apps =
+            try {
+
+                packageManager
+                    .queryIntentActivities(
+                        launcherIntent,
+                        PackageManager.MATCH_DEFAULT_ONLY
+                    )
+
+            } catch (_: Exception) {
+
+                emptyList()
+            }
+
+        var bestPackage: String? = null
+        var bestScore = 0
+
+        for (info in apps) {
+
+            val label =
+                info.loadLabel(
+                    packageManager
+                )
+                    ?.toString()
+                    ?: continue
+
+            val normalizedLabel =
+                normalizeAppName(label)
+
+            val packageName =
+                info.activityInfo.packageName
+
+            val normalizedPackage =
+                normalizeAppName(
+                    packageName
+                        .substringAfterLast(".")
+                )
+
+            var score = 0
+
+            if (
+                normalizedLabel ==
+                requested
+            ) {
+                score = 100
+            } else if (
+                normalizedLabel.contains(requested)
+            ) {
+                score = 80
+            } else if (
+                requested.contains(normalizedLabel)
+            ) {
+                score = 70
+            } else if (
+                normalizedPackage == requested
+            ) {
+                score = 90
+            } else if (
+                normalizedPackage.contains(requested)
+            ) {
+                score = 60
+            }
+
+            if (score > bestScore) {
+
+                bestScore = score
+                bestPackage = packageName
+            }
+        }
+
+        if (bestPackage == null) {
+
+            val direct =
+                try {
+                    packageManager
+                        .getLaunchIntentForPackage(
+                            requestedName
+                        )
+                } catch (_: Exception) {
+                    null
+                }
+
+            if (direct != null) {
+
+                try {
+
+                    direct.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+
+                    startActivity(direct)
+
+                    speak(
+                        "Opening $requestedName"
+                    )
+
+                    return true
+
+                } catch (_: Exception) {}
+            }
+
+            return false
+        }
+
+        return try {
+
+            val launchIntent =
+                packageManager
+                    .getLaunchIntentForPackage(
+                        bestPackage
+                    )
+
+            if (launchIntent != null) {
+
+                launchIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+
+                startActivity(launchIntent)
+
+                speak(
+                    "Opening $requestedName"
+                )
+
+                true
+
+            } else {
+
+                false
+            }
+
+        } catch (_: Exception) {
+
+            false
+        }
+    }
+
+    private fun normalizeAppName(
+        value: String
+    ): String {
+
+        return value
+            .lowercase(Locale.getDefault())
+            .replace(
+                Regex("[^a-z0-9]"),
+                ""
+            )
+            .replace(
+                "application",
+                ""
+            )
+            .replace(
+                "app",
+                ""
+            )
+            .trim()
     }
 
     // =========================================================
@@ -799,35 +1248,6 @@ class AurixService :
     ): String {
 
         var text = input
-
-        val numbers =
-            mapOf(
-                "zero" to "0",
-                "one" to "1",
-                "two" to "2",
-                "three" to "3",
-                "four" to "4",
-                "five" to "5",
-                "six" to "6",
-                "seven" to "7",
-                "eight" to "8",
-                "nine" to "9",
-                "ten" to "10",
-                "eleven" to "11",
-                "twelve" to "12",
-                "thirteen" to "13",
-                "fourteen" to "14",
-                "fifteen" to "15",
-                "sixteen" to "16",
-                "seventeen" to "17",
-                "eighteen" to "18",
-                "nineteen" to "19",
-                "twenty" to "20",
-                "thirty" to "30",
-                "forty" to "40",
-                "fifty" to "50",
-                "sixty" to "60"
-            )
 
         val compounds =
             mapOf(
@@ -880,6 +1300,35 @@ class AurixService :
                     number
                 )
         }
+
+        val numbers =
+            mapOf(
+                "zero" to "0",
+                "one" to "1",
+                "two" to "2",
+                "three" to "3",
+                "four" to "4",
+                "five" to "5",
+                "six" to "6",
+                "seven" to "7",
+                "eight" to "8",
+                "nine" to "9",
+                "ten" to "10",
+                "eleven" to "11",
+                "twelve" to "12",
+                "thirteen" to "13",
+                "fourteen" to "14",
+                "fifteen" to "15",
+                "sixteen" to "16",
+                "seventeen" to "17",
+                "eighteen" to "18",
+                "nineteen" to "19",
+                "twenty" to "20",
+                "thirty" to "30",
+                "forty" to "40",
+                "fifty" to "50",
+                "sixty" to "60"
+            )
 
         numbers.forEach { (word, number) ->
 
@@ -1241,9 +1690,7 @@ class AurixService :
             ) {
 
                 val characteristics =
-                    manager.getCameraCharacteristics(
-                        id
-                    )
+                    manager.getCameraCharacteristics(id)
 
                 val flash =
                     characteristics.get(
@@ -1283,18 +1730,13 @@ class AurixService :
                 enabled
             )
 
-            if (enabled) {
-
-                speak(
+            speak(
+                if (enabled) {
                     "Flashlight turned on"
-                )
-
-            } else {
-
-                speak(
+                } else {
                     "Flashlight turned off"
-                )
-            }
+                }
+            )
 
         } catch (_: Exception) {
 
@@ -1338,6 +1780,7 @@ class AurixService :
                 ) {
 
                     startActivity(intent)
+                    speak("Opening camera")
                     return
                 }
 
@@ -1351,9 +1794,7 @@ class AurixService :
                 "com.miui.camera"
             )
 
-        for (
-            packageName in packages
-        ) {
+        for (packageName in packages) {
 
             try {
 
@@ -1373,6 +1814,7 @@ class AurixService :
                         launchIntent
                     )
 
+                    speak("Opening camera")
                     return
                 }
 
@@ -1398,10 +1840,7 @@ class AurixService :
                 ).apply {
 
                     setDataAndType(
-                        MediaStore
-                            .Images
-                            .Media
-                            .EXTERNAL_CONTENT_URI,
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                         "image/*"
                     )
 
@@ -1411,6 +1850,8 @@ class AurixService :
                 }
 
             startActivity(intent)
+
+            speak("Opening gallery")
 
         } catch (_: Exception) {
 
@@ -1455,9 +1896,7 @@ class AurixService :
                 "com.android.music"
             )
 
-        for (
-            packageName in packages
-        ) {
+        for (packageName in packages) {
 
             try {
 
@@ -1474,6 +1913,9 @@ class AurixService :
                     )
 
                     startActivity(intent)
+
+                    speak("Opening music")
+
                     return
                 }
 
@@ -1508,6 +1950,58 @@ class AurixService :
     }
 
     // =========================================================
+    // MEDIA CONTROL
+    // =========================================================
+
+    private fun controlMedia() {
+
+        try {
+
+            val audio =
+                getSystemService(
+                    Context.AUDIO_SERVICE
+                ) as AudioManager
+
+            val down =
+                Intent(
+                    Intent.ACTION_MEDIA_BUTTON
+                )
+
+            down.putExtra(
+                Intent.EXTRA_KEY_EVENT,
+                android.view.KeyEvent(
+                    android.view.KeyEvent.ACTION_DOWN,
+                    android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                )
+            )
+
+            audio.dispatchMediaKeyEvent(
+                down.getParcelableExtra(
+                    Intent.EXTRA_KEY_EVENT
+                )!!
+            )
+
+            val up =
+                android.view.KeyEvent(
+                    android.view.KeyEvent.ACTION_UP,
+                    android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                )
+
+            audio.dispatchMediaKeyEvent(up)
+
+            speak(
+                "Media control executed"
+            )
+
+        } catch (_: Exception) {
+
+            speak(
+                "I could not control media"
+            )
+        }
+    }
+
+    // =========================================================
     // NOTES
     // =========================================================
 
@@ -1519,9 +2013,7 @@ class AurixService :
                 "com.google.android.keep"
             )
 
-        for (
-            packageName in packages
-        ) {
+        for (packageName in packages) {
 
             try {
 
@@ -1538,6 +2030,9 @@ class AurixService :
                     )
 
                     startActivity(intent)
+
+                    speak("Opening notes")
+
                     return
                 }
 
@@ -1555,63 +2050,73 @@ class AurixService :
 
     private fun openCalculator() {
 
-    val calculatorPackages = arrayOf(
-        "com.miui.calculator",
-        "com.android.calculator2",
-        "com.google.android.calculator"
-    )
+        val calculatorPackages =
+            arrayOf(
+                "com.miui.calculator",
+                "com.android.calculator2",
+                "com.google.android.calculator"
+            )
 
-    for (packageName in calculatorPackages) {
+        for (packageName in calculatorPackages) {
+
+            try {
+
+                val launchIntent =
+                    packageManager
+                        .getLaunchIntentForPackage(
+                            packageName
+                        )
+
+                if (launchIntent != null) {
+
+                    launchIntent.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+
+                    startActivity(
+                        launchIntent
+                    )
+
+                    speak(
+                        "Opening calculator"
+                    )
+
+                    return
+                }
+
+            } catch (_: Exception) {}
+        }
 
         try {
 
-            val launchIntent =
-                packageManager.getLaunchIntentForPackage(
-                    packageName
-                )
+            val intent =
+                Intent().apply {
 
-            if (launchIntent != null) {
+                    action =
+                        Intent.ACTION_MAIN
 
-                launchIntent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
+                    addCategory(
+                        "android.intent.category.APP_CALCULATOR"
+                    )
 
-                startActivity(launchIntent)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
 
-                speak("Opening calculator")
-                return
-            }
+            startActivity(intent)
 
-        } catch (_: Exception) {
-        }
-    }
+            speak(
+                "Opening calculator"
+            )
 
-    try {
+            return
 
-        val intent =
-            Intent().apply {
+        } catch (_: Exception) {}
 
-                action =
-                    Intent.ACTION_MAIN
-
-                addCategory(
-                    "android.intent.category.APP_CALCULATOR"
-                )
-
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-            }
-
-        startActivity(intent)
-
-        speak("Opening calculator")
-        return
-
-    } catch (_: Exception) {
-    }
-
-    speak("Calculator is not available")
+        speak(
+            "Calculator is not available"
+        )
     }
 
     // =========================================================
@@ -1640,6 +2145,8 @@ class AurixService :
 
             startActivity(intent)
 
+            speak("Opening YouTube")
+
         } catch (_: Exception) {
 
             try {
@@ -1650,13 +2157,16 @@ class AurixService :
                         Uri.parse(
                             "https://www.youtube.com"
                         )
-                    )
+                    ).apply {
 
-                intent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+                    }
 
                 startActivity(intent)
+
+                speak("Opening YouTube")
 
             } catch (_: Exception) {
 
@@ -1664,6 +2174,41 @@ class AurixService :
                     "YouTube is not available"
                 )
             }
+        }
+    }
+
+    private fun searchYouTube(
+        query: String
+    ) {
+
+        try {
+
+            val url =
+                "https://www.youtube.com/results?search_query=" +
+                        Uri.encode(query)
+
+            val intent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(url)
+                ).apply {
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+            speak(
+                "Searching YouTube for $query"
+            )
+
+        } catch (_: Exception) {
+
+            speak(
+                "I could not search YouTube"
+            )
         }
     }
 
@@ -1693,6 +2238,8 @@ class AurixService :
 
             startActivity(intent)
 
+            speak("Opening Chrome")
+
         } catch (_: Exception) {
 
             try {
@@ -1703,13 +2250,16 @@ class AurixService :
                         Uri.parse(
                             "https://www.google.com"
                         )
-                    )
+                    ).apply {
 
-                intent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+                    }
 
                 startActivity(intent)
+
+                speak("Opening browser")
 
             } catch (_: Exception) {
 
@@ -1746,6 +2296,8 @@ class AurixService :
 
             startActivity(intent)
 
+            speak("Opening Maps")
+
         } catch (_: Exception) {
 
             try {
@@ -1756,11 +2308,12 @@ class AurixService :
                         Uri.parse(
                             "https://maps.google.com"
                         )
-                    )
+                    ).apply {
 
-                intent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+                    }
 
                 startActivity(intent)
 
@@ -1768,6 +2321,71 @@ class AurixService :
 
                 speak(
                     "Maps is not available"
+                )
+            }
+        }
+    }
+
+    private fun searchMaps(
+        query: String
+    ) {
+
+        try {
+
+            val uri =
+                Uri.parse(
+                    "geo:0,0?q=" +
+                            Uri.encode(query)
+                )
+
+            val intent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    uri
+                ).apply {
+
+                    setPackage(
+                        "com.google.android.apps.maps"
+                    )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+            speak(
+                "Searching Maps for $query"
+            )
+
+        } catch (_: Exception) {
+
+            try {
+
+                val uri =
+                    Uri.parse(
+                        "https://www.google.com/maps/search/?api=1&query=" +
+                                Uri.encode(query)
+                    )
+
+                val intent =
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        uri
+                    ).apply {
+
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+                    }
+
+                startActivity(intent)
+
+            } catch (_: Exception) {
+
+                speak(
+                    "I could not open Maps"
                 )
             }
         }
@@ -1795,6 +2413,8 @@ class AurixService :
                 }
 
             startActivity(intent)
+
+            speak("Opening phone")
 
         } catch (_: Exception) {
 
@@ -1824,12 +2444,84 @@ class AurixService :
 
             startActivity(intent)
 
+            speak("Opening settings")
+
         } catch (_: Exception) {
 
             speak(
                 "Settings is not available"
             )
         }
+    }
+
+    private fun openWifiSettings() {
+
+        try {
+
+            val intent =
+                Intent(
+                    Settings.ACTION_WIFI_SETTINGS
+                ).apply {
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+            speak("Opening Wi-Fi settings")
+
+        } catch (_: Exception) {}
+    }
+
+    private fun openBluetoothSettings() {
+
+        try {
+
+            val intent =
+                Intent(
+                    Settings.ACTION_BLUETOOTH_SETTINGS
+                ).apply {
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+            speak("Opening Bluetooth settings")
+
+        } catch (_: Exception) {}
+    }
+
+    private fun openNotificationSettings() {
+
+        try {
+
+            val intent =
+                Intent(
+                    Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                ).apply {
+
+                    putExtra(
+                        Settings.EXTRA_APP_PACKAGE,
+                        packageName
+                    )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+            speak(
+                "Opening notification settings"
+            )
+
+        } catch (_: Exception) {}
     }
 
     // =========================================================
@@ -1868,7 +2560,38 @@ class AurixService :
     }
 
     // =========================================================
-    // GOOGLE
+    // BATTERY
+    // =========================================================
+
+    private fun tellBattery() {
+
+        try {
+
+            val manager =
+                getSystemService(
+                    Context.BATTERY_SERVICE
+                ) as BatteryManager
+
+            val level =
+                manager.getIntProperty(
+                    BatteryManager
+                        .BATTERY_PROPERTY_CAPACITY
+                )
+
+            speak(
+                "Battery is at $level percent"
+            )
+
+        } catch (_: Exception) {
+
+            speak(
+                "I could not check the battery"
+            )
+        }
+    }
+
+    // =========================================================
+    // GOOGLE SEARCH
     // =========================================================
 
     private fun googleSearch(
@@ -1894,6 +2617,10 @@ class AurixService :
 
             startActivity(intent)
 
+            speak(
+                "Searching for $query"
+            )
+
         } catch (_: Exception) {
 
             speak(
@@ -1917,56 +2644,30 @@ class AurixService :
                 command == "home" ||
                 command == "close app" ||
                 command == "close application" ||
-                command.startsWith("close ") ||
-                command.startsWith("exit ") ||
-                command.startsWith("quit ") ||
-                command.startsWith("band ")
+                command == "band app" ||
+                command == "aurix home"
     }
 
     private fun goHome() {
-
-    try {
-
-        val intent =
-            Intent(
-                Intent.ACTION_MAIN
-            ).apply {
-
-                addCategory(
-                    Intent.CATEGORY_HOME
-                )
-
-                addCategory(
-                    Intent.CATEGORY_DEFAULT
-                )
-
-                flags =
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-
-        startActivity(intent)
-
-    } catch (_: Exception) {
 
         try {
 
             val intent =
                 Intent(
-                    "android.intent.action.MAIN"
+                    Intent.ACTION_MAIN
                 ).apply {
 
                     addCategory(
-                        "android.intent.category.HOME"
+                        Intent.CATEGORY_HOME
                     )
 
                     addCategory(
-                        "android.intent.category.DEFAULT"
+                        Intent.CATEGORY_DEFAULT
                     )
 
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
+                    flags =
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
 
             startActivity(intent)
@@ -1978,7 +2679,6 @@ class AurixService :
             )
         }
     }
-}
 
     // =========================================================
     // TTS
@@ -1994,8 +2694,10 @@ class AurixService :
         ) {
 
             try {
+
                 textToSpeech?.language =
                     Locale.US
+
             } catch (_: Exception) {}
         }
     }
