@@ -742,125 +742,92 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
     private fun openCamera() {
 
-        // METHOD 1
-        try {
+    // 1. Standard camera intent
+    try {
 
-            val intent =
-                Intent(
-                    MediaStore.ACTION_IMAGE_CAPTURE
-                )
-
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
+        val intent =
+            Intent(
+                MediaStore.ACTION_IMAGE_CAPTURE
             )
 
-            if (
-                packageManager.queryIntentActivities(
-                    intent,
-                    PackageManager.MATCH_DEFAULT_ONLY
-                ).isNotEmpty()
-            ) {
+        intent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+        )
 
-                startActivity(intent)
-                return
-            }
-
-        } catch (_: Exception) {
-        }
-
-        // METHOD 2
-        try {
-
-            val intent =
-                Intent(
-                    Intent.ACTION_MAIN
-                )
-
-            intent.addCategory(
-                Intent.CATEGORY_APP_CAMERA
-            )
-
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
-
-            if (
-                packageManager.queryIntentActivities(
-                    intent,
-                    PackageManager.MATCH_DEFAULT_ONLY
-                ).isNotEmpty()
-            ) {
-
-                startActivity(intent)
-                return
-            }
-
-        } catch (_: Exception) {
-        }
-
-        // METHOD 3 - COMMON XIAOMI PACKAGES
-
-        val cameraPackages =
-            arrayOf(
-                "com.android.camera",
-                "com.android.camera2",
-                "com.miui.camera"
-            )
-
-        for (
-            packageName in cameraPackages
+        if (
+            packageManager.queryIntentActivities(
+                intent,
+                PackageManager.MATCH_DEFAULT_ONLY
+            ).isNotEmpty()
         ) {
 
-            try {
-
-                val launchIntent =
-                    packageManager.getLaunchIntentForPackage(
-                        packageName
-                    )
-
-                if (launchIntent != null) {
-
-                    launchIntent.addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-
-                    startActivity(
-                        launchIntent
-                    )
-
-                    return
-                }
-
-            } catch (_: Exception) {
-            }
+            startActivity(intent)
+            return
         }
 
-        // FINAL FALLBACK
+    } catch (_: Exception) {
+    }
+
+    // 2. Try common Xiaomi / Android camera packages
+    val cameraPackages =
+        arrayOf(
+            "com.android.camera",
+            "com.android.camera2",
+            "com.miui.camera"
+        )
+
+    for (
+        cameraPackage in cameraPackages
+    ) {
 
         try {
 
-            val intent =
-                Intent(
-                    Intent.ACTION_VIEW
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage(
+                    cameraPackage
                 )
 
-            intent.data =
-                Uri.parse(
-                    "https://www.google.com/search?q=android+camera"
+            if (launchIntent != null) {
+
+                launchIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
                 )
 
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
+                startActivity(
+                    launchIntent
+                )
 
-            startActivity(intent)
+                return
+            }
 
         } catch (_: Exception) {
-
-            speak(
-                "I could not open the camera"
-            )
         }
+    }
+
+    // 3. Last fallback: generic image capture
+    try {
+
+        val fallbackIntent =
+            Intent(
+                "android.media.action.IMAGE_CAPTURE"
+            )
+
+        fallbackIntent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+        )
+
+        startActivity(
+            fallbackIntent
+        )
+
+        return
+
+    } catch (_: Exception) {
+    }
+
+    speak(
+        "I could not open the camera"
+    )
     }
 
     // =========================================================
