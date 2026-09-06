@@ -3110,4 +3110,9 @@ private fun levenshteinDistance(
     ): IBinder? {
         return null
     }
+    override fun onBind(intent: Intent?): IBinder? {
+    return null
+}
+
+}
 }
