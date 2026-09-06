@@ -1330,11 +1330,574 @@ private fun similarityScore(a: String, b: String): Int {
 }
 
 
-private fun levenshteinDistance(a: String, b: String): Int {
 
-    val dp = Array(a.length + 1) {
-        IntArray(b.length + 1)
+// =========================================================
+// SMART APP CONTROL
+// =========================================================
+
+private fun isAppOpenCommand(
+    command: String
+): Boolean {
+
+    val c = command
+        .lowercase(Locale.getDefault())
+        .trim()
+
+    return c.startsWith("open ") ||
+            c.startsWith("launch ") ||
+            c.startsWith("start ") ||
+            c.startsWith("run ") ||
+            c.startsWith("use ") ||
+            c.startsWith("show ") ||
+            c.startsWith("khol ") ||
+            c.startsWith("kholo ") ||
+            c.startsWith("chalao ") ||
+            c.startsWith("chala ") ||
+            c.contains(" kholo") ||
+            c.contains(" open karo") ||
+            c.contains(" launch karo")
+}
+
+
+// ---------------------------------------------------------
+// EXTRACT APP NAME
+// ---------------------------------------------------------
+
+private fun extractAppName(
+    command: String
+): String {
+
+    var result = command
+        .lowercase(Locale.getDefault())
+        .trim()
+
+    // Remove AURIX wake word
+    result = result.replace(
+        Regex("^aurix[,:]?\\s*"),
+        ""
+    )
+
+    // English prefixes
+    result = result.replace(
+        Regex(
+            "^(please\\s+)?(open|launch|start|run|use|show)\\s+"
+        ),
+        ""
+    )
+
+    // Hindi prefixes
+    result = result.replace(
+        Regex(
+            "^(please\\s+)?(khol|kholo|chalao|chala)\\s+"
+        ),
+        ""
+    )
+
+    // Remove trailing command words
+    result = result.replace(
+        Regex(
+            "\\s+(app|application|karo|kar\\s+do|please|ko)$"
+        ),
+        ""
+    )
+
+    // Examples:
+    // instagram kholo
+    // whatsapp kholo
+    // gmail open karo
+    result = result.replace(
+        Regex(
+            "\\s+(khol|kholo|chalao|chala|open|launch|start|karo|kar\\s+do)$"
+        ),
+        ""
+    )
+
+    return result.trim()
+}
+
+
+// ---------------------------------------------------------
+// NORMALIZE APP NAME
+// ---------------------------------------------------------
+
+private fun normalizeAppName(
+    value: String
+): String {
+
+    return value
+        .lowercase(Locale.getDefault())
+        .replace(Regex("[^a-z0-9]"), "")
+        .trim()
+}
+
+
+// ---------------------------------------------------------
+// OPEN INSTALLED APP
+// ---------------------------------------------------------
+
+private fun openInstalledApp(
+    appName: String
+): Boolean {
+
+    val requestedName =
+        appName.trim()
+
+    if (requestedName.isBlank()) {
+
+        speak(
+            "Which app should I open?"
+        )
+
+        return true
     }
+
+    val requested =
+        normalizeAppName(
+            requestedName
+        )
+
+    // -----------------------------------------------------
+    // DIRECT PACKAGE MAPPING
+    // -----------------------------------------------------
+
+    val knownPackages =
+        mapOf(
+
+            "whatsapp" to listOf(
+                "com.whatsapp",
+                "com.whatsapp.w4b"
+            ),
+
+            "instagram" to listOf(
+                "com.instagram.android"
+            ),
+
+            "gmail" to listOf(
+                "com.google.android.gm"
+            ),
+
+            "youtube" to listOf(
+                "com.google.android.youtube"
+            ),
+
+            "chrome" to listOf(
+                "com.android.chrome"
+            ),
+
+            "maps" to listOf(
+                "com.google.android.apps.maps"
+            ),
+
+            "googlemaps" to listOf(
+                "com.google.android.apps.maps"
+            ),
+
+            "facebook" to listOf(
+                "com.facebook.katana"
+            ),
+
+            "telegram" to listOf(
+                "org.telegram.messenger"
+            ),
+
+            "snapchat" to listOf(
+                "com.snapchat.android"
+            ),
+
+            "spotify" to listOf(
+                "com.spotify.music"
+            ),
+
+            "netflix" to listOf(
+                "com.netflix.mediaclient"
+            ),
+
+            "amazon" to listOf(
+                "in.amazon.mShop.android.shopping"
+            ),
+
+            "flipkart" to listOf(
+                "com.flipkart.android"
+            ),
+
+            "paytm" to listOf(
+                "net.one97.paytm"
+            ),
+
+            "phonepe" to listOf(
+                "com.phonepe.app"
+            ),
+
+            "linkedin" to listOf(
+                "com.linkedin.android"
+            ),
+
+            "twitter" to listOf(
+                "com.twitter.android"
+            ),
+
+            "x" to listOf(
+                "com.twitter.android"
+            ),
+
+            "drive" to listOf(
+                "com.google.android.apps.docs"
+            ),
+
+            "googledrive" to listOf(
+                "com.google.android.apps.docs"
+            ),
+
+            "photos" to listOf(
+                "com.google.android.apps.photos"
+            ),
+
+            "googlephotos" to listOf(
+                "com.google.android.apps.photos"
+            )
+        )
+
+
+    // -----------------------------------------------------
+    // DIRECT LAUNCH
+    // -----------------------------------------------------
+
+    val packages =
+        knownPackages[requested]
+
+    if (packages != null) {
+
+        for (packageName in packages) {
+
+            try {
+
+                val launchIntent =
+                    packageManager
+                        .getLaunchIntentForPackage(
+                            packageName
+                        )
+
+                if (launchIntent != null) {
+
+                    launchIntent.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+
+                    startActivity(
+                        launchIntent
+                    )
+
+                    speak(
+                        "Opening $requestedName"
+                    )
+
+                    return true
+                }
+
+            } catch (_: Exception) {
+                // Try next package
+            }
+        }
+    }
+
+
+    // -----------------------------------------------------
+    // DYNAMIC INSTALLED APP SEARCH
+    // -----------------------------------------------------
+
+    try {
+
+        val launcherIntent =
+            Intent(
+                Intent.ACTION_MAIN
+            ).apply {
+
+                addCategory(
+                    Intent.CATEGORY_LAUNCHER
+                )
+            }
+
+        val apps =
+            packageManager
+                .queryIntentActivities(
+                    launcherIntent,
+                    PackageManager.MATCH_ALL
+                )
+
+        var bestActivity:
+                android.content.pm.ActivityInfo? =
+            null
+
+        var bestScore = 0
+
+
+        for (info in apps) {
+
+            val activityInfo =
+                info.activityInfo
+                    ?: continue
+
+            val label =
+                try {
+
+                    activityInfo
+                        .loadLabel(
+                            packageManager
+                        )
+                        ?.toString()
+                        ?: ""
+
+                } catch (_: Exception) {
+                    ""
+                }
+
+            if (label.isBlank()) {
+                continue
+            }
+
+            val packageName =
+                activityInfo.packageName
+
+            val normalizedLabel =
+                normalizeAppName(
+                    label
+                )
+
+            val normalizedPackage =
+                normalizeAppName(
+                    packageName
+                        .substringAfterLast(".")
+                )
+
+
+            // Exact label match
+            if (
+                normalizedLabel ==
+                requested
+            ) {
+
+                bestActivity =
+                    activityInfo
+
+                bestScore = 100
+
+                break
+            }
+
+
+            // Exact package suffix
+            if (
+                normalizedPackage ==
+                requested
+            ) {
+
+                bestActivity =
+                    activityInfo
+
+                bestScore = 95
+
+                break
+            }
+
+
+            val labelScore =
+                similarityScore(
+                    requested,
+                    normalizedLabel
+                )
+
+            val packageScore =
+                similarityScore(
+                    requested,
+                    normalizedPackage
+                )
+
+            val score =
+                maxOf(
+                    labelScore,
+                    packageScore
+                )
+
+
+            if (
+                score >
+                bestScore
+            ) {
+
+                bestScore = score
+                bestActivity =
+                    activityInfo
+            }
+        }
+
+
+        // -------------------------------------------------
+        // LAUNCH BEST MATCH
+        // -------------------------------------------------
+
+        if (
+            bestActivity != null &&
+            bestScore >= 65
+        ) {
+
+            val launchIntent =
+                Intent(
+                    Intent.ACTION_MAIN
+                ).apply {
+
+                    addCategory(
+                        Intent.CATEGORY_LAUNCHER
+                    )
+
+                    component =
+                        android.content.ComponentName(
+                            bestActivity.packageName,
+                            bestActivity.name
+                        )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+
+            try {
+
+                startActivity(
+                    launchIntent
+                )
+
+                speak(
+                    "Opening $requestedName"
+                )
+
+                return true
+
+            } catch (_: Exception) {
+                // Continue to fallback
+            }
+        }
+
+    } catch (_: Exception) {
+        // Continue to fallback
+    }
+
+
+    // -----------------------------------------------------
+    // FINAL DIRECT PACKAGE FALLBACK
+    // -----------------------------------------------------
+
+    try {
+
+        val directIntent =
+            packageManager
+                .getLaunchIntentForPackage(
+                    requestedName
+                )
+
+        if (directIntent != null) {
+
+            directIntent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
+
+            startActivity(
+                directIntent
+            )
+
+            speak(
+                "Opening $requestedName"
+            )
+
+            return true
+        }
+
+    } catch (_: Exception) {}
+
+
+    // -----------------------------------------------------
+    // NOT FOUND
+    // -----------------------------------------------------
+
+    speak(
+        "I didn't find $requestedName on your phone."
+    )
+
+    return true
+}
+
+
+// ---------------------------------------------------------
+// APP NAME SIMILARITY
+// ---------------------------------------------------------
+
+private fun similarityScore(
+    a: String,
+    b: String
+): Int {
+
+    if (
+        a.isBlank() ||
+        b.isBlank()
+    ) {
+        return 0
+    }
+
+    if (a == b) {
+        return 100
+    }
+
+    if (
+        a.contains(b) ||
+        b.contains(a)
+    ) {
+        return 85
+    }
+
+    val distance =
+        levenshteinDistance(
+            a,
+            b
+        )
+
+    val maxLength =
+        maxOf(
+            a.length,
+            b.length
+        )
+
+    if (maxLength == 0) {
+        return 0
+    }
+
+    return (
+        (
+            1.0 -
+                    distance.toDouble() /
+                    maxLength
+        ) * 100
+        ).toInt()
+}
+
+
+// ---------------------------------------------------------
+// LEVENSHTEIN DISTANCE
+// ---------------------------------------------------------
+
+private fun levenshteinDistance(
+    a: String,
+    b: String
+): Int {
+
+    val dp =
+        Array(
+            a.length + 1
+        ) {
+            IntArray(
+                b.length + 1
+            )
+        }
+
 
     for (i in 0..a.length) {
         dp[i][0] = i
@@ -1344,182 +1907,32 @@ private fun levenshteinDistance(a: String, b: String): Int {
         dp[0][j] = j
     }
 
+
     for (i in 1..a.length) {
 
         for (j in 1..b.length) {
 
             val cost =
-                if (a[i - 1] == b[j - 1]) 0 else 1
+                if (
+                    a[i - 1] ==
+                    b[j - 1]
+                ) {
+                    0
+                } else {
+                    1
+                }
 
-            dp[i][j] = minOf(
-                dp[i - 1][j] + 1,
-                dp[i][j - 1] + 1,
-                dp[i - 1][j - 1] + cost
-            )
+            dp[i][j] =
+                minOf(
+                    dp[i - 1][j] + 1,
+                    dp[i][j - 1] + 1,
+                    dp[i - 1][j - 1] + cost
+                )
         }
     }
 
     return dp[a.length][b.length]
 }
-
-        val apps =
-            try {
-
-                packageManager
-                    .queryIntentActivities(
-                        launcherIntent,
-                        PackageManager.MATCH_DEFAULT_ONLY
-                    )
-
-            } catch (_: Exception) {
-
-                emptyList()
-            }
-
-        var bestPackage: String? = null
-        var bestScore = 0
-
-        for (info in apps) {
-
-            val label =
-                info.loadLabel(
-                    packageManager
-                )
-                    ?.toString()
-                    ?: continue
-
-            val normalizedLabel =
-                normalizeAppName(label)
-
-            val packageName =
-                info.activityInfo.packageName
-
-            val normalizedPackage =
-                normalizeAppName(
-                    packageName
-                        .substringAfterLast(".")
-                )
-
-            var score = 0
-
-            if (
-                normalizedLabel ==
-                requested
-            ) {
-                score = 100
-            } else if (
-                normalizedLabel.contains(requested)
-            ) {
-                score = 80
-            } else if (
-                requested.contains(normalizedLabel)
-            ) {
-                score = 70
-            } else if (
-                normalizedPackage == requested
-            ) {
-                score = 90
-            } else if (
-                normalizedPackage.contains(requested)
-            ) {
-                score = 60
-            }
-
-            if (score > bestScore) {
-
-                bestScore = score
-                bestPackage = packageName
-            }
-        }
-
-        if (bestPackage == null) {
-
-            val direct =
-                try {
-                    packageManager
-                        .getLaunchIntentForPackage(
-                            requestedName
-                        )
-                } catch (_: Exception) {
-                    null
-                }
-
-            if (direct != null) {
-
-                try {
-
-                    direct.addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-
-                    startActivity(direct)
-
-                    speak(
-                        "Opening $requestedName"
-                    )
-
-                    return true
-
-                } catch (_: Exception) {}
-            }
-
-            return false
-        }
-
-        return try {
-
-            val launchIntent =
-                packageManager
-                    .getLaunchIntentForPackage(
-                        bestPackage
-                    )
-
-            if (launchIntent != null) {
-
-                launchIntent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-
-                startActivity(launchIntent)
-
-                speak(
-                    "Opening $requestedName"
-                )
-
-                true
-
-            } else {
-
-                false
-            }
-
-        } catch (_: Exception) {
-
-            false
-        }
-    }
-
-    private fun normalizeAppName(
-        value: String
-    ): String {
-
-        return value
-            .lowercase(Locale.getDefault())
-            .replace(
-                Regex("[^a-z0-9]"),
-                ""
-            )
-            .replace(
-                "application",
-                ""
-            )
-            .replace(
-                "app",
-                ""
-            )
-            .trim()
-    }
-
     // =========================================================
     // NUMBER WORDS
     // =========================================================
@@ -2931,9 +3344,37 @@ private fun levenshteinDistance(a: String, b: String): Int {
 
     private fun goHome() {
 
-        try {
+    try {
 
-            val intent =
+        val homeIntent =
+            Intent(
+                Intent.ACTION_MAIN
+            ).apply {
+
+                addCategory(
+                    Intent.CATEGORY_HOME
+                )
+
+                addCategory(
+                    Intent.CATEGORY_DEFAULT
+                )
+
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+            }
+
+        val resolved =
+            packageManager.resolveActivity(
+                homeIntent,
+                PackageManager.MATCH_DEFAULT_ONLY
+            )
+
+        if (
+            resolved?.activityInfo != null
+        ) {
+
+            val explicitHome =
                 Intent(
                     Intent.ACTION_MAIN
                 ).apply {
@@ -2946,12 +3387,49 @@ private fun levenshteinDistance(a: String, b: String): Int {
                         Intent.CATEGORY_DEFAULT
                     )
 
-                    flags =
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                                Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    component =
+                        android.content.ComponentName(
+                            resolved.activityInfo.packageName,
+                            resolved.activityInfo.name
+                        )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
                 }
 
-            startActivity(intent)
+            startActivity(
+                explicitHome
+            )
+
+        } else {
+
+            startActivity(
+                homeIntent
+            )
+        }
+
+    } catch (_: Exception) {
+
+        try {
+
+            val fallback =
+                Intent(
+                    Intent.ACTION_MAIN
+                ).apply {
+
+                    addCategory(
+                        Intent.CATEGORY_HOME
+                    )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(
+                fallback
+            )
 
         } catch (_: Exception) {
 
@@ -2960,7 +3438,8 @@ private fun levenshteinDistance(a: String, b: String): Int {
             )
         }
     }
-
+}
+    
     // =========================================================
     // TTS
     // =========================================================
