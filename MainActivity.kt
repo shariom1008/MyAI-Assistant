@@ -10,6 +10,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
+import java.util.Locale
 import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
