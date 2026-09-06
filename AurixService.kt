@@ -2931,29 +2931,28 @@ class AurixService :
     val c = command
         .lowercase(Locale.getDefault())
         .trim()
+        .replace(Regex("\\s+"), " ")
 
-    return c == "close" ||
-            c == "exit" ||
-            c == "quit" ||
-
+    return c == "home" ||
             c == "go home" ||
             c == "going home" ||
             c == "go to home" ||
             c == "going to home" ||
-
-            c == "home" ||
             c == "home screen" ||
-
+            c == "go home screen" ||
             c == "go to home screen" ||
             c == "going to home screen" ||
-
+            c == "back to home" ||
+            c == "return home" ||
+            c == "return to home" ||
+            c == "close" ||
+            c == "exit" ||
+            c == "quit" ||
             c == "close app" ||
             c == "close application" ||
-
             c == "band app" ||
             c == "aurix home"
-}
-
+    }
     private fun goHome() {
 
         try {
