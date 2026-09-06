@@ -7,76 +7,46 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.Gravity
 import android.view.View
+import android.view.Window
 import android.view.WindowInsets
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 
-class MainActivity : ComponentActivity() {
+class MainActivity : android.app.Activity() {
 
+    private lateinit var root: FrameLayout
+    private lateinit var activateButton: Button
     private lateinit var statusText: TextView
     private lateinit var commandText: TextView
-    private lateinit var orbText: TextView
-    private lateinit var activateButton: Button
+    private lateinit var orb: TextView
 
-    private val handler =
-        Handler(Looper.getMainLooper())
+    private var active = false
 
-    private var pendingStart = false
+    // =========================================================
+    // COLORS
+    // =========================================================
 
-    companion object {
-        private const val MIC_PERMISSION = 1001
-        private const val NOTIFICATION_PERMISSION = 1002
-    }
+    private val backgroundColor =
+        Color.rgb(7, 10, 18)
 
-    private val aurixReceiver =
-        object : BroadcastReceiver() {
+    private val cardColor =
+        Color.rgb(17, 22, 35)
 
-            override fun onReceive(
-                context: Context,
-                intent: Intent
-            ) {
+    private val accentColor =
+        Color.rgb(0, 220, 255)
 
-                when (
-                    intent.getStringExtra(
-                        AurixService.EXTRA_TYPE
-                    )
-                ) {
-
-                    AurixService.TYPE_STATUS -> {
-
-                        val status =
-                            intent.getStringExtra(
-                                AurixService.EXTRA_TEXT
-                            ) ?: "READY"
-
-                        updateStatus(status)
-                    }
-
-                    AurixService.TYPE_COMMAND -> {
-
-                        val command =
-                            intent.getStringExtra(
-                                AurixService.EXTRA_TEXT
-                            ) ?: ""
-
-                        commandText.text = command
-                    }
-                }
-            }
-        }
+    // =========================================================
+    // ON CREATE
+    // =========================================================
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -84,52 +54,111 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
+        requestPermissionsIfNeeded()
+
         window.statusBarColor =
-            Color.rgb(3, 6, 15)
+            backgroundColor
 
         window.navigationBarColor =
-            Color.rgb(3, 6, 15)
+            backgroundColor
 
         createInterface()
 
-        val filter =
-            IntentFilter(
-                AurixService.ACTION_EVENT
-            )
+        registerAurixReceiver()
 
-        ContextCompat.registerReceiver(
-            this,
-            aurixReceiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        active =
+            AurixService.isRunning
 
-        requestPermissionsIfNeeded()
+        updateInterface()
     }
 
-    // =====================================================
-    // PREMIUM INTERFACE
-    // =====================================================
+    // =========================================================
+    // PERMISSIONS
+    // =========================================================
+
+    private fun requestPermissionsIfNeeded() {
+
+        val permissions =
+            mutableListOf<String>()
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.M
+        ) {
+
+            if (
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.RECORD_AUDIO
+                ) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+
+                permissions.add(
+                    Manifest.permission.RECORD_AUDIO
+                )
+            }
+
+            if (
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.CAMERA
+                ) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+
+                permissions.add(
+                    Manifest.permission.CAMERA
+                )
+            }
+        }
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
+        ) {
+
+            if (
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+
+                permissions.add(
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            }
+        }
+
+        if (permissions.isNotEmpty()) {
+
+            requestPermissions(
+                permissions.toTypedArray(),
+                501
+            )
+        }
+    }
+
+    // =========================================================
+    // PREMIUM UI
+    // =========================================================
 
     private fun createInterface() {
 
-        val root = FrameLayout(this)
+        root =
+            FrameLayout(this)
 
-        val background =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(3, 6, 15),
-                    Color.rgb(7, 12, 28),
-                    Color.rgb(2, 5, 14)
-                )
-            )
+        root.setBackgroundColor(
+            backgroundColor
+        )
 
-        root.background = background
+        setContentView(root)
 
-        // =================================================
-        // TOP
-        // =================================================
+        // -----------------------------------------------------
+        // TOP SECTION
+        // -----------------------------------------------------
 
         val topLayout =
             LinearLayout(this)
@@ -149,12 +178,8 @@ class MainActivity : ComponentActivity() {
         topParams.gravity =
             Gravity.TOP
 
-        topParams.setMargins(
-            0,
-            55,
-            0,
-            0
-        )
+        topParams.topMargin =
+            dp(42)
 
         root.addView(
             topLayout,
@@ -164,16 +189,23 @@ class MainActivity : ComponentActivity() {
         val title =
             TextView(this)
 
-        title.text = "AURIX"
-        title.textSize = 34f
-        title.setTextColor(Color.WHITE)
-        title.gravity = Gravity.CENTER
+        title.text =
+            "A U R I X"
 
-        title.typeface =
-            Typeface.create(
-                "sans-serif",
-                Typeface.BOLD
-            )
+        title.textSize =
+            32f
+
+        title.setTextColor(
+            accentColor
+        )
+
+        title.gravity =
+            Gravity.CENTER
+
+        title.setTypeface(
+            null,
+            android.graphics.Typeface.BOLD
+        )
 
         topLayout.addView(title)
 
@@ -181,19 +213,17 @@ class MainActivity : ComponentActivity() {
             TextView(this)
 
         subtitle.text =
-            "YOUR INTELLIGENT VOICE ASSISTANT"
+            "INTELLIGENT VOICE ASSISTANT"
 
-        subtitle.textSize = 11f
+        subtitle.textSize =
+            11f
 
         subtitle.setTextColor(
-            Color.rgb(130, 170, 230)
+            Color.LTGRAY
         )
 
         subtitle.gravity =
             Gravity.CENTER
-
-        subtitle.letterSpacing =
-            0.15f
 
         val subtitleParams =
             LinearLayout.LayoutParams(
@@ -201,156 +231,100 @@ class MainActivity : ComponentActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
 
-        subtitleParams.topMargin = 6
+        subtitleParams.topMargin =
+            dp(5)
 
         topLayout.addView(
             subtitle,
             subtitleParams
         )
 
-        // =================================================
-        // ORB
-        // =================================================
+        // -----------------------------------------------------
+        // CENTER ORB
+        // -----------------------------------------------------
 
-        val orbContainer =
-            FrameLayout(this)
+        orb =
+            TextView(this)
+
+        orb.text =
+            "A"
+
+        orb.textSize =
+            58f
+
+        orb.gravity =
+            Gravity.CENTER
+
+        orb.setTextColor(
+            Color.WHITE
+        )
+
+        orb.background =
+            createCircle(
+                Color.rgb(
+                    15,
+                    55,
+                    75
+                )
+            )
+
+        val orbSize =
+            dp(170)
 
         val orbParams =
             FrameLayout.LayoutParams(
-                250,
-                250
+                orbSize,
+                orbSize
             )
 
         orbParams.gravity =
             Gravity.CENTER
 
-        orbParams.topMargin = -20
+        orbParams.topMargin =
+            dp(35)
 
         root.addView(
-            orbContainer,
+            orb,
             orbParams
         )
 
-        val outerOrb =
-            View(this)
+        // -----------------------------------------------------
+        // STATUS
+        // -----------------------------------------------------
 
-        val outerDrawable =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(25, 90, 190),
-                    Color.rgb(70, 25, 180)
-                )
-            )
-
-        outerDrawable.shape =
-            GradientDrawable.OVAL
-
-        outerDrawable.setStroke(
-            3,
-            Color.rgb(70, 160, 255)
-        )
-
-        outerOrb.background =
-            outerDrawable
-
-        val outerParams =
-            FrameLayout.LayoutParams(
-                220,
-                220
-            )
-
-        outerParams.gravity =
-            Gravity.CENTER
-
-        orbContainer.addView(
-            outerOrb,
-            outerParams
-        )
-
-        val innerOrb =
-            View(this)
-
-        val innerDrawable =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(5, 30, 75),
-                    Color.rgb(15, 100, 190)
-                )
-            )
-
-        innerDrawable.shape =
-            GradientDrawable.OVAL
-
-        innerDrawable.setStroke(
-            2,
-            Color.rgb(100, 200, 255)
-        )
-
-        innerOrb.background =
-            innerDrawable
-
-        val innerParams =
-            FrameLayout.LayoutParams(
-                165,
-                165
-            )
-
-        innerParams.gravity =
-            Gravity.CENTER
-
-        orbContainer.addView(
-            innerOrb,
-            innerParams
-        )
-
-        orbText =
+        statusText =
             TextView(this)
 
-        orbText.text = "AI"
-        orbText.textSize = 32f
-        orbText.setTextColor(Color.WHITE)
-        orbText.gravity = Gravity.CENTER
+        statusText.textSize =
+            14f
 
-        orbText.typeface =
-            Typeface.DEFAULT_BOLD
-
-        val orbTextParams =
-            FrameLayout.LayoutParams(
-                165,
-                165
-            )
-
-        orbTextParams.gravity =
+        statusText.gravity =
             Gravity.CENTER
 
-        orbContainer.addView(
-            orbText,
-            orbTextParams
+        statusText.setTextColor(
+            accentColor
         )
 
-        val pulse =
-            android.view.animation.AlphaAnimation(
-                0.65f,
-                1f
+        val statusParams =
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                dp(40)
             )
 
-        pulse.duration = 1200
+        statusParams.gravity =
+            Gravity.CENTER_HORIZONTAL
 
-        pulse.repeatMode =
-            android.view.animation.Animation.REVERSE
+        statusParams.topMargin =
+            dp(225)
 
-        pulse.repeatCount =
-            android.view.animation.Animation.INFINITE
-
-        orbContainer.startAnimation(
-            pulse
+        root.addView(
+            statusText,
+            statusParams
         )
 
-        // =================================================
+        // -----------------------------------------------------
         // COMMAND CARD
-        // =================================================
+        // -----------------------------------------------------
 
         val commandCard =
             LinearLayout(this)
@@ -359,146 +333,91 @@ class MainActivity : ComponentActivity() {
             LinearLayout.VERTICAL
 
         commandCard.setPadding(
-            28,
-            22,
-            28,
-            22
-        )
-
-        val cardDrawable =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(10, 20, 42),
-                    Color.rgb(7, 13, 30)
-                )
-            )
-
-        cardDrawable.cornerRadius =
-            30f
-
-        cardDrawable.setStroke(
-            1,
-            Color.rgb(35, 85, 150)
+            dp(20),
+            dp(15),
+            dp(20),
+            dp(15)
         )
 
         commandCard.background =
-            cardDrawable
-
-        val cardParams =
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                150
+            roundedBackground(
+                cardColor,
+                dp(18)
             )
 
-        cardParams.gravity =
+        val commandCardParams =
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                dp(105)
+            )
+
+        commandCardParams.gravity =
             Gravity.CENTER_HORIZONTAL
 
-        cardParams.setMargins(
-            25,
-            250,
-            25,
-            0
-        )
+        commandCardParams.leftMargin =
+            dp(24)
+
+        commandCardParams.rightMargin =
+            dp(24)
+
+        commandCardParams.topMargin =
+            dp(285)
 
         root.addView(
             commandCard,
-            cardParams
+            commandCardParams
         )
 
-        val commandLabel =
+        val commandTitle =
             TextView(this)
 
-        commandLabel.text =
+        commandTitle.text =
             "LAST COMMAND"
 
-        commandLabel.textSize = 10f
+        commandTitle.textSize =
+            10f
 
-        commandLabel.setTextColor(
-            Color.rgb(100, 160, 230)
+        commandTitle.setTextColor(
+            Color.GRAY
         )
 
-        commandLabel.letterSpacing =
-            0.15f
-
         commandCard.addView(
-            commandLabel
+            commandTitle
         )
 
         commandText =
             TextView(this)
 
         commandText.text =
-            "Say something..."
+            "No command yet"
 
         commandText.textSize =
-            18f
+            17f
 
         commandText.setTextColor(
             Color.WHITE
         )
 
-        commandText.gravity =
-            Gravity.CENTER_VERTICAL
+        commandText.maxLines =
+            2
 
         val commandParams =
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                90
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
+
+        commandParams.topMargin =
+            dp(8)
 
         commandCard.addView(
             commandText,
             commandParams
         )
 
-        // =================================================
-        // STATUS
-        // =================================================
-
-        statusText =
-            TextView(this)
-
-        statusText.text =
-            "READY"
-
-        statusText.textSize =
-            13f
-
-        statusText.setTextColor(
-            Color.rgb(100, 190, 255)
-        )
-
-        statusText.gravity =
-            Gravity.CENTER
-
-        statusText.letterSpacing =
-            0.12f
-
-        val statusParams =
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                45
-            )
-
-        statusParams.gravity =
-            Gravity.CENTER_HORIZONTAL
-
-        statusParams.setMargins(
-            20,
-            410,
-            20,
-            0
-        )
-
-        root.addView(
-            statusText,
-            statusParams
-        )
-
-        // =================================================
+        // -----------------------------------------------------
         // FIXED BOTTOM BUTTON
-        // =================================================
+        // -----------------------------------------------------
 
         activateButton =
             Button(this)
@@ -507,214 +426,145 @@ class MainActivity : ComponentActivity() {
             "ACTIVATE AURIX"
 
         activateButton.textSize =
-            16f
+            15f
 
         activateButton.setTextColor(
             Color.WHITE
         )
 
-        activateButton.typeface =
-            Typeface.DEFAULT_BOLD
-
-        activateButton.isAllCaps =
-            false
-
-        val buttonDrawable =
-            GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(
-                    Color.rgb(20, 95, 210),
-                    Color.rgb(75, 35, 180)
-                )
-            )
-
-        buttonDrawable.cornerRadius =
-            60f
+        activateButton.setTypeface(
+            null,
+            android.graphics.Typeface.BOLD
+        )
 
         activateButton.background =
-            buttonDrawable
+            roundedBackground(
+                Color.rgb(
+                    0,
+                    120,
+                    150
+                ),
+                dp(22)
+            )
 
         activateButton.setOnClickListener {
-            toggleAurix()
+
+            if (active) {
+
+                deactivateAurix()
+
+            } else {
+
+                activateAurix()
+            }
         }
 
         val buttonParams =
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                64
+                dp(64)
             )
 
         buttonParams.gravity =
             Gravity.BOTTOM
 
         buttonParams.leftMargin =
-            28
+            dp(24)
 
         buttonParams.rightMargin =
-            28
+            dp(24)
 
+        // IMPORTANT:
+        // Initial safe bottom margin
         buttonParams.bottomMargin =
-            18
+            dp(30)
 
         root.addView(
             activateButton,
             buttonParams
         )
 
-        // =================================================
-        // IMPORTANT: NAVIGATION BAR SAFE AREA
-        // =================================================
+        // -----------------------------------------------------
+        // NAVIGATION BAR INSET FIX
+        // -----------------------------------------------------
 
-        root.setOnApplyWindowInsetsListener {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.R
+        ) {
+
+            root.setOnApplyWindowInsetsListener {
                 view,
                 insets ->
 
-            val bottomInset =
-                if (Build.VERSION.SDK_INT >= 30) {
-
+                val navigationInsets =
                     insets.getInsets(
                         WindowInsets.Type.navigationBars()
-                    ).bottom
+                    )
 
-                } else {
-                    0
-                }
+                val params =
+                    activateButton.layoutParams
+                        as FrameLayout.LayoutParams
 
-            val params =
-                activateButton.layoutParams
-                    as FrameLayout.LayoutParams
+                params.bottomMargin =
+                    navigationInsets.bottom +
+                        dp(18)
 
-            params.bottomMargin =
-                bottomInset + 18
+                activateButton.layoutParams =
+                    params
 
-            activateButton.layoutParams =
-                params
-
-            insets
-        }
-
-        root.post {
-            root.requestApplyInsets()
-        }
-
-        setContentView(root)
-
-        updateButton()
-    }
-
-    // =====================================================
-    // PERMISSIONS
-    // =====================================================
-
-    private fun requestPermissionsIfNeeded() {
-
-        if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-
-            requestPermissions(
-                arrayOf(
-                    Manifest.permission.RECORD_AUDIO
-                ),
-                MIC_PERMISSION
-            )
-
-            return
-        }
-
-        requestNotificationPermission()
-    }
-
-    private fun requestNotificationPermission() {
-
-        if (
-            Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-
-            requestPermissions(
-                arrayOf(
-                    Manifest.permission.POST_NOTIFICATIONS
-                ),
-                NOTIFICATION_PERMISSION
-            )
-        }
-    }
-
-    // =====================================================
-    // AURIX START / STOP
-    // =====================================================
-
-    private fun toggleAurix() {
-
-        if (AurixService.isRunning) {
-
-            stopAurix()
-
-        } else {
-
-            if (
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.RECORD_AUDIO
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-
-                pendingStart = true
-
-                requestPermissions(
-                    arrayOf(
-                        Manifest.permission.RECORD_AUDIO
-                    ),
-                    MIC_PERMISSION
-                )
-
-                return
+                insets
             }
-
-            startAurix()
         }
+
+        root.requestApplyInsets()
     }
 
-    private fun startAurix() {
+    // =========================================================
+    // ACTIVATE
+    // =========================================================
 
-        try {
+    private fun activateAurix() {
 
-            val intent =
-                Intent(
-                    this,
-                    AurixService::class.java
-                )
-
-            intent.action =
-                AurixService.ACTION_START
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
 
             ContextCompat.startForegroundService(
                 this,
-                intent
+                Intent(
+                    this,
+                    AurixService::class.java
+                ).apply {
+                    action =
+                        AurixService.ACTION_START
+                }
             )
 
-            updateStatus(
-                "STARTING AURIX..."
+        } else {
+
+            startService(
+                Intent(
+                    this,
+                    AurixService::class.java
+                ).apply {
+                    action =
+                        AurixService.ACTION_START
+                }
             )
-
-        } catch (_: Exception) {
-
-            Toast.makeText(
-                this,
-                "Could not start AURIX",
-                Toast.LENGTH_SHORT
-            ).show()
         }
+
+        active = true
+
+        updateInterface()
     }
 
-    private fun stopAurix() {
+    // =========================================================
+    // DEACTIVATE
+    // =========================================================
+
+    private fun deactivateAurix() {
 
         val intent =
             Intent(
@@ -727,132 +577,226 @@ class MainActivity : ComponentActivity() {
 
         startService(intent)
 
-        updateStatus("READY")
-        updateButton()
+        active = false
+
+        updateInterface()
     }
 
-    // =====================================================
-    // UI STATUS
-    // =====================================================
+    // =========================================================
+    // RECEIVER
+    // =========================================================
 
-    private fun updateStatus(
-        status: String
-    ) {
+    private val aurixReceiver =
+        object : BroadcastReceiver() {
 
-        statusText.text =
-            status
+            override fun onReceive(
+                context: Context?,
+                intent: Intent?
+            ) {
+
+                if (
+                    intent?.action !=
+                    AurixService.ACTION_EVENT
+                ) return
+
+                val type =
+                    intent.getStringExtra(
+                        AurixService.EXTRA_TYPE
+                    )
+
+                val text =
+                    intent.getStringExtra(
+                        AurixService.EXTRA_TEXT
+                    )
+                        ?: ""
+
+                when (type) {
+
+                    AurixService.TYPE_STATUS -> {
+
+                        statusText.text =
+                            text
+
+                        active =
+                            AurixService.isRunning
+
+                        updateInterface()
+                    }
+
+                    AurixService.TYPE_COMMAND -> {
+
+                        commandText.text =
+                            text
+
+                        statusText.text =
+                            "PROCESSING"
+                    }
+                }
+            }
+        }
+
+    // =========================================================
+    // REGISTER RECEIVER
+    // =========================================================
+
+    private fun registerAurixReceiver() {
+
+        val filter =
+            IntentFilter(
+                AurixService.ACTION_EVENT
+            )
 
         if (
-            status.contains(
-                "LISTEN",
-                true
-            )
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
         ) {
 
-            orbText.text =
-                "●"
-
-            activateButton.text =
-                "DEACTIVATE AURIX"
+            registerReceiver(
+                aurixReceiver,
+                filter,
+                Context.RECEIVER_NOT_EXPORTED
+            )
 
         } else {
 
-            orbText.text =
-                "AI"
-
-            activateButton.text =
-                if (
-                    AurixService.isRunning
-                ) {
-                    "DEACTIVATE AURIX"
-                } else {
-                    "ACTIVATE AURIX"
-                }
+            @Suppress("DEPRECATION")
+            registerReceiver(
+                aurixReceiver,
+                filter
+            )
         }
-
-        updateButton()
     }
 
-    private fun updateButton() {
+    // =========================================================
+    // UPDATE UI
+    // =========================================================
 
-        if (
-            !::activateButton.isInitialized
-        ) {
+    private fun updateInterface() {
+
+        if (!::activateButton.isInitialized) {
             return
         }
 
-        activateButton.text =
-            if (AurixService.isRunning) {
+        if (active) {
+
+            activateButton.text =
                 "DEACTIVATE AURIX"
-            } else {
-                "ACTIVATE AURIX"
-            }
-    }
 
-    // =====================================================
-    // PERMISSION RESULT
-    // =====================================================
+            activateButton.background =
+                roundedBackground(
+                    Color.rgb(
+                        150,
+                        45,
+                        60
+                    ),
+                    dp(22)
+                )
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+            statusText.text =
+                "LISTENING"
 
-        super.onRequestPermissionsResult(
-            requestCode,
-            permissions,
-            grantResults
-        )
-
-        if (
-            requestCode ==
-            MIC_PERMISSION
-        ) {
-
-            if (
-                grantResults.isNotEmpty() &&
-                grantResults[0] ==
-                PackageManager.PERMISSION_GRANTED
-            ) {
-
-                requestNotificationPermission()
-
-                if (pendingStart) {
-
-                    pendingStart =
-                        false
-
-                    handler.postDelayed(
-                        {
-                            startAurix()
-                        },
-                        500
+            orb.background =
+                createCircle(
+                    Color.rgb(
+                        0,
+                        100,
+                        130
                     )
-                }
+                )
 
-            } else {
+        } else {
 
-                Toast.makeText(
-                    this,
-                    "Microphone permission is required",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+            activateButton.text =
+                "ACTIVATE AURIX"
+
+            activateButton.background =
+                roundedBackground(
+                    Color.rgb(
+                        0,
+                        120,
+                        150
+                    ),
+                    dp(22)
+                )
+
+            statusText.text =
+                "READY"
+
+            orb.background =
+                createCircle(
+                    Color.rgb(
+                        15,
+                        55,
+                        75
+                    )
+                )
         }
     }
 
-    override fun onResume() {
+    // =========================================================
+    // DRAWABLE HELPERS
+    // =========================================================
 
-        super.onResume()
+    private fun roundedBackground(
+        color: Int,
+        radius: Int
+    ): GradientDrawable {
 
-        handler.postDelayed(
-            {
-                updateButton()
-            },
-            300
-        )
+        return GradientDrawable().apply {
+
+            setColor(color)
+
+            cornerRadius =
+                radius.toFloat()
+
+            setStroke(
+                dp(1),
+                Color.argb(
+                    80,
+                    255,
+                    255,
+                    255
+                )
+            )
+        }
     }
+
+    private fun createCircle(
+        color: Int
+    ): GradientDrawable {
+
+        return GradientDrawable().apply {
+
+            shape =
+                GradientDrawable.OVAL
+
+            setColor(color)
+
+            setStroke(
+                dp(2),
+                Color.argb(
+                    120,
+                    0,
+                    220,
+                    255
+                )
+            )
+        }
+    }
+
+    private fun dp(
+        value: Int
+    ): Int {
+
+        return (
+            value *
+                resources.displayMetrics.density
+            ).toInt()
+    }
+
+    // =========================================================
+    // DESTROY
+    // =========================================================
 
     override fun onDestroy() {
 
