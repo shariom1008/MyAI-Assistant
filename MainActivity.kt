@@ -1,27 +1,28 @@
 package com.example.myaiassistant
 
 import android.Manifest
+import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
-import java.util.Locale
 import android.view.Gravity
 import android.view.View
-import android.view.WindowInsets
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import java.util.Locale
 
-class MainActivity : android.app.Activity() {
+class MainActivity : Activity() {
 
     private lateinit var root: FrameLayout
     private lateinit var statusText: TextView
@@ -38,10 +39,7 @@ class MainActivity : android.app.Activity() {
                 intent: Intent?
             ) {
 
-                if (
-                    intent?.action !=
-                    AurixService.ACTION_EVENT
-                ) {
+                if (intent?.action != AurixService.ACTION_EVENT) {
                     return
                 }
 
@@ -58,37 +56,31 @@ class MainActivity : android.app.Activity() {
                 when (type) {
 
                     AurixService.TYPE_STATUS -> {
+                        updateStatus(text)
+                    }
 
-                        updateStatus(
-                            text
-                        )
+                    AurixService.TYPE_COMMAND -> {
+                        updateStatus("PROCESSING")
+                    }
+
+                    AurixService.TYPE_SPEAK -> {
+                        updateStatus("LISTENING")
                     }
                 }
             }
         }
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-        super.onCreate(
-            savedInstanceState
-        )
-
-        window.statusBarColor =
-            Color.TRANSPARENT
-
-        window.navigationBarColor =
-            Color.BLACK
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.BLACK
 
         createInterface()
-
+        registerAurixReceiver()
         requestPermissionsIfNeeded()
 
-        registerAurixReceiver()
-
-        active =
-            AurixService.isRunning
+        active = AurixService.isRunning
 
         updateInterface()
     }
@@ -99,65 +91,36 @@ class MainActivity : android.app.Activity() {
 
     private fun createInterface() {
 
-        root =
-            FrameLayout(this)
+        root = FrameLayout(this)
 
         root.setBackgroundColor(
-            Color.rgb(
-                4,
-                7,
-                18
-            )
+            Color.rgb(3, 6, 16)
         )
 
-        setContentView(
-            root
-        )
+        setContentView(root)
 
-        // -----------------------------------------------------
-        // BACKGROUND GLOW
-        // -----------------------------------------------------
+        // Background
+        val background = View(this)
 
-        val glow =
-            View(this)
-
-        val glowDrawable =
+        background.background =
             GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(
-                    Color.rgb(
-                        12,
-                        28,
-                        65
-                    ),
-                    Color.rgb(
-                        5,
-                        8,
-                        20
-                    ),
-                    Color.rgb(
-                        10,
-                        18,
-                        40
-                    )
+                    Color.rgb(8, 20, 48),
+                    Color.rgb(3, 6, 16),
+                    Color.rgb(14, 8, 38)
                 )
             )
 
-        glow.background =
-            glowDrawable
-
         root.addView(
-            glow,
+            background,
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
         )
 
-        // -----------------------------------------------------
-        // MAIN CONTENT
-        // -----------------------------------------------------
-
+        // Main content
         val content =
             LinearLayout(this)
 
@@ -175,9 +138,9 @@ class MainActivity : android.app.Activity() {
 
         contentParams.setMargins(
             dp(20),
-            dp(45),
+            dp(35),
             dp(20),
-            dp(120)
+            dp(115)
         )
 
         root.addView(
@@ -185,30 +148,21 @@ class MainActivity : android.app.Activity() {
             contentParams
         )
 
-        // -----------------------------------------------------
-        // AURIX TITLE
-        // -----------------------------------------------------
+        // =====================================================
+        // TITLE
+        // =====================================================
 
         val title =
             TextView(this)
 
-        title.text =
-            "AURIX"
-
-        title.textSize =
-            34f
-
-        title.setTextColor(
-            Color.WHITE
-        )
-
-        title.gravity =
-            Gravity.CENTER
-
+        title.text = "AURIX"
+        title.textSize = 36f
+        title.setTextColor(Color.WHITE)
+        title.gravity = Gravity.CENTER
         title.typeface =
-            android.graphics.Typeface.create(
+            Typeface.create(
                 "sans-serif",
-                android.graphics.Typeface.BOLD
+                Typeface.BOLD
             )
 
         content.addView(
@@ -219,107 +173,108 @@ class MainActivity : android.app.Activity() {
             )
         )
 
-        // -----------------------------------------------------
-        // SUBTITLE
-        // -----------------------------------------------------
-
         val subtitle =
             TextView(this)
 
         subtitle.text =
             "INTELLIGENT VOICE ASSISTANT"
 
-        subtitle.textSize =
-            11f
+        subtitle.textSize = 10f
 
         subtitle.setTextColor(
-            Color.rgb(
-                150,
-                165,
-                190
-            )
+            Color.rgb(145, 170, 205)
         )
 
         subtitle.gravity =
             Gravity.CENTER
 
-        subtitle.letterSpacing =
-            0.18f
+        subtitle.letterSpacing = 0.2f
 
         content.addView(
             subtitle,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(30)
+                dp(35)
             )
         )
 
-        // -----------------------------------------------------
-        // CENTER SPACE
-        // -----------------------------------------------------
+        // =====================================================
+        // CENTER
+        // =====================================================
 
         val center =
             FrameLayout(this)
 
-        val centerParams =
+        content.addView(
+            center,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
             )
-
-        content.addView(
-            center,
-            centerParams
         )
 
-        // -----------------------------------------------------
-        // ORB
-        // -----------------------------------------------------
-
-        orb =
+        // Outer glow
+        val outerGlow =
             View(this)
 
-        val orbDrawable =
+        outerGlow.background =
             GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(
-                    Color.rgb(
-                        70,
-                        130,
-                        255
-                    ),
-                    Color.rgb(
-                        120,
-                        55,
-                        220
-                    ),
-                    Color.rgb(
-                        20,
-                        210,
-                        240
-                    )
+                    Color.rgb(30, 90, 210),
+                    Color.rgb(100, 40, 190),
+                    Color.rgb(20, 180, 220)
                 )
             )
 
-        orbDrawable.shape =
-            GradientDrawable.OVAL
+        (outerGlow.background as GradientDrawable)
+            .shape = GradientDrawable.OVAL
 
-        orbDrawable.setStroke(
-            dp(2),
-            Color.argb(
-                170,
-                120,
-                220,
-                255
+        val glowSize = dp(205)
+
+        val glowParams =
+            FrameLayout.LayoutParams(
+                glowSize,
+                glowSize
             )
+
+        glowParams.gravity =
+            Gravity.CENTER
+
+        center.addView(
+            outerGlow,
+            glowParams
         )
 
-        orb.background =
-            orbDrawable
+        // Inner orb
+        orb = View(this)
 
-        val orbSize =
-            dp(180)
+        orb.background =
+            GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(
+                    Color.rgb(55, 105, 225),
+                    Color.rgb(90, 45, 175),
+                    Color.rgb(10, 180, 215)
+                )
+            )
+
+        (orb.background as GradientDrawable)
+            .shape = GradientDrawable.OVAL
+
+        (orb.background as GradientDrawable)
+            .setStroke(
+                dp(2),
+                Color.argb(
+                    190,
+                    160,
+                    225,
+                    255
+                )
+            )
+
+        val orbSize = dp(175)
 
         val orbParams =
             FrameLayout.LayoutParams(
@@ -335,69 +290,43 @@ class MainActivity : android.app.Activity() {
             orbParams
         )
 
-        // -----------------------------------------------------
-        // AURIX CENTER TEXT
-        // -----------------------------------------------------
-
-        val orbText =
+        // AI text
+        val aiText =
             TextView(this)
 
-        orbText.text =
-            "AI"
+        aiText.text = "AI"
+        aiText.textSize = 30f
+        aiText.setTextColor(Color.WHITE)
+        aiText.gravity = Gravity.CENTER
+        aiText.typeface = Typeface.DEFAULT_BOLD
 
-        orbText.textSize =
-            30f
-
-        orbText.setTextColor(
-            Color.WHITE
-        )
-
-        orbText.gravity =
-            Gravity.CENTER
-
-        orbText.typeface =
-            android.graphics.Typeface.DEFAULT_BOLD
-
-        val orbTextParams =
+        val aiParams =
             FrameLayout.LayoutParams(
                 orbSize,
                 orbSize
             )
 
-        orbTextParams.gravity =
+        aiParams.gravity =
             Gravity.CENTER
 
         center.addView(
-            orbText,
-            orbTextParams
+            aiText,
+            aiParams
         )
 
-        // -----------------------------------------------------
-        // STATUS
-        // -----------------------------------------------------
-
+        // Status
         statusText =
             TextView(this)
 
-        statusText.text =
-            "READY"
-
-        statusText.textSize =
-            14f
+        statusText.text = "READY"
+        statusText.textSize = 14f
 
         statusText.setTextColor(
-            Color.rgb(
-                160,
-                220,
-                255
-            )
+            Color.rgb(150, 220, 255)
         )
 
-        statusText.gravity =
-            Gravity.CENTER
-
-        statusText.letterSpacing =
-            0.12f
+        statusText.gravity = Gravity.CENTER
+        statusText.letterSpacing = 0.15f
 
         val statusParams =
             FrameLayout.LayoutParams(
@@ -406,20 +335,19 @@ class MainActivity : android.app.Activity() {
             )
 
         statusParams.gravity =
-            Gravity.CENTER_HORIZONTAL or
-                Gravity.BOTTOM
+            Gravity.BOTTOM
 
         statusParams.bottomMargin =
-            dp(25)
+            dp(20)
 
         center.addView(
             statusText,
             statusParams
         )
 
-        // -----------------------------------------------------
-        // FIXED BOTTOM BUTTON
-        // -----------------------------------------------------
+        // =====================================================
+        // FIXED ACTIVATE BUTTON
+        // =====================================================
 
         activateButton =
             TextView(this)
@@ -427,8 +355,7 @@ class MainActivity : android.app.Activity() {
         activateButton.text =
             "ACTIVATE AURIX"
 
-        activateButton.textSize =
-            16f
+        activateButton.textSize = 16f
 
         activateButton.setTextColor(
             Color.WHITE
@@ -438,13 +365,7 @@ class MainActivity : android.app.Activity() {
             Gravity.CENTER
 
         activateButton.typeface =
-            android.graphics.Typeface.DEFAULT_BOLD
-
-        activateButton.isClickable =
-            true
-
-        activateButton.isFocusable =
-            true
+            Typeface.DEFAULT_BOLD
 
         activateButton.setPadding(
             dp(10),
@@ -459,11 +380,8 @@ class MainActivity : android.app.Activity() {
         activateButton.setOnClickListener {
 
             if (active) {
-
                 deactivateAurix()
-
             } else {
-
                 activateAurix()
             }
         }
@@ -471,30 +389,24 @@ class MainActivity : android.app.Activity() {
         val buttonParams =
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(64)
+                dp(62)
             )
 
         buttonParams.gravity =
-            Gravity.BOTTOM or
-                Gravity.CENTER_HORIZONTAL
+            Gravity.BOTTOM
 
-        buttonParams.leftMargin =
-            dp(24)
-
-        buttonParams.rightMargin =
-            dp(24)
-
-        buttonParams.bottomMargin =
-            dp(18)
+        buttonParams.leftMargin = dp(22)
+        buttonParams.rightMargin = dp(22)
+        buttonParams.bottomMargin = dp(18)
 
         root.addView(
             activateButton,
             buttonParams
         )
 
-        // -----------------------------------------------------
-        // SYSTEM NAVIGATION INSETS
-        // -----------------------------------------------------
+        // =====================================================
+        // NAVIGATION BAR SAFE AREA
+        // =====================================================
 
         ViewCompat.setOnApplyWindowInsetsListener(
             root
@@ -510,7 +422,7 @@ class MainActivity : android.app.Activity() {
                     as FrameLayout.LayoutParams
 
             params.bottomMargin =
-                navigation.bottom + dp(18)
+                navigation.bottom + dp(14)
 
             activateButton.layoutParams =
                 params
@@ -518,13 +430,11 @@ class MainActivity : android.app.Activity() {
             insets
         }
 
-        ViewCompat.requestApplyInsets(
-            root
-        )
+        ViewCompat.requestApplyInsets(root)
     }
 
     // =========================================================
-    // BUTTON BACKGROUND
+    // BUTTON
     // =========================================================
 
     private fun createButtonBackground():
@@ -534,26 +444,18 @@ class MainActivity : android.app.Activity() {
             GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(
-                    Color.rgb(
-                        45,
-                        105,
-                        230
-                    ),
-                    Color.rgb(
-                        115,
-                        55,
-                        210
-                    )
+                    Color.rgb(35, 100, 225),
+                    Color.rgb(115, 50, 205)
                 )
             )
 
         drawable.cornerRadius =
-            dp(32).toFloat()
+            dp(31).toFloat()
 
         drawable.setStroke(
             dp(1),
             Color.argb(
-                120,
+                160,
                 160,
                 220,
                 255
@@ -594,9 +496,7 @@ class MainActivity : android.app.Activity() {
 
             } else {
 
-                startService(
-                    intent
-                )
+                startService(intent)
             }
 
             active = true
@@ -605,8 +505,7 @@ class MainActivity : android.app.Activity() {
 
         } catch (_: Exception) {
 
-            statusText.text =
-                "START FAILED"
+            updateStatus("START FAILED")
         }
     }
 
@@ -626,13 +525,8 @@ class MainActivity : android.app.Activity() {
             AurixService.ACTION_STOP
 
         try {
-
-            startService(
-                intent
-            )
-
-        } catch (_: Exception) {
-        }
+            startService(intent)
+        } catch (_: Exception) {}
 
         active = false
 
@@ -640,7 +534,7 @@ class MainActivity : android.app.Activity() {
     }
 
     // =========================================================
-    // UI STATUS
+    // UI
     // =========================================================
 
     private fun updateStatus(
@@ -649,8 +543,7 @@ class MainActivity : android.app.Activity() {
 
         runOnUiThread {
 
-            statusText.text =
-                status
+            statusText.text = status
 
             when (
                 status.uppercase(
@@ -663,7 +556,7 @@ class MainActivity : android.app.Activity() {
                     statusText.setTextColor(
                         Color.rgb(
                             100,
-                            230,
+                            235,
                             255
                         )
                     )
@@ -671,7 +564,7 @@ class MainActivity : android.app.Activity() {
                     orb.animate()
                         .scaleX(1.08f)
                         .scaleY(1.08f)
-                        .setDuration(250)
+                        .setDuration(220)
                         .start()
                 }
 
@@ -679,16 +572,16 @@ class MainActivity : android.app.Activity() {
 
                     statusText.setTextColor(
                         Color.rgb(
-                            190,
+                            200,
                             140,
                             255
                         )
                     )
 
                     orb.animate()
-                        .scaleX(1.03f)
-                        .scaleY(1.03f)
-                        .setDuration(200)
+                        .scaleX(1.04f)
+                        .scaleY(1.04f)
+                        .setDuration(180)
                         .start()
                 }
 
@@ -696,7 +589,7 @@ class MainActivity : android.app.Activity() {
 
                     statusText.setTextColor(
                         Color.rgb(
-                            160,
+                            155,
                             220,
                             255
                         )
@@ -705,7 +598,7 @@ class MainActivity : android.app.Activity() {
                     orb.animate()
                         .scaleX(1f)
                         .scaleY(1f)
-                        .setDuration(200)
+                        .setDuration(180)
                         .start()
                 }
             }
@@ -742,35 +635,27 @@ class MainActivity : android.app.Activity() {
             ArrayList<String>()
 
         if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.M
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
 
-            if (
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.RECORD_AUDIO
-                ) !=
-                PackageManager.PERMISSION_GRANTED
-            ) {
+            permissions.add(
+                Manifest.permission.RECORD_AUDIO
+            )
+        }
 
-                permissions.add(
-                    Manifest.permission.RECORD_AUDIO
-                )
-            }
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
 
-            if (
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.CAMERA
-                ) !=
-                PackageManager.PERMISSION_GRANTED
-            ) {
-
-                permissions.add(
-                    Manifest.permission.CAMERA
-                )
-            }
+            permissions.add(
+                Manifest.permission.CAMERA
+            )
         }
 
         if (
@@ -782,8 +667,7 @@ class MainActivity : android.app.Activity() {
                 ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.POST_NOTIFICATIONS
-                ) !=
-                PackageManager.PERMISSION_GRANTED
+                ) != PackageManager.PERMISSION_GRANTED
             ) {
 
                 permissions.add(
@@ -792,9 +676,7 @@ class MainActivity : android.app.Activity() {
             }
         }
 
-        if (
-            permissions.isNotEmpty()
-        ) {
+        if (permissions.isNotEmpty()) {
 
             requestPermissions(
                 permissions.toTypedArray(),
@@ -835,16 +717,23 @@ class MainActivity : android.app.Activity() {
         }
     }
 
+    override fun onResume() {
+
+        super.onResume()
+
+        active =
+            AurixService.isRunning
+
+        if (::activateButton.isInitialized) {
+            updateInterface()
+        }
+    }
+
     override fun onDestroy() {
 
         try {
-
-            unregisterReceiver(
-                aurixReceiver
-            )
-
-        } catch (_: Exception) {
-        }
+            unregisterReceiver(aurixReceiver)
+        } catch (_: Exception) {}
 
         super.onDestroy()
     }
