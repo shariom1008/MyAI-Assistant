@@ -412,10 +412,46 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         }
 
         if (
-            command.contains("time") ||
-            command.contains("what time") ||
-            command.contains("kitne baje") ||
-            command.contains("टाइम")
+          command.contains("timer") ||
+          command.contains("set timer") ||
+          command.contains("alarm")
+) {
+
+    val number =
+        Regex("\\d+")
+            .find(command)
+            ?.value
+            ?.toLongOrNull()
+
+    if (number != null && number > 0) {
+
+        setTimer(number)
+
+    } else {
+
+        speak("Please tell me the timer duration.")
+    }
+
+    return
+}
+
+
+// CURRENT TIME
+if (
+    command.contains("what time") ||
+    command == "time" ||
+    command.contains("kitne baje") ||
+    command.contains("टाइम")
+) {
+
+    val time =
+        SimpleDateFormat(
+            "hh:mm a",
+            Locale.US
+        ).format(Date())
+
+    speak("The time is $time.")
+    return
         ) {
 
             val time =
