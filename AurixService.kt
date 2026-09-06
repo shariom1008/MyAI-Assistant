@@ -142,13 +142,15 @@ class AurixService :
         try {
             speechRecognizer?.cancel()
             speechRecognizer?.destroy()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
 
         speechRecognizer = null
 
         try {
             textToSpeech?.stop()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
 
         stopForeground(true)
         stopSelf()
@@ -160,10 +162,7 @@ class AurixService :
 
     private fun createNotificationChannel() {
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
             val channel =
                 NotificationChannel(
@@ -187,10 +186,7 @@ class AurixService :
     private fun startForegroundNotification() {
 
         val notification =
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.O
-            ) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
                 Notification.Builder(
                     this,
@@ -240,8 +236,7 @@ class AurixService :
         }
 
         if (
-            !SpeechRecognizer
-                .isRecognitionAvailable(this)
+            !SpeechRecognizer.isRecognitionAvailable(this)
         ) {
 
             sendStatus(
@@ -254,11 +249,11 @@ class AurixService :
         try {
             speechRecognizer?.cancel()
             speechRecognizer?.destroy()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
 
         speechRecognizer =
-            SpeechRecognizer
-                .createSpeechRecognizer(this)
+            SpeechRecognizer.createSpeechRecognizer(this)
 
         speechRecognizer?.setRecognitionListener(
             object : RecognitionListener {
@@ -283,13 +278,16 @@ class AurixService :
 
                 override fun onRmsChanged(
                     rmsdB: Float
-                ) {}
+                ) {
+                }
 
                 override fun onBufferReceived(
                     buffer: ByteArray?
-                ) {}
+                ) {
+                }
 
-                override fun onEndOfSpeech() {}
+                override fun onEndOfSpeech() {
+                }
 
                 override fun onError(
                     error: Int
@@ -301,7 +299,6 @@ class AurixService :
                         isRunning &&
                         !serviceDestroyed
                     ) {
-
                         restartListening()
                     }
                 }
@@ -312,8 +309,7 @@ class AurixService :
 
                     val list =
                         results?.getStringArrayList(
-                            SpeechRecognizer
-                                .RESULTS_RECOGNITION
+                            SpeechRecognizer.RESULTS_RECOGNITION
                         )
 
                     val command =
@@ -324,11 +320,10 @@ class AurixService :
                                 Locale.getDefault()
                             )
 
-                    if (
-                        !command.isNullOrBlank()
-                    ) {
+                    if (!command.isNullOrBlank()) {
 
                         sendCommand(command)
+
                         processCommand(command)
                     }
 
@@ -339,12 +334,14 @@ class AurixService :
 
                 override fun onPartialResults(
                     partialResults: Bundle?
-                ) {}
+                ) {
+                }
 
                 override fun onEvent(
                     eventType: Int,
                     params: Bundle?
-                ) {}
+                ) {
+                }
             }
         )
 
@@ -529,9 +526,7 @@ class AurixService :
                     Locale.getDefault()
                 ).format(Date())
 
-            speak(
-                "Today is $date"
-            )
+            speak("Today is $date")
 
             return
         }
@@ -552,9 +547,7 @@ class AurixService :
                     Locale.getDefault()
                 ).format(Date())
 
-            speak(
-                "Today is $day"
-            )
+            speak("Today is $day")
 
             return
         }
@@ -579,9 +572,7 @@ class AurixService :
                     Locale.getDefault()
                 ).format(Date())
 
-            speak(
-                "The time is $time"
-            )
+            speak("The time is $time")
 
             return
         }
@@ -727,7 +718,10 @@ class AurixService :
             command.startsWith("search maps") ||
             command.startsWith("maps search") ||
             command.startsWith("navigate to") ||
-            command.startsWith("find ") && command.contains(" maps")
+            (
+                command.startsWith("find ") &&
+                        command.contains(" maps")
+                )
         ) {
 
             val query =
@@ -830,9 +824,7 @@ class AurixService :
         // BLUETOOTH
         // -----------------------------------------------------
 
-        if (
-            command.contains("bluetooth")
-        ) {
+        if (command.contains("bluetooth")) {
 
             openBluetoothSettings()
             return
@@ -968,213 +960,424 @@ class AurixService :
             return
         }
 
-        
-        ),
-        
+        // =====================================================
+        // SMART APP CONTROL
+        // =====================================================
+
+        if (isAppOpenCommand(command)) {
+
+            val appName =
+                extractAppName(command)
+
+            if (
+                appName.isNotBlank() &&
+                openInstalledApp(appName)
+            ) {
+                return
+            }
+
+            return
+        }
+
+        // -----------------------------------------------------
+        // UNKNOWN COMMAND
+        // -----------------------------------------------------
+
+        if (command.isNotBlank()) {
+            googleSearch(command)
         }
     }
 
+    // =========================================================
+    // SMART APP CONTROL
+    // =========================================================
 
-        // =========================================================
-// SMART APP CONTROL
-// =========================================================
+    private fun isAppOpenCommand(
+        command: String
+    ): Boolean {
 
-private fun isAppOpenCommand(command: String): Boolean {
+        val c =
+            command
+                .lowercase(Locale.getDefault())
+                .trim()
 
-    val c = command
-        .lowercase(Locale.getDefault())
-        .trim()
-
-    return c.startsWith("open ") ||
-            c.startsWith("launch ") ||
-            c.startsWith("start ") ||
-            c.startsWith("run ") ||
-            c.startsWith("use ") ||
-            c.startsWith("show ") ||
-            c.startsWith("khol ") ||
-            c.startsWith("kholo ") ||
-            c.startsWith("chalao ") ||
-            c.startsWith("chala ") ||
-            c.contains(" kholo") ||
-            c.contains(" open karo") ||
-            c.contains(" launch karo")
-}
-
-private fun extractAppName(command: String): String {
-
-    var result = command
-        .lowercase(Locale.getDefault())
-        .trim()
-
-    result = result.replace(
-        Regex("^aurix[,:]?\\s*"),
-        ""
-    )
-
-    result = result.replace(
-        Regex(
-            "^(please\\s+)?(open|launch|start|run|use|show)\\s+"
-        ),
-        ""
-    )
-
-    result = result.replace(
-        Regex(
-            "^(please\\s+)?(khol|kholo|chalao|chala)\\s+"
-        ),
-        ""
-    )
-
-    result = result.replace(
-        Regex(
-            "\\s+(app|application|karo|kar\\s+do|please|ko)$"
-        ),
-        ""
-    )
-
-    result = result.replace(
-        Regex(
-            "\\s+(khol|kholo|chalao|chala|open|launch|start|karo|kar\\s+do)$"
-        ),
-        ""
-    )
-
-    return result.trim()
-}
-
-private fun normalizeAppName(value: String): String {
-
-    return value
-        .lowercase(Locale.getDefault())
-        .replace(Regex("[^a-z0-9]"), "")
-        .trim()
-}
-
-private fun openInstalledApp(appName: String): Boolean {
-
-    val requestedName = appName.trim()
-
-    if (requestedName.isBlank()) {
-        speak("Which app should I open?")
-        return true
+        return c.startsWith("open ") ||
+                c.startsWith("launch ") ||
+                c.startsWith("start ") ||
+                c.startsWith("run ") ||
+                c.startsWith("use ") ||
+                c.startsWith("show ") ||
+                c.startsWith("khol ") ||
+                c.startsWith("kholo ") ||
+                c.startsWith("chalao ") ||
+                c.startsWith("chala ") ||
+                c.contains(" kholo") ||
+                c.contains(" open karo") ||
+                c.contains(" launch karo")
     }
 
-    val requested = normalizeAppName(requestedName)
+    private fun extractAppName(
+        command: String
+    ): String {
 
-    val knownPackages = mapOf(
+        var result =
+            command
+                .lowercase(Locale.getDefault())
+                .trim()
 
-        "whatsapp" to listOf(
-            "com.whatsapp",
-            "com.whatsapp.w4b"
-        ),
+        result =
+            result.replace(
+                Regex("^aurix[,:]?\\s*"),
+                ""
+            )
 
-        "instagram" to listOf(
-            "com.instagram.android"
-        ),
+        result =
+            result.replace(
+                Regex(
+                    "^(please\\s+)?(open|launch|start|run|use|show)\\s+"
+                ),
+                ""
+            )
 
-        "gmail" to listOf(
-            "com.google.android.gm"
-        ),
+        result =
+            result.replace(
+                Regex(
+                    "^(please\\s+)?(khol|kholo|chalao|chala)\\s+"
+                ),
+                ""
+            )
 
-        "youtube" to listOf(
-            "com.google.android.youtube"
-        ),
+        result =
+            result.replace(
+                Regex(
+                    "\\s+(app|application|karo|kar\\s+do|please|ko)$"
+                ),
+                ""
+            )
 
-        "chrome" to listOf(
-            "com.android.chrome"
-        ),
+        result =
+            result.replace(
+                Regex(
+                    "\\s+(khol|kholo|chalao|chala|open|launch|start|karo|kar\\s+do)$"
+                ),
+                ""
+            )
 
-        "maps" to listOf(
-            "com.google.android.apps.maps"
-        ),
+        return result.trim()
+    }
 
-        "googlemaps" to listOf(
-            "com.google.android.apps.maps"
-        ),
+    private fun normalizeAppName(
+        value: String
+    ): String {
 
-        "facebook" to listOf(
-            "com.facebook.katana"
-        ),
+        return value
+            .lowercase(Locale.getDefault())
+            .replace(
+                Regex("[^a-z0-9]"),
+                ""
+            )
+            .trim()
+    }
 
-        "telegram" to listOf(
-            "org.telegram.messenger"
-        ),
+    private fun openInstalledApp(
+        appName: String
+    ): Boolean {
 
-        "snapchat" to listOf(
-            "com.snapchat.android"
-        ),
+        val requestedName =
+            appName.trim()
 
-        "spotify" to listOf(
-            "com.spotify.music"
-        ),
+        if (requestedName.isBlank()) {
 
-        "netflix" to listOf(
-            "com.netflix.mediaclient"
-        ),
+            speak(
+                "Which app should I open?"
+            )
 
-        "amazon" to listOf(
-            "in.amazon.mShop.android.shopping"
-        ),
+            return true
+        }
 
-        "flipkart" to listOf(
-            "com.flipkart.android"
-        ),
+        val requested =
+            normalizeAppName(
+                requestedName
+            )
 
-        "paytm" to listOf(
-            "net.one97.paytm"
-        ),
+        val knownPackages =
+            mapOf(
 
-        "phonepe" to listOf(
-            "com.phonepe.app"
-        ),
+                "whatsapp" to listOf(
+                    "com.whatsapp",
+                    "com.whatsapp.w4b"
+                ),
 
-        "linkedin" to listOf(
-            "com.linkedin.android"
-        ),
+                "instagram" to listOf(
+                    "com.instagram.android"
+                ),
 
-        "twitter" to listOf(
-            "com.twitter.android"
-        ),
+                "gmail" to listOf(
+                    "com.google.android.gm"
+                ),
 
-        "x" to listOf(
-            "com.twitter.android"
-        ),
+                "youtube" to listOf(
+                    "com.google.android.youtube"
+                ),
 
-        "drive" to listOf(
-            "com.google.android.apps.docs"
-        ),
+                "chrome" to listOf(
+                    "com.android.chrome"
+                ),
 
-        "googledrive" to listOf(
-            "com.google.android.apps.docs"
-        ),
+                "maps" to listOf(
+                    "com.google.android.apps.maps"
+                ),
 
-        "photos" to listOf(
-            "com.google.android.apps.photos"
-        ),
+                "googlemaps" to listOf(
+                    "com.google.android.apps.maps"
+                ),
 
-        "googlephotos" to listOf(
-            "com.google.android.apps.photos"
-        )
-    )
+                "facebook" to listOf(
+                    "com.facebook.katana"
+                ),
 
-    val packages = knownPackages[requested]
+                "telegram" to listOf(
+                    "org.telegram.messenger"
+                ),
 
-    if (packages != null) {
+                "snapchat" to listOf(
+                    "com.snapchat.android"
+                ),
 
-        for (packageName in packages) {
+                "spotify" to listOf(
+                    "com.spotify.music"
+                ),
 
-            try {
+                "netflix" to listOf(
+                    "com.netflix.mediaclient"
+                ),
+
+                "amazon" to listOf(
+                    "in.amazon.mShop.android.shopping"
+                ),
+
+                "flipkart" to listOf(
+                    "com.flipkart.android"
+                ),
+
+                "paytm" to listOf(
+                    "net.one97.paytm"
+                ),
+
+                "phonepe" to listOf(
+                    "com.phonepe.app"
+                ),
+
+                "linkedin" to listOf(
+                    "com.linkedin.android"
+                ),
+
+                "twitter" to listOf(
+                    "com.twitter.android"
+                ),
+
+                "x" to listOf(
+                    "com.twitter.android"
+                ),
+
+                "drive" to listOf(
+                    "com.google.android.apps.docs"
+                ),
+
+                "googledrive" to listOf(
+                    "com.google.android.apps.docs"
+                ),
+
+                "photos" to listOf(
+                    "com.google.android.apps.photos"
+                ),
+
+                "googlephotos" to listOf(
+                    "com.google.android.apps.photos"
+                )
+            )
+
+        val packages =
+            knownPackages[requested]
+
+        if (packages != null) {
+
+            for (packageName in packages) {
+
+                try {
+
+                    val launchIntent =
+                        packageManager
+                            .getLaunchIntentForPackage(
+                                packageName
+                            )
+
+                    if (launchIntent != null) {
+
+                        launchIntent.addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+
+                        startActivity(
+                            launchIntent
+                        )
+
+                        speak(
+                            "Opening $requestedName"
+                        )
+
+                        return true
+                    }
+
+                } catch (_: Exception) {
+                }
+            }
+        }
+
+        // -----------------------------------------------------
+        // Dynamic installed-app search
+        // -----------------------------------------------------
+
+        try {
+
+            val launcherIntent =
+                Intent(
+                    Intent.ACTION_MAIN
+                ).apply {
+
+                    addCategory(
+                        Intent.CATEGORY_LAUNCHER
+                    )
+                }
+
+            val apps =
+                packageManager
+                    .queryIntentActivities(
+                        launcherIntent,
+                        PackageManager.MATCH_ALL
+                    )
+
+            var bestActivity:
+                    android.content.pm.ActivityInfo? = null
+
+            var bestScore = 0
+
+            for (info in apps) {
+
+                val activityInfo =
+                    info.activityInfo
+                        ?: continue
+
+                val label =
+                    try {
+
+                        activityInfo
+                            .loadLabel(
+                                packageManager
+                            )
+                            ?.toString()
+                            ?: ""
+
+                    } catch (_: Exception) {
+
+                        ""
+                    }
+
+                if (label.isBlank()) {
+                    continue
+                }
+
+                val packageName =
+                    activityInfo.packageName
+
+                val normalizedLabel =
+                    normalizeAppName(
+                        label
+                    )
+
+                val normalizedPackage =
+                    normalizeAppName(
+                        packageName
+                            .substringAfterLast(".")
+                    )
+
+                if (
+                    normalizedLabel ==
+                    requested
+                ) {
+
+                    bestActivity =
+                        activityInfo
+
+                    bestScore = 100
+
+                    break
+                }
+
+                if (
+                    normalizedPackage ==
+                    requested
+                ) {
+
+                    bestActivity =
+                        activityInfo
+
+                    bestScore = 95
+
+                    break
+                }
+
+                val labelScore =
+                    similarityScore(
+                        requested,
+                        normalizedLabel
+                    )
+
+                val packageScore =
+                    similarityScore(
+                        requested,
+                        normalizedPackage
+                    )
+
+                val score =
+                    maxOf(
+                        labelScore,
+                        packageScore
+                    )
+
+                if (score > bestScore) {
+
+                    bestScore = score
+                    bestActivity = activityInfo
+                }
+            }
+
+            if (
+                bestActivity != null &&
+                bestScore >= 65
+            ) {
 
                 val launchIntent =
-                    packageManager.getLaunchIntentForPackage(
-                        packageName
-                    )
+                    Intent(
+                        Intent.ACTION_MAIN
+                    ).apply {
 
-                if (launchIntent != null) {
+                        addCategory(
+                            Intent.CATEGORY_LAUNCHER
+                        )
 
-                    launchIntent.addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
+                        component =
+                            android.content.ComponentName(
+                                bestActivity.packageName,
+                                bestActivity.name
+                            )
+
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+                    }
+
+                try {
 
                     startActivity(
                         launchIntent
@@ -1185,142 +1388,34 @@ private fun openInstalledApp(appName: String): Boolean {
                     )
 
                     return true
-                }
-
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    // -----------------------------------------------------
-    // Dynamic installed-app search
-    // -----------------------------------------------------
-
-    try {
-
-        val launcherIntent =
-            Intent(Intent.ACTION_MAIN).apply {
-
-                addCategory(
-                    Intent.CATEGORY_LAUNCHER
-                )
-            }
-
-        val apps =
-            packageManager.queryIntentActivities(
-                launcherIntent,
-                PackageManager.MATCH_ALL
-            )
-
-        var bestActivity:
-                android.content.pm.ActivityInfo? = null
-
-        var bestScore = 0
-
-        for (info in apps) {
-
-            val activityInfo =
-                info.activityInfo
-                    ?: continue
-
-            val label =
-                try {
-
-                    activityInfo
-                        .loadLabel(
-                            packageManager
-                        )
-                        ?.toString()
-                        ?: ""
 
                 } catch (_: Exception) {
-
-                    ""
                 }
-
-            if (label.isBlank()) {
-                continue
             }
 
-            val packageName =
-                activityInfo.packageName
-
-            val normalizedLabel =
-                normalizeAppName(label)
-
-            val normalizedPackage =
-                normalizeAppName(
-                    packageName.substringAfterLast(".")
-                )
-
-            if (normalizedLabel == requested) {
-
-                bestActivity = activityInfo
-                bestScore = 100
-
-                break
-            }
-
-            if (normalizedPackage == requested) {
-
-                bestActivity = activityInfo
-                bestScore = 95
-
-                break
-            }
-
-            val labelScore =
-                similarityScore(
-                    requested,
-                    normalizedLabel
-                )
-
-            val packageScore =
-                similarityScore(
-                    requested,
-                    normalizedPackage
-                )
-
-            val score =
-                maxOf(
-                    labelScore,
-                    packageScore
-                )
-
-            if (score > bestScore) {
-
-                bestScore = score
-                bestActivity = activityInfo
-            }
+        } catch (_: Exception) {
         }
 
-        if (
-            bestActivity != null &&
-            bestScore >= 65
-        ) {
+        // -----------------------------------------------------
+        // Direct package-name fallback
+        // -----------------------------------------------------
 
-            val launchIntent =
-                Intent(Intent.ACTION_MAIN).apply {
+        try {
 
-                    addCategory(
-                        Intent.CATEGORY_LAUNCHER
+            val directIntent =
+                packageManager
+                    .getLaunchIntentForPackage(
+                        requestedName
                     )
 
-                    component =
-                        android.content.ComponentName(
-                            bestActivity.packageName,
-                            bestActivity.name
-                        )
+            if (directIntent != null) {
 
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
-
-            try {
+                directIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
 
                 startActivity(
-                    launchIntent
+                    directIntent
                 )
 
                 speak(
@@ -1328,146 +1423,113 @@ private fun openInstalledApp(appName: String): Boolean {
                 )
 
                 return true
+            }
 
-            } catch (_: Exception) {
+        } catch (_: Exception) {
+        }
+
+        speak(
+            "I didn't find $requestedName on your phone."
+        )
+
+        return true
+    }
+
+    private fun similarityScore(
+        a: String,
+        b: String
+    ): Int {
+
+        if (
+            a.isBlank() ||
+            b.isBlank()
+        ) {
+            return 0
+        }
+
+        if (a == b) {
+            return 100
+        }
+
+        if (
+            a.contains(b) ||
+            b.contains(a)
+        ) {
+            return 85
+        }
+
+        val distance =
+            levenshteinDistance(
+                a,
+                b
+            )
+
+        val maxLength =
+            maxOf(
+                a.length,
+                b.length
+            )
+
+        if (maxLength == 0) {
+            return 0
+        }
+
+        return (
+            (
+                1.0 -
+                        distance.toDouble() /
+                        maxLength
+                ) * 100
+            ).toInt()
+    }
+
+    private fun levenshteinDistance(
+        a: String,
+        b: String
+    ): Int {
+
+        val dp =
+            Array(
+                a.length + 1
+            ) {
+                IntArray(
+                    b.length + 1
+                )
+            }
+
+        for (i in 0..a.length) {
+            dp[i][0] = i
+        }
+
+        for (j in 0..b.length) {
+            dp[0][j] = j
+        }
+
+        for (i in 1..a.length) {
+
+            for (j in 1..b.length) {
+
+                val cost =
+                    if (
+                        a[i - 1] ==
+                        b[j - 1]
+                    ) {
+                        0
+                    } else {
+                        1
+                    }
+
+                dp[i][j] =
+                    minOf(
+                        dp[i - 1][j] + 1,
+                        dp[i][j - 1] + 1,
+                        dp[i - 1][j - 1] + cost
+                    )
             }
         }
 
-    } catch (_: Exception) {
+        return dp[a.length][b.length]
     }
-
-    // -----------------------------------------------------
-    // Direct package-name fallback
-    // -----------------------------------------------------
-
-    try {
-
-        val directIntent =
-            packageManager.getLaunchIntentForPackage(
-                requestedName
-            )
-
-        if (directIntent != null) {
-
-            directIntent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
-
-            startActivity(
-                directIntent
-            )
-
-            speak(
-                "Opening $requestedName"
-            )
-
-            return true
-        }
-
-    } catch (_: Exception) {
-    }
-
-    speak(
-        "I didn't find $requestedName on your phone."
-    )
-
-    return true
-}
-
-private fun similarityScore(
-    a: String,
-    b: String
-): Int {
-
-    if (
-        a.isBlank() ||
-        b.isBlank()
-    ) {
-        return 0
-    }
-
-    if (a == b) {
-        return 100
-    }
-
-    if (
-        a.contains(b) ||
-        b.contains(a)
-    ) {
-        return 85
-    }
-
-    val distance =
-        levenshteinDistance(
-            a,
-            b
-        )
-
-    val maxLength =
-        maxOf(
-            a.length,
-            b.length
-        )
-
-    if (maxLength == 0) {
-        return 0
-    }
-
-    return (
-        (
-            1.0 -
-                    distance.toDouble() /
-                    maxLength
-        ) * 100
-        ).toInt()
-}
-
-private fun levenshteinDistance(
-    a: String,
-    b: String
-): Int {
-
-    val dp =
-        Array(
-            a.length + 1
-        ) {
-            IntArray(
-                b.length + 1
-            )
-        }
-
-    for (i in 0..a.length) {
-        dp[i][0] = i
-    }
-
-    for (j in 0..b.length) {
-        dp[0][j] = j
-    }
-
-    for (i in 1..a.length) {
-
-        for (j in 1..b.length) {
-
-            val cost =
-                if (
-                    a[i - 1] == b[j - 1]
-                ) {
-                    0
-                } else {
-                    1
-                }
-
-            dp[i][j] =
-                minOf(
-                    dp[i - 1][j] + 1,
-                    dp[i][j - 1] + 1,
-                    dp[i - 1][j - 1] + cost
-                )
-        }
-    }
-
-    return dp[a.length][b.length]
-}
 
     // =========================================================
     // NUMBER WORDS
@@ -1481,6 +1543,7 @@ private fun levenshteinDistance(
 
         val compounds =
             mapOf(
+
                 "twenty one" to "21",
                 "twenty two" to "22",
                 "twenty three" to "23",
@@ -1533,6 +1596,7 @@ private fun levenshteinDistance(
 
         val numbers =
             mapOf(
+
                 "zero" to "0",
                 "one" to "1",
                 "two" to "2",
@@ -1894,7 +1958,8 @@ private fun levenshteinDistance(
                     pendingIntent
                 )
 
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -1915,12 +1980,12 @@ private fun levenshteinDistance(
 
             var cameraId: String? = null
 
-            for (
-                id in manager.cameraIdList
-            ) {
+            for (id in manager.cameraIdList) {
 
                 val characteristics =
-                    manager.getCameraCharacteristics(id)
+                    manager.getCameraCharacteristics(
+                        id
+                    )
 
                 val flash =
                     characteristics.get(
@@ -2010,11 +2075,16 @@ private fun levenshteinDistance(
                 ) {
 
                     startActivity(intent)
-                    speak("Opening camera")
+
+                    speak(
+                        "Opening camera"
+                    )
+
                     return
                 }
 
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
 
         val packages =
@@ -2044,11 +2114,15 @@ private fun levenshteinDistance(
                         launchIntent
                     )
 
-                    speak("Opening camera")
+                    speak(
+                        "Opening camera"
+                    )
+
                     return
                 }
 
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
 
         speak(
@@ -2081,7 +2155,9 @@ private fun levenshteinDistance(
 
             startActivity(intent)
 
-            speak("Opening gallery")
+            speak(
+                "Opening gallery"
+            )
 
         } catch (_: Exception) {
 
@@ -2144,12 +2220,15 @@ private fun levenshteinDistance(
 
                     startActivity(intent)
 
-                    speak("Opening music")
+                    speak(
+                        "Opening music"
+                    )
 
                     return
                 }
 
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
 
         try {
@@ -2170,6 +2249,10 @@ private fun levenshteinDistance(
                 }
 
             startActivity(intent)
+
+            speak(
+                "Opening music"
+            )
 
         } catch (_: Exception) {
 
@@ -2193,22 +2276,13 @@ private fun levenshteinDistance(
                 ) as AudioManager
 
             val down =
-                Intent(
-                    Intent.ACTION_MEDIA_BUTTON
-                )
-
-            down.putExtra(
-                Intent.EXTRA_KEY_EVENT,
                 android.view.KeyEvent(
                     android.view.KeyEvent.ACTION_DOWN,
                     android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
                 )
-            )
 
             audio.dispatchMediaKeyEvent(
-                down.getParcelableExtra(
-                    Intent.EXTRA_KEY_EVENT
-                )!!
+                down
             )
 
             val up =
@@ -2217,7 +2291,9 @@ private fun levenshteinDistance(
                     android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
                 )
 
-            audio.dispatchMediaKeyEvent(up)
+            audio.dispatchMediaKeyEvent(
+                up
+            )
 
             speak(
                 "Media control executed"
@@ -2261,12 +2337,15 @@ private fun levenshteinDistance(
 
                     startActivity(intent)
 
-                    speak("Opening notes")
+                    speak(
+                        "Opening notes"
+                    )
 
                     return
                 }
 
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
 
         speak(
@@ -2314,7 +2393,8 @@ private fun levenshteinDistance(
                     return
                 }
 
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
 
         try {
@@ -2342,7 +2422,8 @@ private fun levenshteinDistance(
 
             return
 
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
 
         speak(
             "Calculator is not available"
@@ -2375,7 +2456,9 @@ private fun levenshteinDistance(
 
             startActivity(intent)
 
-            speak("Opening YouTube")
+            speak(
+                "Opening YouTube"
+            )
 
         } catch (_: Exception) {
 
@@ -2396,7 +2479,9 @@ private fun levenshteinDistance(
 
                 startActivity(intent)
 
-                speak("Opening YouTube")
+                speak(
+                    "Opening YouTube"
+                )
 
             } catch (_: Exception) {
 
@@ -2468,7 +2553,9 @@ private fun levenshteinDistance(
 
             startActivity(intent)
 
-            speak("Opening Chrome")
+            speak(
+                "Opening Chrome"
+            )
 
         } catch (_: Exception) {
 
@@ -2489,7 +2576,9 @@ private fun levenshteinDistance(
 
                 startActivity(intent)
 
-                speak("Opening browser")
+                speak(
+                    "Opening browser"
+                )
 
             } catch (_: Exception) {
 
@@ -2526,7 +2615,9 @@ private fun levenshteinDistance(
 
             startActivity(intent)
 
-            speak("Opening Maps")
+            speak(
+                "Opening Maps"
+            )
 
         } catch (_: Exception) {
 
@@ -2546,6 +2637,10 @@ private fun levenshteinDistance(
                     }
 
                 startActivity(intent)
+
+                speak(
+                    "Opening Maps"
+                )
 
             } catch (_: Exception) {
 
@@ -2635,7 +2730,9 @@ private fun levenshteinDistance(
                 ).apply {
 
                     data =
-                        Uri.parse("tel:")
+                        Uri.parse(
+                            "tel:"
+                        )
 
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
@@ -2644,7 +2741,9 @@ private fun levenshteinDistance(
 
             startActivity(intent)
 
-            speak("Opening phone")
+            speak(
+                "Opening phone"
+            )
 
         } catch (_: Exception) {
 
@@ -2674,7 +2773,9 @@ private fun levenshteinDistance(
 
             startActivity(intent)
 
-            speak("Opening settings")
+            speak(
+                "Opening settings"
+            )
 
         } catch (_: Exception) {
 
@@ -2700,9 +2801,16 @@ private fun levenshteinDistance(
 
             startActivity(intent)
 
-            speak("Opening Wi-Fi settings")
+            speak(
+                "Opening Wi-Fi settings"
+            )
 
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+
+            speak(
+                "Wi-Fi settings are not available"
+            )
+        }
     }
 
     private fun openBluetoothSettings() {
@@ -2721,9 +2829,16 @@ private fun levenshteinDistance(
 
             startActivity(intent)
 
-            speak("Opening Bluetooth settings")
+            speak(
+                "Opening Bluetooth settings"
+            )
 
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+
+            speak(
+                "Bluetooth settings are not available"
+            )
+        }
     }
 
     private fun openNotificationSettings() {
@@ -2751,7 +2866,12 @@ private fun levenshteinDistance(
                 "Opening notification settings"
             )
 
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+
+            speak(
+                "Notification settings are not available"
+            )
+        }
     }
 
     // =========================================================
@@ -2786,7 +2906,12 @@ private fun levenshteinDistance(
                 }
             )
 
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+
+            speak(
+                "I could not change the volume"
+            )
+        }
     }
 
     // =========================================================
@@ -2804,8 +2929,7 @@ private fun levenshteinDistance(
 
             val level =
                 manager.getIntProperty(
-                    BatteryManager
-                        .BATTERY_PROPERTY_CAPACITY
+                    BatteryManager.BATTERY_PROPERTY_CAPACITY
                 )
 
             speak(
@@ -2860,7 +2984,7 @@ private fun levenshteinDistance(
     }
 
     // =========================================================
-    // CLOSE / HOME
+    // HOME
     // =========================================================
 
     private fun isCloseCommand(
@@ -2871,7 +2995,10 @@ private fun levenshteinDistance(
                 command == "exit" ||
                 command == "quit" ||
                 command == "go home" ||
+                command == "go to home" ||
                 command == "home" ||
+                command == "home screen" ||
+                command == "open home" ||
                 command == "close app" ||
                 command == "close application" ||
                 command == "band app" ||
@@ -2880,37 +3007,9 @@ private fun levenshteinDistance(
 
     private fun goHome() {
 
-    try {
+        try {
 
-        val homeIntent =
-            Intent(
-                Intent.ACTION_MAIN
-            ).apply {
-
-                addCategory(
-                    Intent.CATEGORY_HOME
-                )
-
-                addCategory(
-                    Intent.CATEGORY_DEFAULT
-                )
-
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-            }
-
-        val resolved =
-            packageManager.resolveActivity(
-                homeIntent,
-                PackageManager.MATCH_DEFAULT_ONLY
-            )
-
-        if (
-            resolved?.activityInfo != null
-        ) {
-
-            val explicitHome =
+            val homeIntent =
                 Intent(
                     Intent.ACTION_MAIN
                 ).apply {
@@ -2923,59 +3022,88 @@ private fun levenshteinDistance(
                         Intent.CATEGORY_DEFAULT
                     )
 
-                    component =
-                        android.content.ComponentName(
-                            resolved.activityInfo.packageName,
-                            resolved.activityInfo.name
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            val resolved =
+                packageManager.resolveActivity(
+                    homeIntent,
+                    PackageManager.MATCH_DEFAULT_ONLY
+                )
+
+            if (
+                resolved?.activityInfo != null
+            ) {
+
+                val explicitHome =
+                    Intent(
+                        Intent.ACTION_MAIN
+                    ).apply {
+
+                        addCategory(
+                            Intent.CATEGORY_HOME
                         )
 
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
+                        addCategory(
+                            Intent.CATEGORY_DEFAULT
+                        )
 
-            startActivity(
-                explicitHome
-            )
+                        component =
+                            android.content.ComponentName(
+                                resolved.activityInfo.packageName,
+                                resolved.activityInfo.name
+                            )
 
-        } else {
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        )
+                    }
 
-            startActivity(
-                homeIntent
-            )
-        }
+                startActivity(
+                    explicitHome
+                )
 
-    } catch (_: Exception) {
+            } else {
 
-        try {
-
-            val fallback =
-                Intent(
-                    Intent.ACTION_MAIN
-                ).apply {
-
-                    addCategory(
-                        Intent.CATEGORY_HOME
-                    )
-
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
-
-            startActivity(
-                fallback
-            )
+                startActivity(
+                    homeIntent
+                )
+            }
 
         } catch (_: Exception) {
 
-            speak(
-                "Unable to go to home"
-            )
+            try {
+
+                val fallback =
+                    Intent(
+                        Intent.ACTION_MAIN
+                    ).apply {
+
+                        addCategory(
+                            Intent.CATEGORY_HOME
+                        )
+
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+                    }
+
+                startActivity(
+                    fallback
+                )
+
+            } catch (_: Exception) {
+
+                speak(
+                    "Unable to go to home"
+                )
+            }
         }
     }
-}
-    
+
     // =========================================================
     // TTS
     // =========================================================
@@ -2994,7 +3122,8 @@ private fun levenshteinDistance(
                 textToSpeech?.language =
                     Locale.US
 
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -3013,7 +3142,8 @@ private fun levenshteinDistance(
                 "AURIX"
             )
 
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     // =========================================================
@@ -3060,7 +3190,9 @@ private fun levenshteinDistance(
                 ACTION_EVENT
             ).apply {
 
-                setPackage(packageName)
+                setPackage(
+                    packageName
+                )
 
                 putExtra(
                     EXTRA_TYPE,
@@ -3090,14 +3222,20 @@ private fun levenshteinDistance(
         handler.removeCallbacksAndMessages(null)
 
         try {
+
             speechRecognizer?.cancel()
             speechRecognizer?.destroy()
-        } catch (_: Exception) {}
+
+        } catch (_: Exception) {
+        }
 
         try {
+
             textToSpeech?.stop()
             textToSpeech?.shutdown()
-        } catch (_: Exception) {}
+
+        } catch (_: Exception) {
+        }
 
         speechRecognizer = null
         textToSpeech = null
@@ -3105,14 +3243,14 @@ private fun levenshteinDistance(
         super.onDestroy()
     }
 
+    // =========================================================
+    // BIND
+    // =========================================================
+
     override fun onBind(
         intent: Intent?
     ): IBinder? {
+
         return null
     }
-    override fun onBind(intent: Intent?): IBinder? {
-    return null
-}
-
-}
 }
