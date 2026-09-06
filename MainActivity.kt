@@ -1,15 +1,13 @@
 package com.example.myaiassistant
 
 import android.Manifest
-import android.app.AlarmClock
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.provider.AlarmClock
 import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -40,7 +38,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     private var listening = false
     private var visible = false
 
-    private val handler = Handler(Looper.getMainLooper())
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     companion object {
         private const val MIC_PERMISSION = 100
@@ -211,7 +209,8 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         recognizer?.destroy()
 
-        recognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        recognizer =
+            SpeechRecognizer.createSpeechRecognizer(this)
 
         recognizer?.setRecognitionListener(
             object : RecognitionListener {
@@ -255,7 +254,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 override fun onResults(results: Bundle?) {
 
                     val list =
-                        results.getStringArrayList(
+                        results?.getStringArrayList(
                             SpeechRecognizer.RESULTS_RECOGNITION
                         )
 
@@ -270,7 +269,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
                     } else {
 
-                        startListening()
+                        if (visible && listening) {
+                            startListening()
+                        }
                     }
                 }
 
@@ -340,20 +341,20 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             recognizer?.cancel()
 
             val intent =
-                Intent(SpeechRecognizer.ACTION_RECOGNIZE_SPEECH)
+                Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
 
             intent.putExtra(
-                SpeechRecognizer.EXTRA_LANGUAGE_MODEL,
-                SpeechRecognizer.LANGUAGE_MODEL_FREE_FORM
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
             )
 
             intent.putExtra(
-                SpeechRecognizer.EXTRA_LANGUAGE,
+                RecognizerIntent.EXTRA_LANGUAGE,
                 Locale.US
             )
 
             intent.putExtra(
-                SpeechRecognizer.EXTRA_PARTIAL_RESULTS,
+                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
                 false
             )
 
@@ -601,7 +602,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             command.contains("volume badhao")
         ) {
 
-            audioManager().adjustVolume(
+            getAudioManager().adjustVolume(
                 AudioManager.ADJUST_RAISE,
                 AudioManager.FLAG_PLAY_SOUND
             )
@@ -615,7 +616,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             command.contains("volume kam")
         ) {
 
-            audioManager().adjustVolume(
+            getAudioManager().adjustVolume(
                 AudioManager.ADJUST_LOWER,
                 AudioManager.FLAG_PLAY_SOUND
             )
@@ -629,7 +630,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
             command.contains("sound off")
         ) {
 
-            audioManager().adjustVolume(
+            getAudioManager().adjustVolume(
                 AudioManager.ADJUST_MUTE,
                 AudioManager.FLAG_PLAY_SOUND
             )
@@ -773,7 +774,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
         speak("I searched Google for that.")
     }
 
-    private fun audioManager(): AudioManager {
+    private fun getAudioManager(): AudioManager {
 
         return getSystemService(AUDIO_SERVICE)
                 as AudioManager
@@ -847,7 +848,10 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 CAMERA_PERMISSION
             )
 
-            speak("Camera permission is required for flashlight.")
+            speak(
+                "Camera permission is required for flashlight."
+            )
+
             return
         }
 
@@ -882,7 +886,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
 
         } catch (e: Exception) {
 
-            speak("I could not control the flashlight.")
+            speak(
+                "I could not control the flashlight."
+            )
         }
     }
 
