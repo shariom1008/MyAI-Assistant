@@ -2926,23 +2926,33 @@ class AurixService :
     // HOME
     // =========================================================
 
-    private fun isCloseCommand(
-        command: String
-    ): Boolean {
+    private fun isCloseCommand(command: String): Boolean {
 
-        return command == "close" ||
-                command == "exit" ||
-                command == "quit" ||
-                command == "go home" ||
-                command == "go to home" ||
-                command == "home" ||
-                command == "home screen" ||
-                command == "go to home screen" ||
-                command == "close app" ||
-                command == "close application" ||
-                command == "band app" ||
-                command == "aurix home"
-    }
+    val c = command
+        .lowercase(Locale.getDefault())
+        .trim()
+
+    return c == "close" ||
+            c == "exit" ||
+            c == "quit" ||
+
+            c == "go home" ||
+            c == "going home" ||
+            c == "go to home" ||
+            c == "going to home" ||
+
+            c == "home" ||
+            c == "home screen" ||
+
+            c == "go to home screen" ||
+            c == "going to home screen" ||
+
+            c == "close app" ||
+            c == "close application" ||
+
+            c == "band app" ||
+            c == "aurix home"
+}
 
     private fun goHome() {
 
