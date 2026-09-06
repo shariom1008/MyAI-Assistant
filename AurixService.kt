@@ -67,6 +67,10 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     private var processing = false
     private var stopping = false
 
+    // =========================================================
+    // CREATE
+    // =========================================================
+
     override fun onCreate() {
 
         super.onCreate()
@@ -249,7 +253,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================
-    // SPEECH RECOGNITION
+    // SPEECH
     // =========================================================
 
     private fun setupRecognizer() {
@@ -258,9 +262,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             !SpeechRecognizer.isRecognitionAvailable(this)
         ) {
 
-            sendStatus(
-                "VOICE NOT AVAILABLE"
-            )
+            sendStatus("VOICE NOT AVAILABLE")
 
             return
         }
@@ -282,9 +284,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
                     if (!stopping) {
 
-                        sendStatus(
-                            "LISTENING"
-                        )
+                        sendStatus("LISTENING")
 
                         updateNotification(
                             "Listening..."
@@ -294,9 +294,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
                 override fun onBeginningOfSpeech() {
 
-                    sendStatus(
-                        "LISTENING"
-                    )
+                    sendStatus("LISTENING")
                 }
 
                 override fun onRmsChanged(
@@ -311,9 +309,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
                 override fun onEndOfSpeech() {
 
-                    sendStatus(
-                        "PROCESSING"
-                    )
+                    sendStatus("PROCESSING")
                 }
 
                 override fun onError(
@@ -348,9 +344,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                             ?.trim()
                             ?: ""
 
-                    if (
-                        text.isNotEmpty()
-                    ) {
+                    if (text.isNotEmpty()) {
 
                         sendCommand(text)
 
@@ -399,11 +393,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 this
             )
         ) {
-
-            sendStatus(
-                "VOICE NOT AVAILABLE"
-            )
-
+            sendStatus("VOICE NOT AVAILABLE")
             return
         }
 
@@ -438,9 +428,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 3
             )
 
-            recognizer?.startListening(
-                intent
-            )
+            recognizer?.startListening(intent)
 
         } catch (_: Exception) {
 
@@ -466,7 +454,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         originalCommand: String
     ) {
 
-        val command =
+        var command =
             originalCommand
                 .lowercase(Locale.getDefault())
                 .trim()
@@ -475,15 +463,19 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             return
         }
 
+        // Convert common spoken numbers into digits.
+        command = normalizeNumberWords(command)
+
         // =====================================================
         // STOP AURIX
         // =====================================================
 
         if (
+            command == "stop" ||
             command.contains("stop listening") ||
-            command.contains("deactivate aurix") ||
             command.contains("stop aurix") ||
-            command == "stop"
+            command.contains("deactivate aurix") ||
+            command.contains("turn off aurix")
         ) {
 
             speak(
@@ -501,19 +493,12 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         }
 
         // =====================================================
-        // CLOSE APP / HOME
+        // CLOSE APP
+        // IMPORTANT: MUST COME BEFORE OPEN COMMANDS
         // =====================================================
 
         if (
-            command.startsWith("close ") ||
-            command.startsWith("exit ") ||
-            command.contains("close calculator") ||
-            command.contains("close chrome") ||
-            command.contains("close youtube") ||
-            command.contains("close gallery") ||
-            command.contains("close music") ||
-            command.contains("close camera") ||
-            command.contains("close settings")
+            isCloseCommand(command)
         ) {
 
             goHome()
@@ -528,16 +513,14 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         if (
             command.contains("flashlight") ||
             command.contains("flash light") ||
-            command.contains("torch") ||
-            command.contains("flash")
+            command.contains("torch")
         ) {
 
             if (
                 command.contains("off") ||
                 command.contains("disable") ||
                 command.contains("turn off") ||
-                command.contains("band") ||
-                command.contains("close")
+                command.contains("band")
             ) {
 
                 setFlashlight(false)
@@ -557,9 +540,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         if (
             command.contains("timer") ||
             command.contains("set timer") ||
-            command.contains("set a timer") ||
-            command.contains("minute timer") ||
-            command.contains("second timer")
+            command.contains("set a timer")
         ) {
 
             setTimer(command)
@@ -589,16 +570,17 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             command == "date" ||
             command.contains("what is the date") ||
             command.contains("what's the date") ||
-            command.contains("what is today's date") ||
-            command.contains("what's today's date") ||
             command.contains("today's date") ||
             command.contains("todays date") ||
+            command.contains("what is today's date") ||
+            command.contains("what's today's date") ||
             command.contains("tell me the date") ||
             command.contains("what date is today") ||
             command.contains("which date is today") ||
             command.contains("today date") ||
             command.contains("aaj ki date") ||
-            command.contains("aaj ki tareekh")
+            command.contains("aaj ki tareekh") ||
+            command.contains("aaj ki tarikh")
         ) {
 
             val date =
@@ -642,17 +624,18 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
         // =====================================================
         // TIME
+        // TIMER IS ALREADY HANDLED ABOVE
         // =====================================================
 
         if (
             command == "time" ||
             command.contains("what time") ||
-            command.contains("current time") ||
-            command.contains("tell me the time") ||
             command.contains("what is the time") ||
             command.contains("what's the time") ||
-            command.contains("time is it") ||
             command.contains("what time is it") ||
+            command.contains("current time") ||
+            command.contains("tell me the time") ||
+            command.contains("time is it") ||
             command.contains("kitne baje") ||
             command.contains("kitna baje")
         ) {
@@ -831,7 +814,6 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
             speak(
                 "Opening phone"
-
             )
 
             openPhone()
@@ -966,17 +948,13 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                     )
                     .trim()
 
-            if (
-                query.isNotEmpty()
-            ) {
+            if (query.isNotEmpty()) {
 
                 speak(
                     "Searching Google"
                 )
 
-                openGoogleSearch(
-                    query
-                )
+                openGoogleSearch(query)
 
                 return
             }
@@ -990,13 +968,151 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             "I will search that on Google"
         )
 
-        openGoogleSearch(
-            command
-        )
+        openGoogleSearch(command)
     }
 
     // =========================================================
-    // GO HOME
+    // CLOSE COMMAND DETECTION
+    // =========================================================
+
+    private fun isCloseCommand(
+        command: String
+    ): Boolean {
+
+        val closeWords =
+            arrayOf(
+                "close ",
+                "exit ",
+                "quit ",
+                "band "
+            )
+
+        for (word in closeWords) {
+
+            if (
+                command.startsWith(word)
+            ) {
+
+                return true
+            }
+        }
+
+        return command.contains("close calculator") ||
+            command.contains("close chrome") ||
+            command.contains("close youtube") ||
+            command.contains("close gallery") ||
+            command.contains("close music") ||
+            command.contains("close camera") ||
+            command.contains("close notes") ||
+            command.contains("close settings") ||
+            command.contains("exit calculator") ||
+            command.contains("exit chrome") ||
+            command.contains("exit youtube") ||
+            command.contains("exit gallery") ||
+            command.contains("exit music") ||
+            command.contains("exit camera") ||
+            command.contains("exit notes") ||
+            command.contains("exit settings")
+    }
+
+    // =========================================================
+    // NUMBER WORD NORMALIZER
+    // =========================================================
+
+    private fun normalizeNumberWords(
+        input: String
+    ): String {
+
+        var text =
+            input
+                .lowercase(Locale.getDefault())
+                .replace(
+                    "-",
+                    " "
+                )
+
+        val numbers =
+            linkedMapOf(
+                "sixty" to "60",
+                "fifty nine" to "59",
+                "fifty eight" to "58",
+                "fifty seven" to "57",
+                "fifty six" to "56",
+                "fifty five" to "55",
+                "fifty four" to "54",
+                "fifty three" to "53",
+                "fifty two" to "52",
+                "fifty one" to "51",
+                "fifty" to "50",
+                "forty nine" to "49",
+                "forty eight" to "48",
+                "forty seven" to "47",
+                "forty six" to "46",
+                "forty five" to "45",
+                "forty four" to "44",
+                "forty three" to "43",
+                "forty two" to "42",
+                "forty one" to "41",
+                "forty" to "40",
+                "thirty nine" to "39",
+                "thirty eight" to "38",
+                "thirty seven" to "37",
+                "thirty six" to "36",
+                "thirty five" to "35",
+                "thirty four" to "34",
+                "thirty three" to "33",
+                "thirty two" to "32",
+                "thirty one" to "31",
+                "thirty" to "30",
+                "twenty nine" to "29",
+                "twenty eight" to "28",
+                "twenty seven" to "27",
+                "twenty six" to "26",
+                "twenty five" to "25",
+                "twenty four" to "24",
+                "twenty three" to "23",
+                "twenty two" to "22",
+                "twenty one" to "21",
+                "twenty" to "20",
+                "nineteen" to "19",
+                "eighteen" to "18",
+                "seventeen" to "17",
+                "sixteen" to "16",
+                "fifteen" to "15",
+                "fourteen" to "14",
+                "thirteen" to "13",
+                "twelve" to "12",
+                "eleven" to "11",
+                "ten" to "10",
+                "nine" to "9",
+                "eight" to "8",
+                "seven" to "7",
+                "six" to "6",
+                "five" to "5",
+                "four" to "4",
+                "three" to "3",
+                "two" to "2",
+                "one" to "1"
+            )
+
+        for (
+            entry in numbers
+        ) {
+
+            text =
+                text.replace(
+                    Regex(
+                        "\\b${Pattern.quote(entry.key)}\\b"
+                    ),
+                    entry.value
+                )
+        }
+
+        return text
+    }
+
+    // =========================================================
+    // HOME
     // =========================================================
 
     private fun goHome() {
@@ -1075,7 +1191,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                             CameraCharacteristics.FLASH_INFO_AVAILABLE
                         ) == true
 
-                    val lensFacing =
+                    val facing =
                         characteristics.get(
                             CameraCharacteristics.LENS_FACING
                         )
@@ -1083,9 +1199,9 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                     if (
                         hasFlash &&
                         (
-                            lensFacing ==
+                            facing ==
                                 CameraCharacteristics.LENS_FACING_BACK ||
-                                lensFacing == null
+                                facing == null
                         )
                     ) {
 
@@ -1220,9 +1336,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 Intent.FLAG_ACTIVITY_NEW_TASK
             )
 
-            startActivity(
-                fallback
-            )
+            startActivity(fallback)
 
             return
 
@@ -1265,32 +1379,9 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         } catch (_: Exception) {
         }
 
-        try {
-
-            val intent =
-                Intent(
-                    Intent.ACTION_VIEW
-                )
-
-            intent.setDataAndType(
-                Uri.parse(
-                    "content://media/external/images/media"
-                ),
-                "image/*"
-            )
-
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
-
-            startActivity(intent)
-
-        } catch (_: Exception) {
-
-            speak(
-                "Gallery is not available"
-            )
-        }
+        speak(
+            "Gallery is not available"
+        )
     }
 
     // =========================================================
@@ -1343,9 +1434,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
 
-                    startActivity(
-                        intent
-                    )
+                    startActivity(intent)
 
                     return
                 }
@@ -1391,9 +1480,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
 
-                    startActivity(
-                        intent
-                    )
+                    startActivity(intent)
 
                     return
                 }
@@ -1439,9 +1526,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
 
-                    startActivity(
-                        intent
-                    )
+                    startActivity(intent)
 
                     return
                 }
@@ -1678,29 +1763,31 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
         var totalSeconds = 0
 
-        val minutePattern =
+        // HOURS
+        val hourMatcher =
+            Pattern.compile(
+                "(\\d+)\\s*(hour|hours|hr|hrs)"
+            ).matcher(command)
+
+        if (hourMatcher.find()) {
+
+            val hours =
+                hourMatcher
+                    .group(1)
+                    ?.toIntOrNull()
+                    ?: 0
+
+            totalSeconds +=
+                hours * 3600
+        }
+
+        // MINUTES
+        val minuteMatcher =
             Pattern.compile(
                 "(\\d+)\\s*(minute|minutes|min|mins)"
-            )
+            ).matcher(command)
 
-        val secondPattern =
-            Pattern.compile(
-                "(\\d+)\\s*(second|seconds|sec|secs)"
-            )
-
-        val minuteMatcher =
-            minutePattern.matcher(
-                command
-            )
-
-        val secondMatcher =
-            secondPattern.matcher(
-                command
-            )
-
-        if (
-            minuteMatcher.find()
-        ) {
+        if (minuteMatcher.find()) {
 
             val minutes =
                 minuteMatcher
@@ -1712,9 +1799,13 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 minutes * 60
         }
 
-        if (
-            secondMatcher.find()
-        ) {
+        // SECONDS
+        val secondMatcher =
+            Pattern.compile(
+                "(\\d+)\\s*(second|seconds|sec|secs)"
+            ).matcher(command)
+
+        if (secondMatcher.find()) {
 
             val seconds =
                 secondMatcher
@@ -1722,163 +1813,10 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                     ?.toIntOrNull()
                     ?: 0
 
-            totalSeconds +=
-                seconds
+            totalSeconds += seconds
         }
 
-        // -----------------------------------------------------
-        // NUMBER WORDS
-        // -----------------------------------------------------
-
-        val words =
-            command
-                .replace(
-                    "-",
-                    " "
-                )
-                .split(
-                    Regex("\\s+")
-                )
-
-        val numberWords =
-            mapOf(
-                "one" to 1,
-                "two" to 2,
-                "three" to 3,
-                "four" to 4,
-                "five" to 5,
-                "six" to 6,
-                "seven" to 7,
-                "eight" to 8,
-                "nine" to 9,
-                "ten" to 10,
-                "eleven" to 11,
-                "twelve" to 12,
-                "thirteen" to 13,
-                "fourteen" to 14,
-                "fifteen" to 15,
-                "sixteen" to 16,
-                "seventeen" to 17,
-                "eighteen" to 18,
-                "nineteen" to 19,
-                "twenty" to 20,
-                "thirty" to 30,
-                "forty" to 40,
-                "fifty" to 50,
-                "sixty" to 60
-            )
-
-        var i = 0
-
-        while (
-            i < words.size
-        ) {
-
-            val word =
-                words[i]
-
-            if (
-                numberWords.containsKey(
-                    word
-                ) &&
-                i + 1 < words.size
-            ) {
-
-                val number =
-                    numberWords[word] ?: 0
-
-                val unit =
-                    words[i + 1]
-
-                if (
-                    unit.startsWith("minute") ||
-                    unit == "min" ||
-                    unit == "mins"
-                ) {
-
-                    totalSeconds +=
-                        number * 60
-
-                } else if (
-                    unit.startsWith("second") ||
-                    unit == "sec" ||
-                    unit == "secs"
-                ) {
-
-                    totalSeconds +=
-                        number
-                }
-            }
-
-            i++
-        }
-
-        // -----------------------------------------------------
-        // HINDI BASIC NUMBERS
-        // -----------------------------------------------------
-
-        val hindiNumbers =
-            mapOf(
-                "ek" to 1,
-                "do" to 2,
-                "teen" to 3,
-                "char" to 4,
-                "chaar" to 4,
-                "paanch" to 5,
-                "panch" to 5,
-                "cheh" to 6,
-                "chhe" to 6,
-                "saat" to 7,
-                "aath" to 8,
-                "nau" to 9,
-                "das" to 10
-            )
-
-        var hindiFound = false
-
-        for (
-            index in words.indices
-        ) {
-
-            val number =
-                hindiNumbers[
-                    words[index]
-                ]
-
-            if (
-                number != null &&
-                index + 1 < words.size
-            ) {
-
-                val unit =
-                    words[index + 1]
-
-                if (
-                    unit.startsWith("minute") ||
-                    unit == "min"
-                ) {
-
-                    totalSeconds +=
-                        number * 60
-
-                    hindiFound = true
-
-                } else if (
-                    unit.startsWith("second") ||
-                    unit == "sec"
-                ) {
-
-                    totalSeconds +=
-                        number
-
-                    hindiFound = true
-                }
-            }
-        }
-
-        if (
-            totalSeconds <= 0
-        ) {
+        if (totalSeconds <= 0) {
 
             speak(
                 "Please say a duration, for example, set timer for five minutes"
@@ -1904,14 +1842,30 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 "AURIX Timer"
             )
 
+            // IMPORTANT:
+            // true = ask Clock app to set timer directly
             intent.putExtra(
                 AlarmClock.EXTRA_SKIP_UI,
-                false
+                true
             )
 
             intent.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK
             )
+
+            if (
+                packageManager.queryIntentActivities(
+                    intent,
+                    PackageManager.MATCH_DEFAULT_ONLY
+                ).isEmpty()
+            ) {
+
+                speak(
+                    "Timer app is not available"
+                )
+
+                return
+            }
 
             startActivity(intent)
 
@@ -1922,7 +1876,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         } catch (_: Exception) {
 
             speak(
-                "I could not open the timer"
+                "I could not set the timer"
             )
         }
     }
@@ -1931,23 +1885,35 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         seconds: Int
     ): String {
 
-        val minutes =
-            seconds / 60
+        val hours =
+            seconds / 3600
 
-        val remaining =
+        val minutes =
+            (seconds % 3600) / 60
+
+        val remainingSeconds =
             seconds % 60
 
         return when {
 
+            hours > 0 ->
+                if (
+                    minutes > 0
+                ) {
+                    "$hours hours $minutes minutes"
+                } else {
+                    "$hours hours"
+                }
+
             minutes > 0 &&
-                remaining > 0 ->
-                "$minutes minutes $remaining seconds"
+                remainingSeconds > 0 ->
+                "$minutes minutes $remainingSeconds seconds"
 
             minutes > 0 ->
                 "$minutes minutes"
 
             else ->
-                "$remaining seconds"
+                "$remainingSeconds seconds"
         }
     }
 
@@ -1959,45 +1925,106 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         command: String
     ) {
 
+        /*
+         * Examples supported:
+         *
+         * set alarm for 7 pm
+         * set alarm for 7:30 pm
+         * set alarm for 07:30
+         * set alarm for seven pm
+         * set alarm for seven thirty pm
+         */
+
         val pattern =
             Pattern.compile(
-                "(\\d{1,2})(?::|\\s)(\\d{2})\\s*(am|pm)?"
+                "(\\d{1,2})(?:\\s*[:.]\\s*(\\d{1,2}))?\\s*(am|pm)?"
             )
 
         val matcher =
-            pattern.matcher(
-                command
-            )
+            pattern.matcher(command)
 
-        if (
-            !matcher.find()
-        ) {
+        var found = false
+        var hour = 0
+        var minute = 0
+        var amPm: String? = null
+
+        while (matcher.find()) {
+
+            val possibleHour =
+                matcher
+                    .group(1)
+                    ?.toIntOrNull()
+                    ?: continue
+
+            val possibleMinute =
+                matcher
+                    .group(2)
+                    ?.toIntOrNull()
+                    ?: 0
+
+            val possibleAmPm =
+                matcher
+                    .group(3)
+                    ?.lowercase()
+
+            // Avoid treating random numbers as alarm time.
+            if (
+                possibleHour in 1..23 &&
+                possibleMinute in 0..59
+            ) {
+
+                hour = possibleHour
+                minute = possibleMinute
+                amPm = possibleAmPm
+                found = true
+                break
+            }
+        }
+
+        if (!found) {
+
+            // Support "7 30 pm"
+            val twoNumberPattern =
+                Pattern.compile(
+                    "(\\d{1,2})\\s+(\\d{1,2})\\s*(am|pm)"
+                )
+
+            val twoMatcher =
+                twoNumberPattern.matcher(command)
+
+            if (twoMatcher.find()) {
+
+                hour =
+                    twoMatcher
+                        .group(1)
+                        ?.toIntOrNull()
+                        ?: 0
+
+                minute =
+                    twoMatcher
+                        .group(2)
+                        ?.toIntOrNull()
+                        ?: 0
+
+                amPm =
+                    twoMatcher
+                        .group(3)
+                        ?.lowercase()
+
+                found = true
+            }
+        }
+
+        if (!found) {
 
             speak(
-                "Please say the alarm time, for example, set alarm for 7 AM"
+                "Please say the alarm time, for example, set alarm for seven PM"
             )
 
             return
         }
 
         try {
-
-            var hour =
-                matcher
-                    .group(1)
-                    ?.toIntOrNull()
-                    ?: return
-
-            val minute =
-                matcher
-                    .group(2)
-                    ?.toIntOrNull()
-                    ?: 0
-
-            val amPm =
-                matcher
-                    .group(3)
-                    ?.lowercase()
 
             if (
                 amPm == "pm" &&
@@ -2045,14 +2072,49 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 "AURIX Alarm"
             )
 
+            intent.putExtra(
+                AlarmClock.EXTRA_SKIP_UI,
+                true
+            )
+
             intent.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK
             )
 
+            if (
+                packageManager.queryIntentActivities(
+                    intent,
+                    PackageManager.MATCH_DEFAULT_ONLY
+                ).isEmpty()
+            ) {
+
+                speak(
+                    "Alarm app is not available"
+                )
+
+                return
+            }
+
             startActivity(intent)
 
+            val displayHour =
+                if (
+                    hour % 12 == 0
+                ) {
+                    12
+                } else {
+                    hour % 12
+                }
+
+            val displayAmPm =
+                if (hour >= 12) {
+                    "PM"
+                } else {
+                    "AM"
+                }
+
             speak(
-                "Alarm set"
+                "Alarm set for $displayHour:${String.format(Locale.US, "%02d", minute)} $displayAmPm"
             )
 
         } catch (_: Exception) {
@@ -2064,7 +2126,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================
-    // GOOGLE SEARCH
+    // GOOGLE
     // =========================================================
 
     private fun openGoogleSearch(
@@ -2074,9 +2136,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         try {
 
             val encoded =
-                Uri.encode(
-                    query
-                )
+                Uri.encode(query)
 
             val intent =
                 Intent(
@@ -2090,9 +2150,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 Intent.FLAG_ACTIVITY_NEW_TASK
             )
 
-            startActivity(
-                intent
-            )
+            startActivity(intent)
 
         } catch (_: Exception) {
 
@@ -2118,9 +2176,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 Intent.FLAG_ACTIVITY_NEW_TASK
             )
 
-            startActivity(
-                intent
-            )
+            startActivity(intent)
 
         } catch (_: Exception) {
         }
@@ -2182,9 +2238,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     ) {
 
         val intent =
-            Intent(
-                ACTION_EVENT
-            )
+            Intent(ACTION_EVENT)
 
         intent.setPackage(
             packageName
@@ -2200,9 +2254,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             text
         )
 
-        sendBroadcast(
-            intent
-        )
+        sendBroadcast(intent)
     }
 
     private fun sendCommand(
@@ -2210,9 +2262,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     ) {
 
         val intent =
-            Intent(
-                ACTION_EVENT
-            )
+            Intent(ACTION_EVENT)
 
         intent.setPackage(
             packageName
@@ -2228,9 +2278,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             text
         )
 
-        sendBroadcast(
-            intent
-        )
+        sendBroadcast(intent)
     }
 
     // =========================================================
@@ -2280,9 +2328,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         } else {
 
             @Suppress("DEPRECATION")
-            stopForeground(
-                true
-            )
+            stopForeground(true)
         }
 
         stopSelf()
