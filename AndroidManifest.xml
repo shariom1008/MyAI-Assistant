@@ -1,19 +1,42 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<?xml version="1.0" encoding="utf-8"?>
 
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Microphone -->
+    <uses-permission
+        android:name="android.permission.RECORD_AUDIO" />
 
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- Foreground Service -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Android 14 microphone foreground service -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+    <!-- Android 13+ notifications -->
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Camera -->
+    <uses-permission
+        android:name="android.permission.CAMERA" />
+
+    <!-- Location -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:theme="@style/Theme.MyAI"
         android:label="AURIX"
         android:allowBackup="true"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:icon="@drawable/aurix_logo">
 
         <activity
             android:name=".MainActivity"
@@ -22,14 +45,21 @@
             <intent-filter>
 
                 <action
-                    android:name="android.intent.action.MAIN"/>
+                    android:name="android.intent.action.MAIN" />
 
                 <category
-                    android:name="android.intent.category.LAUNCHER"/>
+                    android:name="android.intent.category.LAUNCHER" />
 
             </intent-filter>
 
         </activity>
+
+        <!-- AURIX Background Voice Service -->
+
+        <service
+            android:name=".AurixService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
     </application>
 
