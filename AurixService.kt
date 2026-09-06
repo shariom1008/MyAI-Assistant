@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.BatteryManager
@@ -25,7 +26,6 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.widget.Toast
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -45,23 +45,16 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         const val ACTION_EVENT =
             "com.example.myaiassistant.AURIX_EVENT"
 
-        const val EXTRA_TYPE =
-            "type"
+        const val EXTRA_TYPE = "type"
+        const val EXTRA_TEXT = "text"
 
-        const val EXTRA_TEXT =
-            "text"
-
-        const val TYPE_STATUS =
-            "status"
-
-        const val TYPE_COMMAND =
-            "command"
+        const val TYPE_STATUS = "status"
+        const val TYPE_COMMAND = "command"
 
         private const val CHANNEL_ID =
             "aurix_voice_channel"
 
-        private const val NOTIFICATION_ID =
-            9001
+        private const val NOTIFICATION_ID = 9001
 
         var isRunning = false
             private set
@@ -77,6 +70,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     private var stopping = false
 
     override fun onCreate() {
+
         super.onCreate()
 
         createNotificationChannel()
@@ -89,10 +83,11 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         isRunning = true
         stopping = false
 
-        tts = TextToSpeech(
-            applicationContext,
-            this
-        )
+        tts =
+            TextToSpeech(
+                applicationContext,
+                this
+            )
 
         setupRecognizer()
 
@@ -108,11 +103,14 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         when (intent?.action) {
 
             ACTION_STOP -> {
+
                 stopAurix()
+
                 return START_NOT_STICKY
             }
 
             ACTION_START -> {
+
                 stopping = false
                 isRunning = true
 
@@ -134,7 +132,10 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
     private fun createNotificationChannel() {
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
 
             val channel =
                 NotificationChannel(
@@ -148,12 +149,9 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
             channel.setShowBadge(false)
 
-            val manager =
-                getSystemService(
-                    NotificationManager::class.java
-                )
-
-            manager.createNotificationChannel(channel)
+            getSystemService(
+                NotificationManager::class.java
+            ).createNotificationChannel(channel)
         }
     }
 
@@ -243,33 +241,31 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         message: String
     ) {
 
-        val manager =
-            getSystemService(
-                NotificationManager::class.java
-            )
-
-        manager.notify(
+        getSystemService(
+            NotificationManager::class.java
+        ).notify(
             NOTIFICATION_ID,
             createNotification(message)
         )
     }
 
     // =========================================================
-    // SPEECH RECOGNIZER
+    // SPEECH
     // =========================================================
 
     private fun setupRecognizer() {
 
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+        if (
+            !SpeechRecognizer.isRecognitionAvailable(this)
+        ) {
 
             sendStatus("VOICE NOT AVAILABLE")
+
             return
         }
 
         try {
-
             recognizer?.destroy()
-
         } catch (_: Exception) {
         }
 
@@ -282,8 +278,11 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 override fun onReadyForSpeech(
                     params: Bundle?
                 ) {
+
                     if (!stopping) {
+
                         sendStatus("LISTENING")
+
                         updateNotification(
                             "Listening..."
                         )
@@ -291,6 +290,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 }
 
                 override fun onBeginningOfSpeech() {
+
                     sendStatus("LISTENING")
                 }
 
@@ -305,6 +305,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 }
 
                 override fun onEndOfSpeech() {
+
                     sendStatus("PROCESSING")
                 }
 
@@ -315,8 +316,6 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                     processing = false
 
                     if (!stopping) {
-
-                        sendStatus("LISTENING")
 
                         handler.postDelayed(
                             {
@@ -357,7 +356,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                             {
                                 startListening()
                             },
-                            700
+                            900
                         )
                     }
                 }
@@ -387,7 +386,9 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                 this
             )
         ) {
+
             sendStatus("VOICE NOT AVAILABLE")
+
             return
         }
 
@@ -455,7 +456,10 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
         if (command.isEmpty()) return
 
-        // STOP FIRST
+        // -----------------------------------------------------
+        // STOP
+        // -----------------------------------------------------
+
         if (
             command.contains("stop listening") ||
             command.contains("deactivate aurix") ||
@@ -464,6 +468,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         ) {
 
             speak("AURIX deactivated")
+
             handler.postDelayed(
                 {
                     stopAurix()
@@ -474,29 +479,65 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             return
         }
 
-        // TIMER BEFORE TIME
+        // -----------------------------------------------------
+        // FLASHLIGHT
+        // -----------------------------------------------------
+
+        if (
+            command.contains("flashlight") ||
+            command.contains("flash light") ||
+            command.contains("torch")
+        ) {
+
+            if (
+                command.contains("off") ||
+                command.contains("disable") ||
+                command.contains("turn off")
+            ) {
+
+                setFlashlight(false)
+
+            } else {
+
+                setFlashlight(true)
+            }
+
+            return
+        }
+
+        // -----------------------------------------------------
+        // TIMER
+        // -----------------------------------------------------
+
         if (
             command.contains("timer") ||
-            command.contains("set timer") ||
             command.contains("minute timer") ||
             command.contains("second timer")
         ) {
 
             setTimer(command)
+
             return
         }
 
+        // -----------------------------------------------------
         // ALARM
+        // -----------------------------------------------------
+
         if (
             command.contains("alarm") ||
             command.contains("wake me")
         ) {
 
             setAlarm(command)
+
             return
         }
 
+        // -----------------------------------------------------
         // CAMERA
+        // -----------------------------------------------------
+
         if (
             command.contains("camera") ||
             command.contains("take a photo") ||
@@ -505,11 +546,16 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         ) {
 
             speak("Opening camera")
+
             openCamera()
+
             return
         }
 
+        // -----------------------------------------------------
         // GALLERY
+        // -----------------------------------------------------
+
         if (
             command.contains("gallery") ||
             command.contains("photos") ||
@@ -518,145 +564,194 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         ) {
 
             speak("Opening gallery")
+
             openGallery()
+
             return
         }
 
+        // -----------------------------------------------------
         // MUSIC
+        // -----------------------------------------------------
+
         if (
             command.contains("music") ||
             command.contains("song") ||
             command.contains("songs") ||
-            command.contains("gaane") ||
-            command.contains("open music")
+            command.contains("gaane")
         ) {
 
             speak("Opening music")
+
             openMusic()
+
             return
         }
 
+        // -----------------------------------------------------
         // NOTES
+        // -----------------------------------------------------
+
         if (
             command.contains("notes") ||
-            command.contains("note") ||
-            command.contains("open notes")
+            command.contains("note")
         ) {
 
             speak("Opening notes")
+
             openNotes()
+
             return
         }
 
+        // -----------------------------------------------------
         // CALCULATOR
+        // -----------------------------------------------------
+
         if (
             command.contains("calculator") ||
             command.contains("calculate")
         ) {
 
             speak("Opening calculator")
+
             openCalculator()
+
             return
         }
 
+        // -----------------------------------------------------
         // YOUTUBE
+        // -----------------------------------------------------
+
         if (
-            command.contains("youtube") ||
-            command.contains("open youtube")
+            command.contains("youtube")
         ) {
 
             speak("Opening YouTube")
+
             openYouTube()
+
             return
         }
 
+        // -----------------------------------------------------
         // CHROME
+        // -----------------------------------------------------
+
         if (
             command.contains("chrome") ||
-            command.contains("open browser") ||
-            command.contains("browser")
+            command.contains("browser") ||
+            command.contains("open browser")
         ) {
 
             speak("Opening browser")
+
             openChrome()
+
             return
         }
 
+        // -----------------------------------------------------
         // MAPS
+        // -----------------------------------------------------
+
         if (
             command.contains("maps") ||
-            command.contains("google maps") ||
-            command.contains("open maps")
+            command.contains("google maps")
         ) {
 
             speak("Opening maps")
+
             openMaps()
+
             return
         }
 
+        // -----------------------------------------------------
         // PHONE
+        // -----------------------------------------------------
+
         if (
             command.contains("phone") ||
-            command.contains("dialer") ||
-            command.contains("open phone")
+            command.contains("dialer")
         ) {
 
             speak("Opening phone")
+
             openPhone()
+
             return
         }
 
+        // -----------------------------------------------------
         // SETTINGS
+        // -----------------------------------------------------
+
         if (
-            command.contains("settings") ||
-            command.contains("open settings")
+            command.contains("settings")
         ) {
 
             speak("Opening settings")
+
             openSettings()
+
             return
         }
 
-        // VOLUME UP
+        // -----------------------------------------------------
+        // VOLUME
+        // -----------------------------------------------------
+
         if (
             command.contains("volume up") ||
-            command.contains("increase volume") ||
-            command.contains("volume increase")
+            command.contains("increase volume")
         ) {
 
             changeVolume(true)
+
             speak("Volume increased")
+
             return
         }
 
-        // VOLUME DOWN
         if (
             command.contains("volume down") ||
-            command.contains("decrease volume") ||
-            command.contains("volume decrease")
+            command.contains("decrease volume")
         ) {
 
             changeVolume(false)
+
             speak("Volume decreased")
+
             return
         }
 
+        // -----------------------------------------------------
         // BATTERY
+        // -----------------------------------------------------
+
         if (
-            command.contains("battery") ||
-            command.contains("battery status")
+            command.contains("battery")
         ) {
 
             batteryStatus()
+
             return
         }
 
+        // -----------------------------------------------------
         // TIME
+        // IMPORTANT: TIMER IS ABOVE THIS BLOCK
+        // -----------------------------------------------------
+
         if (
             command == "time" ||
             command.contains("what time") ||
             command.contains("current time") ||
-            command.contains("tell me the time")
+            command.contains("tell me the time") ||
+            command.contains("what is the time") ||
+            command.contains("time is it")
         ) {
 
             val time =
@@ -665,11 +760,17 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                     Locale.getDefault()
                 ).format(Date())
 
-            speak("The time is $time")
+            speak(
+                "The current time is $time"
+            )
+
             return
         }
 
+        // -----------------------------------------------------
         // HELLO
+        // -----------------------------------------------------
+
         if (
             command == "hello" ||
             command == "hi" ||
@@ -677,11 +778,17 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             command.contains("hi aurix")
         ) {
 
-            speak("Hello. I am AURIX. How can I help you?")
+            speak(
+                "Hello. I am AURIX. How can I help you?"
+            )
+
             return
         }
 
+        // -----------------------------------------------------
         // IDENTITY
+        // -----------------------------------------------------
+
         if (
             command.contains("who are you") ||
             command.contains("your name") ||
@@ -695,11 +802,14 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             return
         }
 
+        // -----------------------------------------------------
         // GOOGLE SEARCH
+        // -----------------------------------------------------
+
         if (
             command.startsWith("search ") ||
             command.startsWith("google ") ||
-            command.contains("search for ")
+            command.startsWith("search for ")
         ) {
 
             val query =
@@ -728,7 +838,10 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             }
         }
 
-        // UNKNOWN COMMAND
+        // -----------------------------------------------------
+        // UNKNOWN
+        // -----------------------------------------------------
+
         speak(
             "I will search that on Google"
         )
@@ -737,97 +850,198 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================
+    // FLASHLIGHT
+    // =========================================================
+
+    private fun setFlashlight(
+        enabled: Boolean
+    ) {
+
+        try {
+
+            if (
+                Build.VERSION.SDK_INT <
+                Build.VERSION_CODES.M
+            ) {
+
+                speak(
+                    "Flashlight is not supported on this device"
+                )
+
+                return
+            }
+
+            val cameraManager =
+                getSystemService(
+                    Context.CAMERA_SERVICE
+                ) as CameraManager
+
+            var cameraId: String? = null
+
+            for (
+                id in cameraManager.cameraIdList
+            ) {
+
+                try {
+
+                    val characteristics =
+                        cameraManager.getCameraCharacteristics(
+                            id
+                        )
+
+                    val hasFlash =
+                        characteristics.get(
+                            android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE
+                        ) == true
+
+                    val lensFacing =
+                        characteristics.get(
+                            android.hardware.camera2.CameraCharacteristics.LENS_FACING
+                        )
+
+                    if (
+                        hasFlash &&
+                        (
+                            lensFacing ==
+                                android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK ||
+                                lensFacing == null
+                        )
+                    ) {
+
+                        cameraId = id
+
+                        break
+                    }
+
+                } catch (_: Exception) {
+                }
+            }
+
+            if (cameraId == null) {
+
+                speak(
+                    "Flashlight is not available"
+                )
+
+                return
+            }
+
+            cameraManager.setTorchMode(
+                cameraId,
+                enabled
+            )
+
+            if (enabled) {
+
+                speak("Flashlight turned on")
+
+            } else {
+
+                speak("Flashlight turned off")
+            }
+
+        } catch (_: SecurityException) {
+
+            speak(
+                "Camera permission is required for flashlight"
+            )
+
+        } catch (_: Exception) {
+
+            speak(
+                "I could not control the flashlight"
+            )
+        }
+    }
+
+    // =========================================================
     // CAMERA
     // =========================================================
 
     private fun openCamera() {
 
-    // 1. Standard camera intent
-    try {
-
-        val intent =
-            Intent(
-                MediaStore.ACTION_IMAGE_CAPTURE
-            )
-
-        intent.addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK
-        )
-
-        if (
-            packageManager.queryIntentActivities(
-                intent,
-                PackageManager.MATCH_DEFAULT_ONLY
-            ).isNotEmpty()
-        ) {
-
-            startActivity(intent)
-            return
-        }
-
-    } catch (_: Exception) {
-    }
-
-    // 2. Try common Xiaomi / Android camera packages
-    val cameraPackages =
-        arrayOf(
-            "com.android.camera",
-            "com.android.camera2",
-            "com.miui.camera"
-        )
-
-    for (
-        cameraPackage in cameraPackages
-    ) {
-
         try {
 
-            val launchIntent =
-                packageManager.getLaunchIntentForPackage(
-                    cameraPackage
+            val intent =
+                Intent(
+                    MediaStore.ACTION_IMAGE_CAPTURE
                 )
 
-            if (launchIntent != null) {
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
 
-                launchIntent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
+            if (
+                packageManager.queryIntentActivities(
+                    intent,
+                    PackageManager.MATCH_DEFAULT_ONLY
+                ).isNotEmpty()
+            ) {
 
-                startActivity(
-                    launchIntent
-                )
+                startActivity(intent)
 
                 return
             }
 
         } catch (_: Exception) {
         }
-    }
 
-    // 3. Last fallback: generic image capture
-    try {
-
-        val fallbackIntent =
-            Intent(
-                "android.media.action.IMAGE_CAPTURE"
+        val cameraPackages =
+            arrayOf(
+                "com.android.camera",
+                "com.android.camera2",
+                "com.miui.camera"
             )
 
-        fallbackIntent.addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK
+        for (
+            cameraPackage in cameraPackages
+        ) {
+
+            try {
+
+                val launchIntent =
+                    packageManager.getLaunchIntentForPackage(
+                        cameraPackage
+                    )
+
+                if (launchIntent != null) {
+
+                    launchIntent.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+
+                    startActivity(
+                        launchIntent
+                    )
+
+                    return
+                }
+
+            } catch (_: Exception) {
+            }
+        }
+
+        try {
+
+            val fallback =
+                Intent(
+                    "android.media.action.IMAGE_CAPTURE"
+                )
+
+            fallback.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            )
+
+            startActivity(fallback)
+
+            return
+
+        } catch (_: Exception) {
+        }
+
+        speak(
+            "I could not open the camera"
         )
-
-        startActivity(
-            fallbackIntent
-        )
-
-        return
-
-    } catch (_: Exception) {
-    }
-
-    speak(
-        "I could not open the camera"
-    )
     }
 
     // =========================================================
@@ -969,27 +1183,9 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             }
         }
 
-        try {
-
-            val intent =
-                Intent(
-                    Intent.ACTION_INSERT
-                )
-
-            intent.type = "text/plain"
-
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
-
-            startActivity(intent)
-
-        } catch (_: Exception) {
-
-            speak(
-                "Notes app is not available"
-            )
-        }
+        speak(
+            "Notes app is not available"
+        )
     }
 
     // =========================================================
@@ -1067,7 +1263,9 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             val intent =
                 Intent(
                     Intent.ACTION_VIEW,
-                    Uri.parse("https://www.google.com")
+                    Uri.parse(
+                        "https://www.google.com"
+                    )
                 )
 
             intent.setPackage(
@@ -1082,26 +1280,9 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
         } catch (_: Exception) {
 
-            try {
-
-                val intent =
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("https://www.google.com")
-                    )
-
-                intent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-
-                startActivity(intent)
-
-            } catch (_: Exception) {
-
-                speak(
-                    "Browser is not available"
-                )
-            }
+            openUrl(
+                "https://www.google.com"
+            )
         }
     }
 
@@ -1242,18 +1423,11 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                     Context.AUDIO_SERVICE
                 ) as AudioManager
 
-            val direction =
-                if (increase) {
-
-                    AudioManager.ADJUST_RAISE
-
-                } else {
-
-                    AudioManager.ADJUST_LOWER
-                }
-
             audioManager.adjustVolume(
-                direction,
+                if (increase)
+                    AudioManager.ADJUST_RAISE
+                else
+                    AudioManager.ADJUST_LOWER,
                 AudioManager.FLAG_SHOW_UI
             )
 
@@ -1331,19 +1505,19 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
         if (secondMatcher.find()) {
 
-            val extraSeconds =
+            val extra =
                 secondMatcher
                     .group(1)
                     ?.toIntOrNull()
                     ?: 0
 
-            seconds += extraSeconds
+            seconds += extra
         }
 
         if (seconds <= 0) {
 
             speak(
-                "Please say a timer duration, for example, set timer for 5 minutes"
+                "Please say a duration, for example, set timer for 5 minutes"
             )
 
             return
@@ -1384,7 +1558,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         } catch (_: Exception) {
 
             speak(
-                "I could not set the timer"
+                "I could not open the timer"
             )
         }
     }
@@ -1421,13 +1595,13 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         command: String
     ) {
 
-        val timePattern =
+        val pattern =
             Pattern.compile(
                 "(\\d{1,2})(?::|\\s)(\\d{2})\\s*(am|pm)?"
             )
 
         val matcher =
-            timePattern.matcher(command)
+            pattern.matcher(command)
 
         if (!matcher.find()) {
 
@@ -1457,11 +1631,17 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
                     .group(3)
                     ?.lowercase()
 
-            if (amPm == "pm" && hour < 12) {
+            if (
+                amPm == "pm" &&
+                hour < 12
+            ) {
                 hour += 12
             }
 
-            if (amPm == "am" && hour == 12) {
+            if (
+                amPm == "am" &&
+                hour == 12
+            ) {
                 hour = 0
             }
 
@@ -1504,7 +1684,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
             startActivity(intent)
 
             speak(
-                "Alarm set for $hour $minute"
+                "Alarm set"
             )
 
         } catch (_: Exception) {
@@ -1516,7 +1696,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================
-    // GOOGLE SEARCH
+    // GOOGLE
     // =========================================================
 
     private fun openGoogleSearch(
@@ -1573,7 +1753,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================
-    // TEXT TO SPEECH
+    // TTS
     // =========================================================
 
     override fun onInit(
@@ -1616,7 +1796,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================
-    // BROADCAST EVENTS
+    // EVENTS
     // =========================================================
 
     private fun sendStatus(
@@ -1626,9 +1806,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         val intent =
             Intent(ACTION_EVENT)
 
-        intent.setPackage(
-            packageName
-        )
+        intent.setPackage(packageName)
 
         intent.putExtra(
             EXTRA_TYPE,
@@ -1650,9 +1828,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
         val intent =
             Intent(ACTION_EVENT)
 
-        intent.setPackage(
-            packageName
-        )
+        intent.setPackage(packageName)
 
         intent.putExtra(
             EXTRA_TYPE,
@@ -1668,7 +1844,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================
-    // STOP SERVICE
+    // STOP
     // =========================================================
 
     private fun stopAurix() {
@@ -1698,7 +1874,10 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
         sendStatus("READY")
 
-        if (Build.VERSION.SDK_INT >= 24) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.N
+        ) {
 
             stopForeground(
                 STOP_FOREGROUND_REMOVE
@@ -1714,7 +1893,7 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================
-    // SERVICE LIFECYCLE
+    // DESTROY
     // =========================================================
 
     override fun onDestroy() {
@@ -1724,10 +1903,6 @@ class AurixService : Service(), TextToSpeech.OnInitListener {
 
         try {
             recognizer?.cancel()
-        } catch (_: Exception) {
-        }
-
-        try {
             recognizer?.destroy()
         } catch (_: Exception) {
         }
