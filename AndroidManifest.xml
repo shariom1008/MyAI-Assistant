@@ -15,7 +15,7 @@
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
-    <!-- Android 13+ notifications -->
+    <!-- Notifications -->
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -30,6 +30,10 @@
     <uses-permission
         android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Alarm scheduling -->
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <application
         android:theme="@style/Theme.MyAI"
         android:label="AURIX"
@@ -38,6 +42,7 @@
         android:usesCleartextTraffic="true"
         android:icon="@drawable/aurix_logo">
 
+        <!-- Main AURIX UI -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -54,12 +59,16 @@
 
         </activity>
 
-        <!-- AURIX Background Voice Service -->
-
+        <!-- Background Voice Service -->
         <service
             android:name=".AurixService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- AURIX Timer / Alarm Receiver -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:exported="false" />
 
     </application>
 
