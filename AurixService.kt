@@ -968,376 +968,18 @@ class AurixService :
             return
         }
 
-        // =====================================================
-        // SMART APP CONTROL
-        // =====================================================
-
-        if (
-            isAppOpenCommand(command)
-        ) {
-
-            val appName =
-                extractAppName(command)
-
-            if (
-                appName.isNotBlank() &&
-                openInstalledApp(appName)
-            ) {
-                return
-            }
-
-            speak(
-                "I couldn't find that app on your phone."
-            )
-
-            return
-        }
-
-        // -----------------------------------------------------
-        // UNKNOWN
-        // -----------------------------------------------------
-
-        googleSearch(command)
-    }
-
-    // =========================================================
-    // SMART APP CONTROL
-    // =========================================================
-
-    private fun isAppOpenCommand(command: String): Boolean {
-
-    val c = command
-        .lowercase(Locale.getDefault())
-        .trim()
-
-    return c.startsWith("open ") ||
-            c.startsWith("launch ") ||
-            c.startsWith("start ") ||
-            c.startsWith("run ") ||
-            c.startsWith("use ") ||
-            c.startsWith("show ") ||
-            c.startsWith("khol ") ||
-            c.startsWith("kholo ") ||
-            c.startsWith("chalao ") ||
-            c.contains(" kholo") ||
-            c.contains(" open karo")
-    }
-
-        return prefixes.any {
-            command.startsWith(it)
+        
+        ),
+        
         }
     }
 
-    private fun extractAppName(
-        command: String
-    ): String {
 
-        var result = command.trim()
-
-        val prefixes =
-            listOf(
-                "open ",
-                "launch ",
-                "start ",
-                "run ",
-                "use ",
-                "show "
-            )
-
-        for (prefix in prefixes) {
-
-            if (result.startsWith(prefix)) {
-
-                result =
-                    result.removePrefix(prefix)
-                break
-            }
-        }
-
-        result =
-            result
-                .removeSuffix(" app")
-                .removeSuffix(" application")
-                .trim()
-
-        return result
-    }
-
-    private fun openInstalledApp(command: String): Boolean {
-
-    val requestedName = extractAppName(command)
-
-    if (requestedName.isBlank()) {
-        speak("Which app should I open?")
-        return true
-    }
-
-    // Direct known-app package mapping
-    val knownPackages = mapOf(
-        "whatsapp" to listOf(
-            "com.whatsapp",
-            "com.whatsapp.w4b"
-        ),
-        "instagram" to listOf(
-            "com.instagram.android"
-        ),
-        "gmail" to listOf(
-            "com.google.android.gm"
-        ),
-        "youtube" to listOf(
-            "com.google.android.youtube"
-        ),
-        "chrome" to listOf(
-            "com.android.chrome"
-        ),
-        "maps" to listOf(
-            "com.google.android.apps.maps"
-        ),
-        "google maps" to listOf(
-            "com.google.android.apps.maps"
-        ),
-        "facebook" to listOf(
-            "com.facebook.katana"
-        ),
-        "telegram" to listOf(
-            "org.telegram.messenger"
-        ),
-        "snapchat" to listOf(
-            "com.snapchat.android"
-        ),
-        "spotify" to listOf(
-            "com.spotify.music"
-        ),
-        "netflix" to listOf(
-            "com.netflix.mediaclient"
-        ),
-        "amazon" to listOf(
-            "in.amazon.mShop.android.shopping"
-        ),
-        "flipkart" to listOf(
-            "com.flipkart.android"
-        ),
-        "paytm" to listOf(
-            "net.one97.paytm"
-        ),
-        "phonepe" to listOf(
-            "com.phonepe.app"
-        ),
-        "linkedin" to listOf(
-            "com.linkedin.android"
-        ),
-        "twitter" to listOf(
-            "com.twitter.android"
-        ),
-        "x" to listOf(
-            "com.twitter.android"
-        ),
-        "drive" to listOf(
-            "com.google.android.apps.docs"
-        ),
-        "google drive" to listOf(
-            "com.google.android.apps.docs"
-        ),
-        "photos" to listOf(
-            "com.google.android.apps.photos"
-        ),
-        "google photos" to listOf(
-            "com.google.android.apps.photos"
-        )
-    )
-
-    val normalizedRequest = normalizeAppName(requestedName)
-
-    // 1. Try direct package launch first
-    val packages = knownPackages[normalizedRequest]
-
-    if (packages != null) {
-        for (packageName in packages) {
-            try {
-                val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-
-                if (launchIntent != null) {
-                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(launchIntent)
-
-                    speak("Opening $requestedName")
-                    return true
-                }
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    // 2. Search all launcher apps
-    try {
-
-        val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-
-        val apps = packageManager.queryIntentActivities(
-            launcherIntent,
-            PackageManager.MATCH_ALL
-        )
-
-        var bestActivity: android.content.pm.ActivityInfo? = null
-        var bestScore = 0
-
-        for (resolveInfo in apps) {
-
-            val activityInfo = resolveInfo.activityInfo ?: continue
-
-            val label = try {
-                activityInfo.loadLabel(packageManager).toString()
-            } catch (_: Exception) {
-                ""
-            }
-
-            val packageName = activityInfo.packageName ?: ""
-
-            val labelNormalized = normalizeAppName(label)
-            val packageNormalized = normalizeAppName(
-                packageName.substringAfterLast(".")
-            )
-
-            if (labelNormalized == normalizedRequest ||
-                packageNormalized == normalizedRequest
-            ) {
-                bestActivity = activityInfo
-                bestScore = 100
-                break
-            }
-
-            val score1 = similarityScore(
-                normalizedRequest,
-                labelNormalized
-            )
-
-            val score2 = similarityScore(
-                normalizedRequest,
-                packageNormalized
-            )
-
-            val score = maxOf(score1, score2)
-
-            if (score > bestScore) {
-                bestScore = score
-                bestActivity = activityInfo
-            }
-        }
-
-        // Only launch if match is reasonably strong
-        if (bestActivity != null && bestScore >= 65) {
-
-            val launchIntent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-                component = android.content.ComponentName(
-                    bestActivity.packageName,
-                    bestActivity.name
-                )
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-
-            startActivity(launchIntent)
-
-            speak("Opening $requestedName")
-            return true
-        }
-
-    } catch (_: Exception) {
-    }
-
-    speak("I didn't find $requestedName on your phone.")
-    return true
-}
-
-
-private fun extractAppName(command: String): String {
-
-    var result = command
-        .lowercase(Locale.getDefault())
-        .trim()
-
-    // Remove wake word
-    result = result.replace(
-        Regex("^aurix[,:]?\\s*"),
-        ""
-    )
-
-    // English commands
-    result = result.replace(
-        Regex(
-            "^(please\\s+)?(open|launch|start|run|use|show)\\s+"
-        ),
-        ""
-    )
-
-    // Hindi commands
-    result = result.replace(
-        Regex(
-            "^(please\\s+)?(khol|kholo|chalao|chala|shuru\\s+karo)\\s+"
-        ),
-        ""
-    )
-
-    // Remove trailing words
-    result = result.replace(
-        Regex(
-            "\\s+(app|application|karo|kar\\s+do|please|ko)$"
-        ),
-        ""
-    )
-
-    // Support:
-    // "instagram kholo"
-    // "whatsapp kholo"
-    // "gmail open karo"
-    result = result.replace(
-        Regex(
-            "\\s+(khol|kholo|chalao|chala|open|launch|start|karo|kar\\s+do)$"
-        ),
-        ""
-    )
-
-    return result.trim()
-}
-
-
-private fun normalizeAppName(value: String): String {
-
-    return value
-        .lowercase(Locale.getDefault())
-        .replace(Regex("[^a-z0-9]"), "")
-}
-
-
-private fun similarityScore(a: String, b: String): Int {
-
-    if (a.isBlank() || b.isBlank()) return 0
-
-    if (a == b) return 100
-
-    if (a.contains(b) || b.contains(a)) {
-        return 85
-    }
-
-    val distance = levenshteinDistance(a, b)
-    val maxLength = maxOf(a.length, b.length)
-
-    if (maxLength == 0) return 0
-
-    return ((1.0 - distance.toDouble() / maxLength) * 100).toInt()
-}
-
-
-
-// =========================================================
+        // =========================================================
 // SMART APP CONTROL
 // =========================================================
 
-private fun isAppOpenCommand(
-    command: String
-): Boolean {
+private fun isAppOpenCommand(command: String): Boolean {
 
     val c = command
         .lowercase(Locale.getDefault())
@@ -1358,26 +1000,17 @@ private fun isAppOpenCommand(
             c.contains(" launch karo")
 }
 
-
-// ---------------------------------------------------------
-// EXTRACT APP NAME
-// ---------------------------------------------------------
-
-private fun extractAppName(
-    command: String
-): String {
+private fun extractAppName(command: String): String {
 
     var result = command
         .lowercase(Locale.getDefault())
         .trim()
 
-    // Remove AURIX wake word
     result = result.replace(
         Regex("^aurix[,:]?\\s*"),
         ""
     )
 
-    // English prefixes
     result = result.replace(
         Regex(
             "^(please\\s+)?(open|launch|start|run|use|show)\\s+"
@@ -1385,7 +1018,6 @@ private fun extractAppName(
         ""
     )
 
-    // Hindi prefixes
     result = result.replace(
         Regex(
             "^(please\\s+)?(khol|kholo|chalao|chala)\\s+"
@@ -1393,7 +1025,6 @@ private fun extractAppName(
         ""
     )
 
-    // Remove trailing command words
     result = result.replace(
         Regex(
             "\\s+(app|application|karo|kar\\s+do|please|ko)$"
@@ -1401,10 +1032,6 @@ private fun extractAppName(
         ""
     )
 
-    // Examples:
-    // instagram kholo
-    // whatsapp kholo
-    // gmail open karo
     result = result.replace(
         Regex(
             "\\s+(khol|kholo|chalao|chala|open|launch|start|karo|kar\\s+do)$"
@@ -1415,14 +1042,7 @@ private fun extractAppName(
     return result.trim()
 }
 
-
-// ---------------------------------------------------------
-// NORMALIZE APP NAME
-// ---------------------------------------------------------
-
-private fun normalizeAppName(
-    value: String
-): String {
+private fun normalizeAppName(value: String): String {
 
     return value
         .lowercase(Locale.getDefault())
@@ -1430,140 +1050,114 @@ private fun normalizeAppName(
         .trim()
 }
 
+private fun openInstalledApp(appName: String): Boolean {
 
-// ---------------------------------------------------------
-// OPEN INSTALLED APP
-// ---------------------------------------------------------
-
-private fun openInstalledApp(
-    appName: String
-): Boolean {
-
-    val requestedName =
-        appName.trim()
+    val requestedName = appName.trim()
 
     if (requestedName.isBlank()) {
-
-        speak(
-            "Which app should I open?"
-        )
-
+        speak("Which app should I open?")
         return true
     }
 
-    val requested =
-        normalizeAppName(
-            requestedName
+    val requested = normalizeAppName(requestedName)
+
+    val knownPackages = mapOf(
+
+        "whatsapp" to listOf(
+            "com.whatsapp",
+            "com.whatsapp.w4b"
+        ),
+
+        "instagram" to listOf(
+            "com.instagram.android"
+        ),
+
+        "gmail" to listOf(
+            "com.google.android.gm"
+        ),
+
+        "youtube" to listOf(
+            "com.google.android.youtube"
+        ),
+
+        "chrome" to listOf(
+            "com.android.chrome"
+        ),
+
+        "maps" to listOf(
+            "com.google.android.apps.maps"
+        ),
+
+        "googlemaps" to listOf(
+            "com.google.android.apps.maps"
+        ),
+
+        "facebook" to listOf(
+            "com.facebook.katana"
+        ),
+
+        "telegram" to listOf(
+            "org.telegram.messenger"
+        ),
+
+        "snapchat" to listOf(
+            "com.snapchat.android"
+        ),
+
+        "spotify" to listOf(
+            "com.spotify.music"
+        ),
+
+        "netflix" to listOf(
+            "com.netflix.mediaclient"
+        ),
+
+        "amazon" to listOf(
+            "in.amazon.mShop.android.shopping"
+        ),
+
+        "flipkart" to listOf(
+            "com.flipkart.android"
+        ),
+
+        "paytm" to listOf(
+            "net.one97.paytm"
+        ),
+
+        "phonepe" to listOf(
+            "com.phonepe.app"
+        ),
+
+        "linkedin" to listOf(
+            "com.linkedin.android"
+        ),
+
+        "twitter" to listOf(
+            "com.twitter.android"
+        ),
+
+        "x" to listOf(
+            "com.twitter.android"
+        ),
+
+        "drive" to listOf(
+            "com.google.android.apps.docs"
+        ),
+
+        "googledrive" to listOf(
+            "com.google.android.apps.docs"
+        ),
+
+        "photos" to listOf(
+            "com.google.android.apps.photos"
+        ),
+
+        "googlephotos" to listOf(
+            "com.google.android.apps.photos"
         )
+    )
 
-    // -----------------------------------------------------
-    // DIRECT PACKAGE MAPPING
-    // -----------------------------------------------------
-
-    val knownPackages =
-        mapOf(
-
-            "whatsapp" to listOf(
-                "com.whatsapp",
-                "com.whatsapp.w4b"
-            ),
-
-            "instagram" to listOf(
-                "com.instagram.android"
-            ),
-
-            "gmail" to listOf(
-                "com.google.android.gm"
-            ),
-
-            "youtube" to listOf(
-                "com.google.android.youtube"
-            ),
-
-            "chrome" to listOf(
-                "com.android.chrome"
-            ),
-
-            "maps" to listOf(
-                "com.google.android.apps.maps"
-            ),
-
-            "googlemaps" to listOf(
-                "com.google.android.apps.maps"
-            ),
-
-            "facebook" to listOf(
-                "com.facebook.katana"
-            ),
-
-            "telegram" to listOf(
-                "org.telegram.messenger"
-            ),
-
-            "snapchat" to listOf(
-                "com.snapchat.android"
-            ),
-
-            "spotify" to listOf(
-                "com.spotify.music"
-            ),
-
-            "netflix" to listOf(
-                "com.netflix.mediaclient"
-            ),
-
-            "amazon" to listOf(
-                "in.amazon.mShop.android.shopping"
-            ),
-
-            "flipkart" to listOf(
-                "com.flipkart.android"
-            ),
-
-            "paytm" to listOf(
-                "net.one97.paytm"
-            ),
-
-            "phonepe" to listOf(
-                "com.phonepe.app"
-            ),
-
-            "linkedin" to listOf(
-                "com.linkedin.android"
-            ),
-
-            "twitter" to listOf(
-                "com.twitter.android"
-            ),
-
-            "x" to listOf(
-                "com.twitter.android"
-            ),
-
-            "drive" to listOf(
-                "com.google.android.apps.docs"
-            ),
-
-            "googledrive" to listOf(
-                "com.google.android.apps.docs"
-            ),
-
-            "photos" to listOf(
-                "com.google.android.apps.photos"
-            ),
-
-            "googlephotos" to listOf(
-                "com.google.android.apps.photos"
-            )
-        )
-
-
-    // -----------------------------------------------------
-    // DIRECT LAUNCH
-    // -----------------------------------------------------
-
-    val packages =
-        knownPackages[requested]
+    val packages = knownPackages[requested]
 
     if (packages != null) {
 
@@ -1572,10 +1166,9 @@ private fun openInstalledApp(
             try {
 
                 val launchIntent =
-                    packageManager
-                        .getLaunchIntentForPackage(
-                            packageName
-                        )
+                    packageManager.getLaunchIntentForPackage(
+                        packageName
+                    )
 
                 if (launchIntent != null) {
 
@@ -1595,22 +1188,18 @@ private fun openInstalledApp(
                 }
 
             } catch (_: Exception) {
-                // Try next package
             }
         }
     }
 
-
     // -----------------------------------------------------
-    // DYNAMIC INSTALLED APP SEARCH
+    // Dynamic installed-app search
     // -----------------------------------------------------
 
     try {
 
         val launcherIntent =
-            Intent(
-                Intent.ACTION_MAIN
-            ).apply {
+            Intent(Intent.ACTION_MAIN).apply {
 
                 addCategory(
                     Intent.CATEGORY_LAUNCHER
@@ -1618,18 +1207,15 @@ private fun openInstalledApp(
             }
 
         val apps =
-            packageManager
-                .queryIntentActivities(
-                    launcherIntent,
-                    PackageManager.MATCH_ALL
-                )
+            packageManager.queryIntentActivities(
+                launcherIntent,
+                PackageManager.MATCH_ALL
+            )
 
         var bestActivity:
-                android.content.pm.ActivityInfo? =
-            null
+                android.content.pm.ActivityInfo? = null
 
         var bestScore = 0
-
 
         for (info in apps) {
 
@@ -1648,6 +1234,7 @@ private fun openInstalledApp(
                         ?: ""
 
                 } catch (_: Exception) {
+
                     ""
                 }
 
@@ -1659,46 +1246,28 @@ private fun openInstalledApp(
                 activityInfo.packageName
 
             val normalizedLabel =
-                normalizeAppName(
-                    label
-                )
+                normalizeAppName(label)
 
             val normalizedPackage =
                 normalizeAppName(
-                    packageName
-                        .substringAfterLast(".")
+                    packageName.substringAfterLast(".")
                 )
 
+            if (normalizedLabel == requested) {
 
-            // Exact label match
-            if (
-                normalizedLabel ==
-                requested
-            ) {
-
-                bestActivity =
-                    activityInfo
-
+                bestActivity = activityInfo
                 bestScore = 100
 
                 break
             }
 
+            if (normalizedPackage == requested) {
 
-            // Exact package suffix
-            if (
-                normalizedPackage ==
-                requested
-            ) {
-
-                bestActivity =
-                    activityInfo
-
+                bestActivity = activityInfo
                 bestScore = 95
 
                 break
             }
-
 
             val labelScore =
                 similarityScore(
@@ -1718,22 +1287,12 @@ private fun openInstalledApp(
                     packageScore
                 )
 
-
-            if (
-                score >
-                bestScore
-            ) {
+            if (score > bestScore) {
 
                 bestScore = score
-                bestActivity =
-                    activityInfo
+                bestActivity = activityInfo
             }
         }
-
-
-        // -------------------------------------------------
-        // LAUNCH BEST MATCH
-        // -------------------------------------------------
 
         if (
             bestActivity != null &&
@@ -1741,9 +1300,7 @@ private fun openInstalledApp(
         ) {
 
             val launchIntent =
-                Intent(
-                    Intent.ACTION_MAIN
-                ).apply {
+                Intent(Intent.ACTION_MAIN).apply {
 
                     addCategory(
                         Intent.CATEGORY_LAUNCHER
@@ -1760,7 +1317,6 @@ private fun openInstalledApp(
                     )
                 }
 
-
             try {
 
                 startActivity(
@@ -1774,26 +1330,22 @@ private fun openInstalledApp(
                 return true
 
             } catch (_: Exception) {
-                // Continue to fallback
             }
         }
 
     } catch (_: Exception) {
-        // Continue to fallback
     }
 
-
     // -----------------------------------------------------
-    // FINAL DIRECT PACKAGE FALLBACK
+    // Direct package-name fallback
     // -----------------------------------------------------
 
     try {
 
         val directIntent =
-            packageManager
-                .getLaunchIntentForPackage(
-                    requestedName
-                )
+            packageManager.getLaunchIntentForPackage(
+                requestedName
+            )
 
         if (directIntent != null) {
 
@@ -1812,12 +1364,8 @@ private fun openInstalledApp(
             return true
         }
 
-    } catch (_: Exception) {}
-
-
-    // -----------------------------------------------------
-    // NOT FOUND
-    // -----------------------------------------------------
+    } catch (_: Exception) {
+    }
 
     speak(
         "I didn't find $requestedName on your phone."
@@ -1825,11 +1373,6 @@ private fun openInstalledApp(
 
     return true
 }
-
-
-// ---------------------------------------------------------
-// APP NAME SIMILARITY
-// ---------------------------------------------------------
 
 private fun similarityScore(
     a: String,
@@ -1879,11 +1422,6 @@ private fun similarityScore(
         ).toInt()
 }
 
-
-// ---------------------------------------------------------
-// LEVENSHTEIN DISTANCE
-// ---------------------------------------------------------
-
 private fun levenshteinDistance(
     a: String,
     b: String
@@ -1898,7 +1436,6 @@ private fun levenshteinDistance(
             )
         }
 
-
     for (i in 0..a.length) {
         dp[i][0] = i
     }
@@ -1907,15 +1444,13 @@ private fun levenshteinDistance(
         dp[0][j] = j
     }
 
-
     for (i in 1..a.length) {
 
         for (j in 1..b.length) {
 
             val cost =
                 if (
-                    a[i - 1] ==
-                    b[j - 1]
+                    a[i - 1] == b[j - 1]
                 ) {
                     0
                 } else {
@@ -1933,6 +1468,7 @@ private fun levenshteinDistance(
 
     return dp[a.length][b.length]
 }
+
     // =========================================================
     // NUMBER WORDS
     // =========================================================
