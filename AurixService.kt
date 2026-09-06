@@ -1004,19 +1004,24 @@ class AurixService :
     // SMART APP CONTROL
     // =========================================================
 
-    private fun isAppOpenCommand(
-        command: String
-    ): Boolean {
+    private fun isAppOpenCommand(command: String): Boolean {
 
-        val prefixes =
-            listOf(
-                "open ",
-                "launch ",
-                "start ",
-                "run ",
-                "use ",
-                "show "
-            )
+    val c = command
+        .lowercase(Locale.getDefault())
+        .trim()
+
+    return c.startsWith("open ") ||
+            c.startsWith("launch ") ||
+            c.startsWith("start ") ||
+            c.startsWith("run ") ||
+            c.startsWith("use ") ||
+            c.startsWith("show ") ||
+            c.startsWith("khol ") ||
+            c.startsWith("kholo ") ||
+            c.startsWith("chalao ") ||
+            c.contains(" kholo") ||
+            c.contains(" open karo")
+    }
 
         return prefixes.any {
             command.startsWith(it)
