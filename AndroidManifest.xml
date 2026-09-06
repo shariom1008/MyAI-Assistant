@@ -55,6 +55,26 @@
     <!-- APPLICATION -->
     <!-- ===================================================== -->
 
+    <queries>
+
+    <intent>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent>
+
+    <package android:name="com.whatsapp" />
+    <package android:name="com.whatsapp.w4b" />
+    <package android:name="com.instagram.android" />
+    <package android:name="com.google.android.gm" />
+    <package android:name="com.google.android.youtube" />
+    <package android:name="com.android.chrome" />
+    <package android:name="com.google.android.apps.maps" />
+    <package android:name="com.facebook.katana" />
+    <package android:name="org.telegram.messenger" />
+    <package android:name="com.snapchat.android" />
+    <package android:name="com.spotify.music" />
+
+</queries>
     <application
         android:theme="@style/Theme.MyAI"
         android:label="AURIX"
