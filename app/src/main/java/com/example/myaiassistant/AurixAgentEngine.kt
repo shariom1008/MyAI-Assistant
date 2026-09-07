@@ -3,15 +3,11 @@ package com.example.myaiassistant
 /**
  * AURIX 2.0
  *
- * Agent Engine
+ * Multi-Step Agent Planner
  *
- * Responsible for:
- * - Understanding a user goal
- * - Creating an execution plan
- * - Running planned actions
- * - Returning the final result
- *
- * This is the foundation of AURIX Agent Mode.
+ * Converts a user goal into a sequence of
+ * smaller actions that can later be executed
+ * by AURIX skills.
  */
 object AurixAgentEngine {
 
@@ -34,11 +30,13 @@ object AurixAgentEngine {
 
     data class AgentResult(
         val success: Boolean,
-        val message: String
+        val message: String,
+        val completedSteps: Int = 0,
+        val totalSteps: Int = 0
     )
 
     /**
-     * Creates an agent task from a user command.
+     * Creates an agent task.
      */
     fun createTask(command: String): AgentTask {
 
@@ -49,33 +47,132 @@ object AurixAgentEngine {
     }
 
     /**
-     * Creates an execution plan.
-     *
-     * Advanced AI planning will be connected here later.
+     * Converts one user command into multiple steps.
      */
     fun createPlan(task: AgentTask): AgentPlan {
 
-        val step = AgentStep(
-            id = 1,
-            action = "UNDERSTAND",
-            description = task.command
-        )
+        val command = task.command.lowercase()
+
+        val steps = mutableListOf<AgentStep>()
+
+        /*
+         * Bluetooth + music workflow
+         */
+        if (
+            command.contains("bluetooth") &&
+            (
+                command.contains("music") ||
+                command.contains("play")
+            )
+        ) {
+
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "BLUETOOTH",
+                    description = "Connect or prepare the Bluetooth audio device."
+                )
+            )
+
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "PLAY",
+                    description = "Start media playback."
+                )
+            )
+        }
+
+        /*
+         * Open application + music workflow
+         */
+        if (
+            command.contains("youtube") &&
+            (
+                command.contains("music") ||
+                command.contains("play")
+            )
+        ) {
+
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "OPEN_YOUTUBE",
+                    description = "Open YouTube."
+                )
+            )
+
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "PLAY",
+                    description = "Start media playback."
+                )
+            )
+        }
+
+        /*
+         * Phone workflow
+         */
+        if (
+            command.contains("open phone") ||
+            command.contains("open dialer")
+        ) {
+
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "OPEN_PHONE",
+                    description = "Open the phone dialer."
+                )
+            )
+        }
+
+        /*
+         * Settings workflow
+         */
+        if (command.contains("open settings")) {
+
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "OPEN_SETTINGS",
+                    description = "Open Android settings."
+                )
+            )
+        }
+
+        /*
+         * If no specialized workflow was detected,
+         * keep the original command as one step.
+         */
+        if (steps.isEmpty()) {
+
+            steps.add(
+                AgentStep(
+                    id = 1,
+                    action = "GENERAL",
+                    description = task.command
+                )
+            )
+        }
 
         return AgentPlan(
             task = task,
-            steps = listOf(step)
+            steps = steps
         )
     }
 
     /**
-     * Executes an agent plan.
+     * Executes the current plan.
      *
-     * Real skill execution will be connected
-     * in the next stages.
+     * Actual skill execution will be connected
+     * in the next stage.
      */
     fun execute(plan: AgentPlan): AgentResult {
 
         if (plan.steps.isEmpty()) {
+
             return AgentResult(
                 success = false,
                 message = "No execution steps were created."
@@ -84,16 +181,19 @@ object AurixAgentEngine {
 
         return AgentResult(
             success = true,
-            message = "Agent task created successfully."
+            message = "Agent plan created with ${plan.steps.size} step(s).",
+            completedSteps = 0,
+            totalSteps = plan.steps.size
         )
     }
 
     /**
-     * Complete Agent Mode pipeline.
+     * Complete Agent pipeline.
      */
     fun run(command: String): AgentResult {
 
         if (command.isBlank()) {
+
             return AgentResult(
                 success = false,
                 message = "No command provided."
