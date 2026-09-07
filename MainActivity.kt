@@ -30,7 +30,31 @@ class MainActivity : Activity() {
     private lateinit var orb: View
 
     private var active = false
+private val homeReceiver =
+    object : BroadcastReceiver() {
 
+        override fun onReceive(
+            context: Context?,
+            intent: Intent?
+        ) {
+
+            if (intent?.action != "com.example.myaiassistant.GO_HOME") {
+                return
+            }
+
+            try {
+                val homeIntent =
+                    Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_HOME)
+                        addCategory(Intent.CATEGORY_DEFAULT)
+                    }
+
+                startActivity(homeIntent)
+
+            } catch (_: Exception) {
+            }
+        }
+    }
     private val aurixReceiver =
         object : BroadcastReceiver() {
 
