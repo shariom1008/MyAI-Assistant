@@ -2962,18 +2962,27 @@ class AurixService :
     }
   
 private fun goHome() {
+
+    speak("Going to home screen")
+
     try {
-        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_HOME)
-            addCategory(Intent.CATEGORY_DEFAULT)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+
+        val launchIntent =
+            packageManager.getLaunchIntentForPackage(
+                "com.example.myaiassistant"
+            )
+
+        val homeIntent =
+            Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                addCategory(Intent.CATEGORY_DEFAULT)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
 
         startActivity(homeIntent)
 
-        speak("Going to home screen")
+    } catch (_: Exception) {
 
-    } catch (e: Exception) {
         speak("Unable to go to home screen")
     }
 }
