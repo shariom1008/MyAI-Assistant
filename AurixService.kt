@@ -794,25 +794,7 @@ class AurixService :
             return
         }
 
-        // -----------------------------------------------------
-        // BLUETOOTH
-        // -----------------------------------------------------
-
-        if (command.contains("bluetooth")) {
-
-            openBluetoothSettings()
-            return
-        }
-
-        // -----------------------------------------------------
-        // NOTIFICATION SETTINGS
-        // -----------------------------------------------------
-
-        if (command.contains("notification settings")) {
-
-            openNotificationSettings()
-            return
-        }
+        
 
         // -----------------------------------------------------
         // VOLUME
