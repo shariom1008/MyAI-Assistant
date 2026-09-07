@@ -28,33 +28,49 @@ class MainActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var activateButton: TextView
     private lateinit var orb: View
+    private lateinit var coreText: TextView
+    private lateinit var systemText: TextView
 
     private var active = false
-private val homeReceiver =
-    object : BroadcastReceiver() {
 
-        override fun onReceive(
-            context: Context?,
-            intent: Intent?
-        ) {
+    // =========================================================
+    // GO HOME RECEIVER
+    // =========================================================
 
-            if (intent?.action != "com.example.myaiassistant.GO_HOME") {
-                return
-            }
+    private val homeReceiver =
+        object : BroadcastReceiver() {
 
-            try {
-                val homeIntent =
-                    Intent(Intent.ACTION_MAIN).apply {
-                        addCategory(Intent.CATEGORY_HOME)
-                        addCategory(Intent.CATEGORY_DEFAULT)
-                    }
+            override fun onReceive(
+                context: Context?,
+                intent: Intent?
+            ) {
 
-                startActivity(homeIntent)
+                if (
+                    intent?.action !=
+                    "com.example.myaiassistant.GO_HOME"
+                ) {
+                    return
+                }
 
-            } catch (_: Exception) {
+                try {
+
+                    val homeIntent =
+                        Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_HOME)
+                            addCategory(Intent.CATEGORY_DEFAULT)
+                        }
+
+                    startActivity(homeIntent)
+
+                } catch (_: Exception) {
+                }
             }
         }
-    }
+
+    // =========================================================
+    // AURIX EVENT RECEIVER
+    // =========================================================
+
     private val aurixReceiver =
         object : BroadcastReceiver() {
 
@@ -63,7 +79,10 @@ private val homeReceiver =
                 intent: Intent?
             ) {
 
-                if (intent?.action != AurixService.ACTION_EVENT) {
+                if (
+                    intent?.action !=
+                    AurixService.ACTION_EVENT
+                ) {
                     return
                 }
 
@@ -94,23 +113,39 @@ private val homeReceiver =
             }
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    // =========================================================
+    // CREATE
+    // =========================================================
+
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
+
         super.onCreate(savedInstanceState)
 
         window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.BLACK
+        window.navigationBarColor =
+            Color.rgb(2, 4, 10)
 
         createInterface()
+
         registerAurixReceiver()
+
         registerReceiver(
-    homeReceiver,
-    IntentFilter("com.example.myaiassistant.GO_HOME"),
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-        Context.RECEIVER_NOT_EXPORTED
-    else
-        0
-)
-        
+            homeReceiver,
+            IntentFilter(
+                "com.example.myaiassistant.GO_HOME"
+            ),
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.TIRAMISU
+            ) {
+                Context.RECEIVER_NOT_EXPORTED
+            } else {
+                0
+            }
+        )
+
         requestPermissionsIfNeeded()
 
         active = AurixService.isRunning
@@ -119,7 +154,7 @@ private val homeReceiver =
     }
 
     // =========================================================
-    // PREMIUM UI
+    // AURIX 2.0 FUTURISTIC INTERFACE
     // =========================================================
 
     private fun createInterface() {
@@ -127,21 +162,24 @@ private val homeReceiver =
         root = FrameLayout(this)
 
         root.setBackgroundColor(
-            Color.rgb(3, 6, 16)
+            Color.rgb(2, 5, 14)
         )
 
         setContentView(root)
 
-        // Background
+        // =====================================================
+        // BACKGROUND
+        // =====================================================
+
         val background = View(this)
 
         background.background =
             GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(
-                    Color.rgb(8, 20, 48),
-                    Color.rgb(3, 6, 16),
-                    Color.rgb(14, 8, 38)
+                    Color.rgb(3, 15, 35),
+                    Color.rgb(2, 5, 14),
+                    Color.rgb(15, 4, 35)
                 )
             )
 
@@ -153,56 +191,61 @@ private val homeReceiver =
             )
         )
 
-        // Main content
-        val content =
+        // =====================================================
+        // TOP HEADER
+        // =====================================================
+
+        val header =
             LinearLayout(this)
 
-        content.orientation =
+        header.orientation =
             LinearLayout.VERTICAL
 
-        content.gravity =
+        header.gravity =
             Gravity.CENTER_HORIZONTAL
 
-        val contentParams =
+        val headerParams =
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
+                dp(105)
             )
 
-        contentParams.setMargins(
-            dp(20),
-            dp(35),
-            dp(20),
-            dp(115)
-        )
+        headerParams.topMargin = dp(22)
+        headerParams.leftMargin = dp(20)
+        headerParams.rightMargin = dp(20)
 
         root.addView(
-            content,
-            contentParams
+            header,
+            headerParams
         )
-
-        // =====================================================
-        // TITLE
-        // =====================================================
 
         val title =
             TextView(this)
 
         title.text = "AURIX"
-        title.textSize = 36f
-        title.setTextColor(Color.WHITE)
-        title.gravity = Gravity.CENTER
+
+        title.textSize = 34f
+
+        title.setTextColor(
+            Color.WHITE
+        )
+
+        title.gravity =
+            Gravity.CENTER
+
         title.typeface =
             Typeface.create(
                 "sans-serif",
                 Typeface.BOLD
             )
 
-        content.addView(
+        title.letterSpacing = 0.12f
+
+        header.addView(
             title,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(55)
+                dp(52)
             )
         )
 
@@ -210,20 +253,24 @@ private val homeReceiver =
             TextView(this)
 
         subtitle.text =
-            "INTELLIGENT VOICE ASSISTANT"
+            "A U R I X   •   INTELLIGENCE CORE"
 
-        subtitle.textSize = 10f
+        subtitle.textSize = 9f
 
         subtitle.setTextColor(
-            Color.rgb(145, 170, 205)
+            Color.rgb(
+                105,
+                180,
+                225
+            )
         )
 
         subtitle.gravity =
             Gravity.CENTER
 
-        subtitle.letterSpacing = 0.2f
+        subtitle.letterSpacing = 0.18f
 
-        content.addView(
+        header.addView(
             subtitle,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -232,82 +279,108 @@ private val homeReceiver =
         )
 
         // =====================================================
-        // CENTER
+        // MAIN CENTER
         // =====================================================
 
         val center =
             FrameLayout(this)
 
-        content.addView(
-            center,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+        val centerParams =
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                0
             )
+
+        centerParams.topMargin = dp(95)
+        centerParams.bottomMargin = dp(160)
+        centerParams.leftMargin = dp(15)
+        centerParams.rightMargin = dp(15)
+
+        centerParams.height =
+            FrameLayout.LayoutParams.MATCH_PARENT
+
+        root.addView(
+            center,
+            centerParams
         )
 
-        // Outer glow
-        val outerGlow =
+        // =====================================================
+        // OUTER RING
+        // =====================================================
+
+        val outerRing =
             View(this)
 
-        outerGlow.background =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
+        outerRing.background =
+            createOval(
                 intArrayOf(
-                    Color.rgb(30, 90, 210),
-                    Color.rgb(100, 40, 190),
-                    Color.rgb(20, 180, 220)
+                    Color.rgb(20, 75, 170),
+                    Color.rgb(95, 35, 190),
+                    Color.rgb(15, 150, 200)
                 )
             )
 
-        (outerGlow.background as GradientDrawable)
-            .shape = GradientDrawable.OVAL
+        val outerSize =
+            dp(235)
 
-        val glowSize = dp(205)
-
-        val glowParams =
+        val outerParams =
             FrameLayout.LayoutParams(
-                glowSize,
-                glowSize
+                outerSize,
+                outerSize
             )
 
-        glowParams.gravity =
+        outerParams.gravity =
             Gravity.CENTER
 
         center.addView(
-            outerGlow,
-            glowParams
+            outerRing,
+            outerParams
         )
 
-        // Inner orb
+        // =====================================================
+        // INNER RING
+        // =====================================================
+
+        val innerRing =
+            View(this)
+
+        innerRing.background =
+            createOval(
+                intArrayOf(
+                    Color.rgb(8, 22, 65),
+                    Color.rgb(22, 10, 55),
+                    Color.rgb(5, 50, 65)
+                )
+            )
+
+        val innerSize =
+            dp(207)
+
+        val innerParams =
+            FrameLayout.LayoutParams(
+                innerSize,
+                innerSize
+            )
+
+        innerParams.gravity =
+            Gravity.CENTER
+
+        center.addView(
+            innerRing,
+            innerParams
+        )
+
+        // =====================================================
+        // CORE ORB
+        // =====================================================
+
         orb = View(this)
 
         orb.background =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(55, 105, 225),
-                    Color.rgb(90, 45, 175),
-                    Color.rgb(10, 180, 215)
-                )
-            )
+            createOrb()
 
-        (orb.background as GradientDrawable)
-            .shape = GradientDrawable.OVAL
-
-        (orb.background as GradientDrawable)
-            .setStroke(
-                dp(2),
-                Color.argb(
-                    190,
-                    160,
-                    225,
-                    255
-                )
-            )
-
-        val orbSize = dp(175)
+        val orbSize =
+            dp(168)
 
         val orbParams =
             FrameLayout.LayoutParams(
@@ -323,55 +396,86 @@ private val homeReceiver =
             orbParams
         )
 
-        // AI text
-        val aiText =
+        // =====================================================
+        // CORE TEXT
+        // =====================================================
+
+        coreText =
             TextView(this)
 
-        aiText.text = "AI"
-        aiText.textSize = 30f
-        aiText.setTextColor(Color.WHITE)
-        aiText.gravity = Gravity.CENTER
-        aiText.typeface = Typeface.DEFAULT_BOLD
+        coreText.text =
+            "AURIX"
 
-        val aiParams =
+        coreText.textSize = 23f
+
+        coreText.setTextColor(
+            Color.WHITE
+        )
+
+        coreText.gravity =
+            Gravity.CENTER
+
+        coreText.typeface =
+            Typeface.DEFAULT_BOLD
+
+        coreText.letterSpacing =
+            0.18f
+
+        val coreParams =
             FrameLayout.LayoutParams(
                 orbSize,
                 orbSize
             )
 
-        aiParams.gravity =
+        coreParams.gravity =
             Gravity.CENTER
 
         center.addView(
-            aiText,
-            aiParams
+            coreText,
+            coreParams
         )
 
-        // Status
+        // =====================================================
+        // STATUS
+        // =====================================================
+
         statusText =
             TextView(this)
 
-        statusText.text = "READY"
+        statusText.text =
+            "READY"
+
         statusText.textSize = 14f
 
         statusText.setTextColor(
-            Color.rgb(150, 220, 255)
+            Color.rgb(
+                120,
+                215,
+                255
+            )
         )
 
-        statusText.gravity = Gravity.CENTER
-        statusText.letterSpacing = 0.15f
+        statusText.gravity =
+            Gravity.CENTER
+
+        statusText.typeface =
+            Typeface.DEFAULT_BOLD
+
+        statusText.letterSpacing =
+            0.20f
 
         val statusParams =
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(45)
+                dp(40)
             )
 
         statusParams.gravity =
-            Gravity.BOTTOM
+            Gravity.CENTER_HORIZONTAL or
+                    Gravity.BOTTOM
 
         statusParams.bottomMargin =
-            dp(20)
+            dp(12)
 
         center.addView(
             statusText,
@@ -379,7 +483,59 @@ private val homeReceiver =
         )
 
         // =====================================================
-        // FIXED ACTIVATE BUTTON
+        // SYSTEM STATUS
+        // =====================================================
+
+        systemText =
+            TextView(this)
+
+        systemText.text =
+            "SYSTEM ONLINE"
+
+        systemText.textSize = 9f
+
+        systemText.setTextColor(
+            Color.rgb(
+                75,
+                145,
+                180
+            )
+        )
+
+        systemText.gravity =
+            Gravity.CENTER
+
+        systemText.letterSpacing =
+            0.20f
+
+        val systemParams =
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                dp(28)
+            )
+
+        systemParams.gravity =
+            Gravity.CENTER_HORIZONTAL or
+                    Gravity.BOTTOM
+
+        systemParams.bottomMargin =
+            dp(43)
+
+        center.addView(
+            systemText,
+            systemParams
+        )
+
+        // =====================================================
+        // CORE ANIMATION
+        // =====================================================
+
+        startCoreAnimation(
+            outerRing
+        )
+
+        // =====================================================
+        // ACTIVATE BUTTON
         // =====================================================
 
         activateButton =
@@ -388,7 +544,8 @@ private val homeReceiver =
         activateButton.text =
             "ACTIVATE AURIX"
 
-        activateButton.textSize = 16f
+        activateButton.textSize =
+            15f
 
         activateButton.setTextColor(
             Color.WHITE
@@ -400,12 +557,8 @@ private val homeReceiver =
         activateButton.typeface =
             Typeface.DEFAULT_BOLD
 
-        activateButton.setPadding(
-            dp(10),
-            0,
-            dp(10),
-            0
-        )
+        activateButton.letterSpacing =
+            0.08f
 
         activateButton.background =
             createButtonBackground()
@@ -413,8 +566,11 @@ private val homeReceiver =
         activateButton.setOnClickListener {
 
             if (active) {
+
                 deactivateAurix()
+
             } else {
+
                 activateAurix()
             }
         }
@@ -422,15 +578,20 @@ private val homeReceiver =
         val buttonParams =
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(62)
+                dp(60)
             )
 
         buttonParams.gravity =
             Gravity.BOTTOM
 
-        buttonParams.leftMargin = dp(22)
-        buttonParams.rightMargin = dp(22)
-        buttonParams.bottomMargin = dp(18)
+        buttonParams.leftMargin =
+            dp(25)
+
+        buttonParams.rightMargin =
+            dp(25)
+
+        buttonParams.bottomMargin =
+            dp(18)
 
         root.addView(
             activateButton,
@@ -438,7 +599,7 @@ private val homeReceiver =
         )
 
         // =====================================================
-        // NAVIGATION BAR SAFE AREA
+        // NAVIGATION SAFE AREA
         // =====================================================
 
         ViewCompat.setOnApplyWindowInsetsListener(
@@ -466,8 +627,128 @@ private val homeReceiver =
         ViewCompat.requestApplyInsets(root)
     }
 
-        // =========================================================
-    // GO TO HOME
+    // =========================================================
+    // ORB
+    // =========================================================
+
+    private fun createOval(
+        colors: IntArray
+    ): GradientDrawable {
+
+        val drawable =
+            GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                colors
+            )
+
+        drawable.shape =
+            GradientDrawable.OVAL
+
+        return drawable
+    }
+
+    private fun createOrb():
+        GradientDrawable {
+
+        val drawable =
+            GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(
+                    Color.rgb(
+                        25,
+                        95,
+                        210
+                    ),
+                    Color.rgb(
+                        95,
+                        35,
+                        185
+                    ),
+                    Color.rgb(
+                        5,
+                        170,
+                        210
+                    )
+                )
+            )
+
+        drawable.shape =
+            GradientDrawable.OVAL
+
+        drawable.setStroke(
+            dp(2),
+            Color.argb(
+                210,
+                175,
+                235,
+                255
+            )
+        )
+
+        return drawable
+    }
+
+    // =========================================================
+    // CORE ANIMATION
+    // =========================================================
+
+    private fun startCoreAnimation(
+        ring: View
+    ) {
+
+        ring.animate()
+            .rotationBy(360f)
+            .setDuration(9000)
+            .withEndAction {
+
+                startCoreAnimation(ring)
+            }
+            .start()
+
+        orb.animate()
+            .scaleX(1.04f)
+            .scaleY(1.04f)
+            .setDuration(1800)
+            .withEndAction {
+
+                orb.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(1800)
+                    .withEndAction {
+
+                        startCorePulse()
+                    }
+                    .start()
+            }
+            .start()
+    }
+
+    private fun startCorePulse() {
+
+        orb.animate()
+            .scaleX(1.035f)
+            .scaleY(1.035f)
+            .setDuration(1600)
+            .withEndAction {
+
+                orb.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(1600)
+                    .withEndAction {
+
+                        if (!isFinishing) {
+                            startCorePulse()
+                        }
+                    }
+                    .start()
+            }
+            .start()
+    }
+
+    // =========================================================
+    // GO HOME
     // =========================================================
 
     fun goToHomeScreen() {
@@ -491,9 +772,9 @@ private val homeReceiver =
         } catch (_: Exception) {
         }
     }
-    
+
     // =========================================================
-    // BUTTON
+    // BUTTON BACKGROUND
     // =========================================================
 
     private fun createButtonBackground():
@@ -503,20 +784,28 @@ private val homeReceiver =
             GradientDrawable(
                 GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(
-                    Color.rgb(35, 100, 225),
-                    Color.rgb(115, 50, 205)
+                    Color.rgb(
+                        25,
+                        95,
+                        220
+                    ),
+                    Color.rgb(
+                        110,
+                        40,
+                        200
+                    )
                 )
             )
 
         drawable.cornerRadius =
-            dp(31).toFloat()
+            dp(30).toFloat()
 
         drawable.setStroke(
             dp(1),
             Color.argb(
-                160,
-                160,
-                220,
+                190,
+                165,
+                225,
                 255
             )
         )
@@ -564,7 +853,9 @@ private val homeReceiver =
 
         } catch (_: Exception) {
 
-            updateStatus("START FAILED")
+            updateStatus(
+                "START FAILED"
+            )
         }
     }
 
@@ -584,8 +875,11 @@ private val homeReceiver =
             AurixService.ACTION_STOP
 
         try {
+
             startService(intent)
-        } catch (_: Exception) {}
+
+        } catch (_: Exception) {
+        }
 
         active = false
 
@@ -593,7 +887,7 @@ private val homeReceiver =
     }
 
     // =========================================================
-    // UI
+    // STATUS
     // =========================================================
 
     private fun updateStatus(
@@ -602,7 +896,8 @@ private val homeReceiver =
 
         runOnUiThread {
 
-            statusText.text = status
+            statusText.text =
+                status
 
             when (
                 status.uppercase(
@@ -614,16 +909,19 @@ private val homeReceiver =
 
                     statusText.setTextColor(
                         Color.rgb(
-                            100,
+                            90,
                             235,
                             255
                         )
                     )
 
+                    coreText.text =
+                        "LISTEN"
+
                     orb.animate()
-                        .scaleX(1.08f)
-                        .scaleY(1.08f)
-                        .setDuration(220)
+                        .scaleX(1.10f)
+                        .scaleY(1.10f)
+                        .setDuration(250)
                         .start()
                 }
 
@@ -631,16 +929,39 @@ private val homeReceiver =
 
                     statusText.setTextColor(
                         Color.rgb(
-                            200,
-                            140,
+                            205,
+                            145,
                             255
                         )
                     )
 
+                    coreText.text =
+                        "THINK"
+
                     orb.animate()
-                        .scaleX(1.04f)
-                        .scaleY(1.04f)
-                        .setDuration(180)
+                        .scaleX(1.07f)
+                        .scaleY(1.07f)
+                        .setDuration(200)
+                        .start()
+                }
+
+                "READY" -> {
+
+                    statusText.setTextColor(
+                        Color.rgb(
+                            120,
+                            215,
+                            255
+                        )
+                    )
+
+                    coreText.text =
+                        "AURIX"
+
+                    orb.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(200)
                         .start()
                 }
 
@@ -648,21 +969,25 @@ private val homeReceiver =
 
                     statusText.setTextColor(
                         Color.rgb(
-                            155,
-                            220,
-                            255
+                            145,
+                            210,
+                            245
                         )
                     )
 
                     orb.animate()
                         .scaleX(1f)
                         .scaleY(1f)
-                        .setDuration(180)
+                        .setDuration(200)
                         .start()
                 }
             }
         }
     }
+
+    // =========================================================
+    // UPDATE INTERFACE
+    // =========================================================
 
     private fun updateInterface() {
 
@@ -671,16 +996,28 @@ private val homeReceiver =
             activateButton.text =
                 "DEACTIVATE AURIX"
 
+            systemText.text =
+                "SYSTEM ACTIVE"
+
             statusText.text =
                 "STARTING..."
+
+            coreText.text =
+                "AURIX"
 
         } else {
 
             activateButton.text =
                 "ACTIVATE AURIX"
 
+            systemText.text =
+                "SYSTEM ONLINE"
+
             statusText.text =
                 "READY"
+
+            coreText.text =
+                "AURIX"
         }
     }
 
@@ -776,6 +1113,10 @@ private val homeReceiver =
         }
     }
 
+    // =========================================================
+    // RESUME
+    // =========================================================
+
     override fun onResume() {
 
         super.onResume()
@@ -783,22 +1124,35 @@ private val homeReceiver =
         active =
             AurixService.isRunning
 
-        if (::activateButton.isInitialized) {
+        if (
+            ::activateButton.isInitialized
+        ) {
+
             updateInterface()
         }
     }
 
+    // =========================================================
+    // DESTROY
+    // =========================================================
+
     override fun onDestroy() {
 
-    try {
-        unregisterReceiver(aurixReceiver)
-    } catch (_: Exception) {}
+        try {
+            unregisterReceiver(
+                aurixReceiver
+            )
+        } catch (_: Exception) {
+        }
 
-    try {
-        unregisterReceiver(homeReceiver)
-    } catch (_: Exception) {}
+        try {
+            unregisterReceiver(
+                homeReceiver
+            )
+        } catch (_: Exception) {
+        }
 
-    super.onDestroy()
+        super.onDestroy()
     }
 
     // =========================================================
