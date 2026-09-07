@@ -83,6 +83,9 @@ class AurixService :
         AurixSkillEngine.addSkill(
             PhoneSkill(this)
 )
+        AurixSkillEngine.addSkill(
+            BluetoothAudioSkill(this)
+)
         serviceDestroyed = false
         isRunning = true
         restarting = false
