@@ -2967,19 +2967,12 @@ private fun goHome() {
 
     try {
 
-        val launchIntent =
-            packageManager.getLaunchIntentForPackage(
-                "com.example.myaiassistant"
-            )
-
-        val homeIntent =
-            Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_HOME)
-                addCategory(Intent.CATEGORY_DEFAULT)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent =
+            Intent("com.example.myaiassistant.GO_HOME").apply {
+                setPackage(packageName)
             }
 
-        startActivity(homeIntent)
+        sendBroadcast(intent)
 
     } catch (_: Exception) {
 
