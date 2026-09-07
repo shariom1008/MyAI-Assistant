@@ -433,6 +433,32 @@ class MainActivity : Activity() {
         ViewCompat.requestApplyInsets(root)
     }
 
+        // =========================================================
+    // GO TO HOME
+    // =========================================================
+
+    fun goToHomeScreen() {
+
+        try {
+
+            val homeIntent =
+                Intent(Intent.ACTION_MAIN).apply {
+
+                    addCategory(
+                        Intent.CATEGORY_HOME
+                    )
+
+                    addCategory(
+                        Intent.CATEGORY_DEFAULT
+                    )
+                }
+
+            startActivity(homeIntent)
+
+        } catch (_: Exception) {
+        }
+    }
+    
     // =========================================================
     // BUTTON
     // =========================================================
