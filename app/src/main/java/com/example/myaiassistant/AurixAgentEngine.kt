@@ -3,11 +3,7 @@ package com.example.myaiassistant
 /**
  * AURIX 2.0
  *
- * Multi-Step Agent Planner + Executor
- *
- * Converts a user goal into a sequence of
- * smaller actions and executes supported actions
- * through the existing AURIX command router.
+ * Multi-Step Agent Planner
  */
 object AurixAgentEngine {
 
@@ -36,7 +32,6 @@ object AurixAgentEngine {
     )
 
     fun createTask(command: String): AgentTask {
-
         return AgentTask(
             id = "task_${System.currentTimeMillis()}",
             command = command.trim()
@@ -49,39 +44,8 @@ object AurixAgentEngine {
 
         val steps = mutableListOf<AgentStep>()
 
-        if (
-            command.contains("bluetooth") &&
-            (
-                command.contains("music") ||
-                command.contains("play")
-            )
-        ) {
-
-            steps.add(
-                AgentStep(
-                    id = steps.size + 1,
-                    action = "BLUETOOTH",
-                    description = "Connect or prepare the Bluetooth audio device."
-                )
-            )
-
-            steps.add(
-                AgentStep(
-                    id = steps.size + 1,
-                    action = "PLAY",
-                    description = "Start media playback."
-                )
-            )
-        }
-
-        if (
-            command.contains("youtube") &&
-            (
-                command.contains("music") ||
-                command.contains("play")
-            )
-        ) {
-
+        // OPEN YOUTUBE
+        if (command.contains("youtube")) {
             steps.add(
                 AgentStep(
                     id = steps.size + 1,
@@ -89,21 +53,13 @@ object AurixAgentEngine {
                     description = "Open YouTube."
                 )
             )
-
-            steps.add(
-                AgentStep(
-                    id = steps.size + 1,
-                    action = "PLAY",
-                    description = "Start media playback."
-                )
-            )
         }
 
+        // OPEN PHONE
         if (
-            command.contains("open phone") ||
-            command.contains("open dialer")
+            command.contains("phone") ||
+            command.contains("dialer")
         ) {
-
             steps.add(
                 AgentStep(
                     id = steps.size + 1,
@@ -113,8 +69,8 @@ object AurixAgentEngine {
             )
         }
 
-        if (command.contains("open settings")) {
-
+        // OPEN SETTINGS
+        if (command.contains("settings")) {
             steps.add(
                 AgentStep(
                     id = steps.size + 1,
@@ -124,8 +80,29 @@ object AurixAgentEngine {
             )
         }
 
-        if (steps.isEmpty()) {
+        // BLUETOOTH
+        if (command.contains("bluetooth")) {
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "BLUETOOTH",
+                    description = "Handle Bluetooth audio."
+                )
+            )
+        }
 
+        // PLAY
+        if (command.contains("play")) {
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "PLAY",
+                    description = "Start media playback."
+                )
+            )
+        }
+
+        if (steps.isEmpty()) {
             steps.add(
                 AgentStep(
                     id = 1,
@@ -141,13 +118,9 @@ object AurixAgentEngine {
         )
     }
 
-    /**
-     * Executes the current agent plan.
-     */
     fun execute(plan: AgentPlan): AgentResult {
 
         if (plan.steps.isEmpty()) {
-
             return AgentResult(
                 success = false,
                 message = "No execution steps were created."
@@ -182,7 +155,8 @@ object AurixAgentEngine {
                     continue
             }
 
-            val response = AurixCommandRouter.route(command)
+            val response =
+                AurixCommandRouter.route(command)
 
             if (
                 response.isNotBlank() &&
@@ -205,13 +179,9 @@ object AurixAgentEngine {
         )
     }
 
-    /**
-     * Complete Agent pipeline.
-     */
     fun run(command: String): AgentResult {
 
         if (command.isBlank()) {
-
             return AgentResult(
                 success = false,
                 message = "No command provided."
@@ -219,7 +189,6 @@ object AurixAgentEngine {
         }
 
         val task = createTask(command)
-
         val plan = createPlan(task)
 
         return execute(plan)
