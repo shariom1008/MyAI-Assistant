@@ -2962,26 +2962,19 @@ class AurixService :
     }
   
 private fun goHome() {
-
-    speak("Going to home screen")
-
-    val accessibilityService =
-        AurixAccessibilityService.instance
-
-    if (accessibilityService != null) {
-
-        val success =
-            accessibilityService.goHome()
-
-        if (!success) {
-            speak("Unable to go to home")
+    try {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            addCategory(Intent.CATEGORY_DEFAULT)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-    } else {
+        startActivity(homeIntent)
 
-        speak(
-            "Please enable AURIX accessibility service"
-        )
+        speak("Going to home screen")
+
+    } catch (e: Exception) {
+        speak("Unable to go to home screen")
     }
 }
             
