@@ -941,11 +941,18 @@ class AurixService :
         }
 
         // -----------------------------------------------------
-        // UNKNOWN COMMAND
-        // -----------------------------------------------------
+// AURIX 2.0 COMMAND ROUTER
+// -----------------------------------------------------
 
-        googleSearch(command)
-    }
+val aurixResponse = AurixCommandRouter.route(command)
+
+if (
+    aurixResponse.isNotBlank() &&
+    !aurixResponse.startsWith("I understood:")
+) {
+    speak(aurixResponse)
+    return
+}
 
     // =========================================================
     // SMART APP CONTROL
