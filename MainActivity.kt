@@ -102,6 +102,15 @@ private val homeReceiver =
 
         createInterface()
         registerAurixReceiver()
+        registerReceiver(
+    homeReceiver,
+    IntentFilter("com.example.myaiassistant.GO_HOME"),
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        Context.RECEIVER_NOT_EXPORTED
+    else
+        0
+)
+        
         requestPermissionsIfNeeded()
 
         active = AurixService.isRunning
@@ -781,11 +790,15 @@ private val homeReceiver =
 
     override fun onDestroy() {
 
-        try {
-            unregisterReceiver(aurixReceiver)
-        } catch (_: Exception) {}
+    try {
+        unregisterReceiver(aurixReceiver)
+    } catch (_: Exception) {}
 
-        super.onDestroy()
+    try {
+        unregisterReceiver(homeReceiver)
+    } catch (_: Exception) {}
+
+    super.onDestroy()
     }
 
     // =========================================================
