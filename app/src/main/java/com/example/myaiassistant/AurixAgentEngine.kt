@@ -3,11 +3,11 @@ package com.example.myaiassistant
 /**
  * AURIX 2.0
  *
- * Multi-Step Agent Planner
+ * Multi-Step Agent Planner + Executor
  *
  * Converts a user goal into a sequence of
- * smaller actions that can later be executed
- * by AURIX skills.
+ * smaller actions and executes supported actions
+ * through the existing AURIX command router.
  */
 object AurixAgentEngine {
 
@@ -35,9 +35,6 @@ object AurixAgentEngine {
         val totalSteps: Int = 0
     )
 
-    /**
-     * Creates an agent task.
-     */
     fun createTask(command: String): AgentTask {
 
         return AgentTask(
@@ -46,18 +43,12 @@ object AurixAgentEngine {
         )
     }
 
-    /**
-     * Converts one user command into multiple steps.
-     */
     fun createPlan(task: AgentTask): AgentPlan {
 
         val command = task.command.lowercase()
 
         val steps = mutableListOf<AgentStep>()
 
-        /*
-         * Bluetooth + music workflow
-         */
         if (
             command.contains("bluetooth") &&
             (
@@ -83,9 +74,6 @@ object AurixAgentEngine {
             )
         }
 
-        /*
-         * Open application + music workflow
-         */
         if (
             command.contains("youtube") &&
             (
@@ -111,9 +99,6 @@ object AurixAgentEngine {
             )
         }
 
-        /*
-         * Phone workflow
-         */
         if (
             command.contains("open phone") ||
             command.contains("open dialer")
@@ -128,9 +113,6 @@ object AurixAgentEngine {
             )
         }
 
-        /*
-         * Settings workflow
-         */
         if (command.contains("open settings")) {
 
             steps.add(
@@ -142,10 +124,6 @@ object AurixAgentEngine {
             )
         }
 
-        /*
-         * If no specialized workflow was detected,
-         * keep the original command as one step.
-         */
         if (steps.isEmpty()) {
 
             steps.add(
@@ -164,10 +142,7 @@ object AurixAgentEngine {
     }
 
     /**
-     * Executes the current plan.
-     *
-     * Actual skill execution will be connected
-     * in the next stage.
+     * Executes the current agent plan.
      */
     fun execute(plan: AgentPlan): AgentResult {
 
@@ -179,10 +154,53 @@ object AurixAgentEngine {
             )
         }
 
+        var completedSteps = 0
+
+        for (step in plan.steps) {
+
+            val command = when (step.action) {
+
+                "OPEN_YOUTUBE" ->
+                    "open youtube"
+
+                "OPEN_PHONE" ->
+                    "open phone"
+
+                "OPEN_SETTINGS" ->
+                    "open settings"
+
+                "BLUETOOTH" ->
+                    "show my paired bluetooth devices"
+
+                "PLAY" ->
+                    "play music"
+
+                "GENERAL" ->
+                    step.description
+
+                else ->
+                    continue
+            }
+
+            val response = AurixCommandRouter.route(command)
+
+            if (
+                response.isNotBlank() &&
+                !response.startsWith("I understood:")
+            ) {
+                completedSteps++
+            }
+        }
+
         return AgentResult(
-            success = true,
-            message = "Agent plan created with ${plan.steps.size} step(s).",
-            completedSteps = 0,
+            success = completedSteps == plan.steps.size,
+            message =
+                if (completedSteps == plan.steps.size) {
+                    "Agent completed all planned steps."
+                } else {
+                    "Agent completed $completedSteps of ${plan.steps.size} steps."
+                },
+            completedSteps = completedSteps,
             totalSteps = plan.steps.size
         )
     }
