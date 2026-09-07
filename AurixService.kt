@@ -953,6 +953,9 @@ if (
     speak(aurixResponse)
     return
 }
+    googleSearch(command)
+}
+
 
     // =========================================================
     // SMART APP CONTROL
