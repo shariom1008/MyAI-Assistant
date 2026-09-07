@@ -479,17 +479,19 @@ class AurixService :
 // =========================================================
 // AURIX 2.0 MULTI-STEP AGENT
 // =========================================================
-
 if (isAgentCommand(command)) {
 
     sendStatus("THINKING")
 
-    val result =
-        AurixAgentEngine.run(command)
+    val task =
+        AurixAgentEngine.createTask(command)
+
+    val plan =
+        AurixAgentEngine.createPlan(task)
 
     sendStatus("EXECUTING")
 
-    speak(result.message)
+    executeAgentSteps(plan)
 
     return
 }
@@ -988,6 +990,91 @@ private fun isAgentCommand(
         c.contains("youtube")
 
     return hasKnownAction
+}
+private fun executeAgentSteps(
+    plan: AurixAgentEngine.AgentPlan
+) {
+
+    if (plan.steps.isEmpty()) {
+        speak("I could not create an execution plan.")
+        return
+    }
+
+    executeAgentStep(
+        plan = plan,
+        index = 0
+    )
+}
+
+private fun executeAgentStep(
+    plan: AurixAgentEngine.AgentPlan,
+    index: Int
+) {
+
+    if (index >= plan.steps.size) {
+
+        speak(
+            "Agent completed all planned steps."
+        )
+
+        return
+    }
+
+    val step =
+        plan.steps[index]
+
+    val command =
+        when (step.action) {
+
+            "OPEN_YOUTUBE" ->
+                "open youtube"
+
+            "OPEN_PHONE" ->
+                "open phone"
+
+            "OPEN_SETTINGS" ->
+                "open settings"
+
+            "BLUETOOTH" ->
+                "show my paired bluetooth devices"
+
+            "PLAY" ->
+                "play music"
+
+            "GENERAL" ->
+                step.description
+
+            else ->
+                step.description
+        }
+
+    val response =
+        AurixCommandRouter.route(command)
+
+    sendStatus(
+        "EXECUTING: ${step.description}"
+    )
+
+    val nextIndex =
+        index + 1
+
+    if (nextIndex >= plan.steps.size) {
+
+        speak(
+            "Agent completed all planned steps."
+        )
+
+        return
+    }
+
+    handler.postDelayed({
+
+        executeAgentStep(
+            plan = plan,
+            index = nextIndex
+        )
+
+    }, 1500)
 }
 
     // =========================================================
