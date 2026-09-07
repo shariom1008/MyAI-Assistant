@@ -432,6 +432,13 @@ class AurixService :
                     )
                     .trim()
             )
+            if (
+                command.contains("home") &&
+                !command.contains("homework")
+) {
+    goHome()
+    return
+            }
 
         if (command.isBlank()) {
             return
@@ -2953,32 +2960,24 @@ class AurixService :
             c == "band app" ||
             c == "aurix home"
     }
-    private fun goHome() {
+  
+private fun goHome() {
 
-        try {
+    speak("Going to home screen")
 
-            val homeIntent =
-                Intent(
-                    Intent.ACTION_MAIN
-                ).apply {
+    try {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            addCategory(Intent.CATEGORY_DEFAULT)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
 
-                    addCategory(
-                        Intent.CATEGORY_HOME
-                    )
+        startActivity(homeIntent)
 
-                    addCategory(
-                        Intent.CATEGORY_DEFAULT
-                    )
-
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    )
-                }
-
+    } catch (_: Exception) {
+        speak("Unable to go to home")
+    }
+}
             val resolved =
                 packageManager.resolveActivity(
                     homeIntent,
