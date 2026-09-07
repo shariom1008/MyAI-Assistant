@@ -80,7 +80,9 @@ class AurixService :
     override fun onCreate() {
 
         super.onCreate()
-
+        AurixSkillEngine.addSkill(
+            PhoneSkill(this)
+)
         serviceDestroyed = false
         isRunning = true
         restarting = false
