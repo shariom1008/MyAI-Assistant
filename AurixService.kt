@@ -465,6 +465,7 @@ class AurixService :
             stopAurix()
             return
         }
+        
 
         // -----------------------------------------------------
         // HOME
@@ -475,7 +476,23 @@ class AurixService :
             goHome()
             return
         }
+// =========================================================
+// AURIX 2.0 MULTI-STEP AGENT
+// =========================================================
 
+if (isAgentCommand(command)) {
+
+    sendStatus("THINKING")
+
+    val result =
+        AurixAgentEngine.run(command)
+
+    sendStatus("EXECUTING")
+
+    speak(result.message)
+
+    return
+}
         // -----------------------------------------------------
         // FLASHLIGHT
         // -----------------------------------------------------
@@ -941,6 +958,37 @@ if (
     googleSearch(command)
 }
 
+private fun isAgentCommand(
+    command: String
+): Boolean {
+
+    val c =
+        command
+            .lowercase(Locale.getDefault())
+            .trim()
+
+    val hasMultipleActions =
+        c.contains(" and ") ||
+        c.contains(" then ") ||
+        c.contains("after that") ||
+        c.contains("and then")
+
+    if (!hasMultipleActions) {
+        return false
+    }
+
+    val hasKnownAction =
+        c.contains("open") ||
+        c.contains("launch") ||
+        c.contains("start") ||
+        c.contains("play") ||
+        c.contains("bluetooth") ||
+        c.contains("settings") ||
+        c.contains("phone") ||
+        c.contains("youtube")
+
+    return hasKnownAction
+}
 
     // =========================================================
     // SMART APP CONTROL
