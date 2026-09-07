@@ -593,11 +593,6 @@ class MainActivity : Activity() {
         buttonParams.bottomMargin =
             dp(18)
 
-
-root.addView(
-    dashboard,
-    dashboardParams
-)
         root.addView(
             activateButton,
             buttonParams
