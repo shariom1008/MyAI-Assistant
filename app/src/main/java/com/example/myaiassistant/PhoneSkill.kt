@@ -3,10 +3,11 @@ package com.example.myaiassistant
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
 
 /**
  * AURIX 2.0
- * Basic Phone Control Skill
+ * Phone Control Skill
  */
 class PhoneSkill(
     private val context: Context
@@ -24,6 +25,8 @@ class PhoneSkill(
         val cmd = command.lowercase().trim()
 
         return when {
+
+            // YouTube
             cmd.contains("youtube") -> {
                 openAppOrWebsite(
                     packageName = "com.google.android.youtube",
@@ -32,7 +35,9 @@ class PhoneSkill(
                 )
             }
 
-            cmd.contains("chrome") -> {
+            // Chrome
+            cmd.contains("chrome") ||
+                    cmd.contains("browser") -> {
                 openAppOrWebsite(
                     packageName = "com.android.chrome",
                     url = "https://www.google.com",
@@ -40,32 +45,15 @@ class PhoneSkill(
                 )
             }
 
-            cmd.contains("settings") -> {
-                try {
-                    val intent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-
-                    context.startActivity(intent)
-                    "Opening settings."
-                } catch (e: Exception) {
-                    "I couldn't open settings."
-                }
+            // Phone / Dialer
+            cmd.contains("phone") ||
+                    cmd.contains("dialer") -> {
+                openPhone()
             }
 
-            cmd.contains("phone") ||
-                    cmd.contains("dialer") ||
-                    cmd.contains("call") -> {
-                try {
-                    val intent = Intent(Intent.ACTION_DIAL).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-
-                    context.startActivity(intent)
-                    "Opening phone."
-                } catch (e: Exception) {
-                    "I couldn't open the phone app."
-                }
+            // Settings
+            cmd.contains("settings") -> {
+                openSettings()
             }
 
             else -> null
@@ -81,11 +69,15 @@ class PhoneSkill(
         return try {
 
             val launchIntent =
-                context.packageManager.getLaunchIntentForPackage(packageName)
+                context.packageManager
+                    .getLaunchIntentForPackage(packageName)
 
             if (launchIntent != null) {
 
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                launchIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+
                 context.startActivity(launchIntent)
 
                 "Opening $appName."
@@ -104,8 +96,46 @@ class PhoneSkill(
                 "Opening $appName in browser."
             }
 
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "I couldn't open $appName."
+        }
+    }
+
+    private fun openPhone(): String {
+
+        return try {
+
+            val intent = Intent(
+                Intent.ACTION_DIAL
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            context.startActivity(intent)
+
+            "Opening phone."
+
+        } catch (_: Exception) {
+            "I couldn't open the phone app."
+        }
+    }
+
+    private fun openSettings(): String {
+
+        return try {
+
+            val intent = Intent(
+                Settings.ACTION_SETTINGS
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            context.startActivity(intent)
+
+            "Opening settings."
+
+        } catch (_: Exception) {
+            "I couldn't open settings."
         }
     }
 }
