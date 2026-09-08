@@ -20,7 +20,7 @@ object AurixContextResolver {
         }
 
         // -----------------------------------------------------
-        // MEMORY STATEMENTS
+        // NAME MEMORY
         // -----------------------------------------------------
 
         if (
@@ -29,7 +29,26 @@ object AurixContextResolver {
             current.startsWith("mera name ")
         ) {
 
-            return MEMORY_STATEMENT_PREFIX + command.trim()
+            return MEMORY_STATEMENT_PREFIX +
+                    command.trim()
+        }
+
+        // -----------------------------------------------------
+        // LOCATION MEMORY
+        // -----------------------------------------------------
+
+        if (
+            current.startsWith("i live in ") ||
+            current.startsWith("i am from ") ||
+            current.startsWith("i'm from ") ||
+            current.startsWith("main ") &&
+            current.contains("mein rehta") ||
+            current.startsWith("main ") &&
+            current.contains("mein rehti")
+        ) {
+
+            return MEMORY_STATEMENT_PREFIX +
+                    command.trim()
         }
 
         // -----------------------------------------------------
@@ -43,10 +62,10 @@ object AurixContextResolver {
         val recent =
             ConversationMemoryEngine
                 .getRecentTurns()
-                .takeLast(6)
+                .takeLast(12)
 
         // -----------------------------------------------------
-        // MEMORY QUESTIONS
+        // NAME QUESTION
         // -----------------------------------------------------
 
         if (
@@ -61,6 +80,25 @@ object AurixContextResolver {
                     buildMemoryAnswer(
                         recent,
                         "name"
+                    )
+        }
+
+        // -----------------------------------------------------
+        // LOCATION QUESTION
+        // -----------------------------------------------------
+
+        if (
+            current.contains("where do i live") ||
+            current.contains("where am i from") ||
+            current.contains("do you know where i live") ||
+            current.contains("main kahan rehta hoon") ||
+            current.contains("main kahan rehti hoon")
+        ) {
+
+            return DIRECT_RESPONSE_PREFIX +
+                    buildMemoryAnswer(
+                        recent,
+                        "location"
                     )
         }
 
@@ -86,6 +124,10 @@ object AurixContextResolver {
         return current
     }
 
+    // ---------------------------------------------------------
+    // MEMORY ANSWER
+    // ---------------------------------------------------------
+
     private fun buildMemoryAnswer(
         turns: List<ConversationMemoryEngine.Turn>,
         type: String
@@ -95,12 +137,12 @@ object AurixContextResolver {
             return "I don't have that information yet."
         }
 
-        if (type == "name") {
+        for (turn in turns.asReversed()) {
 
-            for (turn in turns.asReversed()) {
+            val user =
+                turn.user.lowercase()
 
-                val user =
-                    turn.user.lowercase()
+            if (type == "name") {
 
                 val patterns =
                     listOf(
@@ -116,19 +158,12 @@ object AurixContextResolver {
 
                     if (index >= 0) {
 
-                        var name =
-                            turn.user
-                                .substring(
+                        val name =
+                            cleanValue(
+                                turn.user.substring(
                                     index + pattern.length
                                 )
-                                .trim()
-
-                        name =
-                            name
-                                .removeSuffix(".")
-                                .removeSuffix("!")
-                                .removeSuffix("?")
-                                .trim()
+                            )
 
                         if (
                             name.isNotBlank() &&
@@ -140,10 +175,76 @@ object AurixContextResolver {
                     }
                 }
             }
+
+            if (type == "location") {
+
+                val patterns =
+                    listOf(
+                        "i live in ",
+                        "i am from ",
+                        "i'm from ",
+                        "mein rehta hoon",
+                        "mein rehti hoon"
+                    )
+
+                for (pattern in patterns) {
+
+                    val index =
+                        user.indexOf(pattern)
+
+                    if (index >= 0) {
+
+                        val location =
+                            cleanValue(
+                                turn.user.substring(
+                                    index + pattern.length
+                                )
+                            )
+
+                        if (
+                            location.isNotBlank() &&
+                            location.length <= 60
+                        ) {
+
+                            return "You live in $location."
+                        }
+                    }
+                }
+            }
         }
 
-        return "I don't remember your name yet."
+        return when (type) {
+
+            "name" ->
+                "I don't remember your name yet."
+
+            "location" ->
+                "I don't remember where you live yet."
+
+            else ->
+                "I don't have that information yet."
+        }
     }
+
+    // ---------------------------------------------------------
+    // CLEAN MEMORY VALUE
+    // ---------------------------------------------------------
+
+    private fun cleanValue(
+        value: String
+    ): String {
+
+        return value
+            .trim()
+            .removeSuffix(".")
+            .removeSuffix("!")
+            .removeSuffix("?")
+            .trim()
+    }
+
+    // ---------------------------------------------------------
+    // CONVERSATION SUMMARY
+    // ---------------------------------------------------------
 
     private fun buildConversationAnswer(
         turns: List<ConversationMemoryEngine.Turn>
