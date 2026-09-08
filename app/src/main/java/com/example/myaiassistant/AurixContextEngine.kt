@@ -55,6 +55,17 @@ object AurixContextEngine {
     fun clear() {
         history.clear()
     }
+    fun getConversationText(): String {
+
+    return history.joinToString("\n") {
+        "${it.role}: ${it.text}"
+    }
+}
+
+fun getLastMessages(limit: Int = 6): List<ContextItem> {
+
+    return history.takeLast(limit)
+}
 
     fun size(): Int {
         return history.size
