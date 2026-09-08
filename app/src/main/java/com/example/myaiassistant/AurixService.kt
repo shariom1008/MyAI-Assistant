@@ -73,31 +73,31 @@ class AurixService :
     private val handler =
         Handler(Looper.getMainLooper())
 
-    // =========================================================
-    // SERVICE
-    // =========================================================
+    private var currentUserCommand = ""
+    private var currentResponseSent = false
 
     override fun onCreate() {
-
         super.onCreate()
-        AurixSkillEngine.addSkill(
-            PhoneSkill(this)
-)
-        AurixSkillEngine.addSkill(
-            BluetoothAudioSkill(this)
-)
+
         serviceDestroyed = false
         isRunning = true
         restarting = false
+
+        AurixMemoryBridge.initialize(this)
+
+        AurixSkillEngine.addSkill(
+            PhoneSkill(this)
+        )
+
+        AurixSkillEngine.addSkill(
+            BluetoothAudioSkill(this)
+        )
 
         createNotificationChannel()
         startForegroundNotification()
 
         textToSpeech =
-            TextToSpeech(
-                this,
-                this
-            )
+            TextToSpeech(this, this)
 
         startListening()
     }
@@ -116,7 +116,6 @@ class AurixService :
             }
 
             ACTION_START -> {
-
                 isRunning = true
                 restarting = false
 
@@ -126,7 +125,6 @@ class AurixService :
             }
 
             else -> {
-
                 if (!listening) {
                     startListening()
                 }
@@ -161,13 +159,11 @@ class AurixService :
         stopSelf()
     }
 
-    // =========================================================
-    // NOTIFICATION
-    // =========================================================
-
     private fun createNotificationChannel() {
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
 
             val channel =
                 NotificationChannel(
@@ -191,7 +187,10 @@ class AurixService :
     private fun startForegroundNotification() {
 
         val notification =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O
+            ) {
 
                 Notification.Builder(
                     this,
@@ -227,18 +226,12 @@ class AurixService :
         )
     }
 
-    // =========================================================
-    // SPEECH ENGINE
-    // =========================================================
-
     private fun startListening() {
 
         if (
             serviceDestroyed ||
             !isRunning
-        ) {
-            return
-        }
+        ) return
 
         if (
             !SpeechRecognizer
@@ -279,7 +272,7 @@ class AurixService :
                 override fun onBeginningOfSpeech() {
 
                     sendStatus(
-                        "PROCESSING"
+                        "THINKING"
                     )
                 }
 
@@ -316,7 +309,8 @@ class AurixService :
 
                     val list =
                         results?.getStringArrayList(
-                            SpeechRecognizer.RESULTS_RECOGNITION
+                            SpeechRecognizer
+                                .RESULTS_RECOGNITION
                         )
 
                     val command =
@@ -332,6 +326,7 @@ class AurixService :
                     ) {
 
                         sendCommand(command)
+
                         processCommand(command)
                     }
 
@@ -360,36 +355,40 @@ class AurixService :
 
         val intent =
             Intent(
-                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+                RecognizerIntent
+                    .ACTION_RECOGNIZE_SPEECH
             ).apply {
 
                 putExtra(
-                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                    RecognizerIntent
+                        .EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent
+                        .LANGUAGE_MODEL_FREE_FORM
                 )
 
                 putExtra(
-                    RecognizerIntent.EXTRA_LANGUAGE,
+                    RecognizerIntent
+                        .EXTRA_LANGUAGE,
                     Locale.getDefault()
                 )
 
                 putExtra(
-                    RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                    RecognizerIntent
+                        .EXTRA_PARTIAL_RESULTS,
                     false
                 )
 
                 putExtra(
-                    RecognizerIntent.EXTRA_MAX_RESULTS,
+                    RecognizerIntent
+                        .EXTRA_MAX_RESULTS,
                     3
                 )
             }
 
         try {
-
-            speechRecognizer?.startListening(intent)
-
+            speechRecognizer
+                ?.startListening(intent)
         } catch (_: Exception) {
-
             restartListening()
         }
     }
@@ -400,9 +399,7 @@ class AurixService :
             restarting ||
             !isRunning ||
             serviceDestroyed
-        ) {
-            return
-        }
+        ) return
 
         restarting = true
         listening = false
@@ -422,12 +419,14 @@ class AurixService :
     }
 
     // =========================================================
-    // COMMAND ENGINE
+    // MAIN AURIX COMMAND ENGINE
     // =========================================================
 
     private fun processCommand(
         rawCommand: String
     ) {
+
+        currentResponseSent = false
 
         var command =
             normalizeNumberWords(
@@ -437,58 +436,104 @@ class AurixService :
                     )
                     .trim()
             )
-            if (
-                command.contains("home") &&
-                !command.contains("homework")
-) {
-    goHome()
-    return
-            }
 
-        if (command.isBlank()) {
-            return
-        }
-    
+        if (command.isBlank()) return
+
+        currentUserCommand =
+            rawCommand.trim()
+
         AurixMemoryBridge.initialize(this)
-        val resolvedCommand =
-        AurixContextResolver.resolve(command)
-        command = resolvedCommand
-        currentUserCommand = command
-        if (
-    command.startsWith(
-        "AURIX_MEMORY_STATEMENT:"
-    )
-) {
 
-    currentUserCommand =
-        rawCommand
-
-    speak(
-        "Got it. I'll remember that."
-    )
-
-    return
-        }
-        if (
-    command.startsWith(
-        "AURIX_DIRECT_RESPONSE:"
-    )
-) {
-
-    val response =
-        command.removePrefix(
-            "AURIX_DIRECT_RESPONSE:"
-        )
-
-    currentUserCommand =
-        rawCommand
-
-    speak(response)
-    return
-        }
+        sendStatus("THINKING")
 
         // -----------------------------------------------------
-        // STOP AURIX
+        // CONTEXT RESOLUTION
+        // -----------------------------------------------------
+
+        when (
+            val resolution =
+                AurixContextResolver.resolve(
+                    this,
+                    command
+                )
+        ) {
+
+            is AurixContextResolver.Resolution.MemoryStatement -> {
+
+                AurixMemoryBridge.rememberThat(
+                    this,
+                    resolution.original
+                )
+
+                speakOnce(
+                    "Got it. I'll remember that."
+                )
+
+                return
+            }
+
+            is AurixContextResolver.Resolution.DirectResponse -> {
+
+                speakOnce(
+                    resolution.response
+                )
+
+                return
+            }
+
+            is AurixContextResolver.Resolution.ClearMemory -> {
+
+                if (resolution.all) {
+
+                    AurixMemoryBridge.clearAll(
+                        this
+                    )
+
+                    speakOnce(
+                        "I've cleared my personal memory."
+                    )
+
+                } else {
+
+                    val key =
+                        resolution.key
+
+                    if (
+                        key.isNullOrBlank()
+                    ) {
+
+                        speakOnce(
+                            "Tell me what you want me to forget."
+                        )
+
+                    } else {
+
+                        AurixMemoryBridge
+                            .clearMemoryKey(
+                                this,
+                                key
+                            )
+
+                        speakOnce(
+                            "Okay. I'll forget that."
+                        )
+                    }
+                }
+
+                return
+            }
+
+            is AurixContextResolver.Resolution.Command -> {
+                command =
+                    resolution.command
+            }
+        }
+
+        currentUserCommand =
+            command
+
+        // -----------------------------------------------------
+        // STOP
         // -----------------------------------------------------
 
         if (
@@ -499,54 +544,203 @@ class AurixService :
             command == "aurix deactivate"
         ) {
 
-            speak("Stopping AURIX")
-            stopAurix()
+            speakOnce(
+                "Stopping AURIX."
+            )
+
+            handler.postDelayed(
+                {
+                    stopAurix()
+                },
+                700
+            )
+
             return
         }
-        
 
         // -----------------------------------------------------
-        // HOME
+        // HOME / CLOSE
         // -----------------------------------------------------
 
-        if (isCloseCommand(command)) {
+        if (
+            isCloseCommand(command)
+        ) {
 
             goHome()
             return
         }
-// =========================================================
-// AURIX 2.0 MULTI-STEP AGENT
-// =========================================================
-if (isAgentCommand(command)) {
 
-    sendStatus("THINKING")
+        // -----------------------------------------------------
+        // MEMORY
+        // -----------------------------------------------------
 
-    val task =
-        AurixAgentEngine.createTask(command)
+        if (
+            command.contains(
+                "what did i tell you"
+            ) ||
+            command.contains(
+                "what do you remember"
+            ) ||
+            command.contains(
+                "what do you know about me"
+            ) ||
+            command.contains(
+                "what you know about me"
+            ) ||
+            command.contains(
+                "tell me about myself"
+            )
+        ) {
 
-    val plan =
-        AurixAgentEngine.createPlan(task)
+            val memory =
+                AurixMemoryBridge
+                    .getPersonalMemory(
+                        this
+                    )
 
-    sendStatus("EXECUTING")
+            if (
+                memory.isBlank()
+            ) {
 
-    executeAgentStep(
-    plan = plan,
-    index = 0
-)
+                speakOnce(
+                    "I don't have any personal memory about you yet."
+                )
 
-    return
-}
+            } else {
+
+                speakOnce(
+                    memory
+                )
+            }
+
+            return
+        }
+
+        if (
+            command.contains(
+                "clear memory"
+            ) ||
+            command.contains(
+                "forget everything"
+            ) ||
+            command.contains(
+                "forget all"
+            ) ||
+            command.contains(
+                "delete memory"
+            )
+        ) {
+
+            AurixMemoryBridge.clearAll(
+                this
+            )
+
+            speakOnce(
+                "All personal memory has been cleared."
+            )
+
+            return
+        }
+
+        // -----------------------------------------------------
+        // DIAGNOSTICS
+        // -----------------------------------------------------
+
+        if (
+            command.contains(
+                "aurix status"
+            ) ||
+            command.contains(
+                "aurix diagnostics"
+            ) ||
+            command.contains(
+                "system status"
+            ) ||
+            command == "diagnostics"
+        ) {
+
+            sendStatus(
+                "VERIFYING"
+            )
+
+            val battery =
+                getBatteryLevel()
+
+            val skills =
+                AurixSkillEngine.skillCount()
+
+            val memory =
+                if (
+                    AurixMemoryBridge
+                        .hasMemory()
+                ) {
+                    "available"
+                } else {
+                    "empty"
+                }
+
+            speakOnce(
+                "AURIX is online. " +
+                    "Voice is active. " +
+                    "Memory is $memory. " +
+                    "$skills skills are loaded. " +
+                    "Battery is $battery percent."
+            )
+
+            return
+        }
+
+        // -----------------------------------------------------
+        // AGENT MODE
+        // -----------------------------------------------------
+
+        if (
+            isAgentCommand(command)
+        ) {
+
+            sendStatus(
+                "EXECUTING"
+            )
+
+            val task =
+                AurixAgentEngine
+                    .createTask(command)
+
+            val plan =
+                AurixAgentEngine
+                    .createPlan(task)
+
+            executeAgentStep(
+                plan,
+                0
+            )
+
+            return
+        }
+
         // -----------------------------------------------------
         // FLASHLIGHT
         // -----------------------------------------------------
 
         if (
-            command.contains("turn on flashlight") ||
-            command.contains("switch on flashlight") ||
-            command.contains("flashlight on") ||
-            command.contains("torch on") ||
-            command.contains("torch chalao") ||
-            command.contains("flashlight chalao")
+            command.contains(
+                "turn on flashlight"
+            ) ||
+            command.contains(
+                "switch on flashlight"
+            ) ||
+            command.contains(
+                "flashlight on"
+            ) ||
+            command.contains(
+                "torch on"
+            ) ||
+            command.contains(
+                "torch chalao"
+            ) ||
+            command.contains(
+                "flashlight chalao"
+            )
         ) {
 
             setFlashlight(true)
@@ -554,12 +748,24 @@ if (isAgentCommand(command)) {
         }
 
         if (
-            command.contains("turn off flashlight") ||
-            command.contains("switch off flashlight") ||
-            command.contains("flashlight off") ||
-            command.contains("torch off") ||
-            command.contains("torch band") ||
-            command.contains("flashlight band")
+            command.contains(
+                "turn off flashlight"
+            ) ||
+            command.contains(
+                "switch off flashlight"
+            ) ||
+            command.contains(
+                "flashlight off"
+            ) ||
+            command.contains(
+                "torch off"
+            ) ||
+            command.contains(
+                "torch band"
+            ) ||
+            command.contains(
+                "flashlight band"
+            )
         ) {
 
             setFlashlight(false)
@@ -570,7 +776,9 @@ if (isAgentCommand(command)) {
         // TIMER
         // -----------------------------------------------------
 
-        if (command.contains("timer")) {
+        if (
+            command.contains("timer")
+        ) {
 
             setAurixTimer(command)
             return
@@ -580,7 +788,9 @@ if (isAgentCommand(command)) {
         // ALARM
         // -----------------------------------------------------
 
-        if (command.contains("alarm")) {
+        if (
+            command.contains("alarm")
+        ) {
 
             setAurixAlarm(command)
             return
@@ -592,8 +802,12 @@ if (isAgentCommand(command)) {
 
         if (
             command.contains("date") ||
-            command.contains("today's date") ||
-            command.contains("today date")
+            command.contains(
+                "today's date"
+            ) ||
+            command.contains(
+                "today date"
+            )
         ) {
 
             val date =
@@ -602,7 +816,10 @@ if (isAgentCommand(command)) {
                     Locale.getDefault()
                 ).format(Date())
 
-            speak("Today is $date")
+            speakOnce(
+                "Today is $date."
+            )
+
             return
         }
 
@@ -612,8 +829,12 @@ if (isAgentCommand(command)) {
 
         if (
             command == "day" ||
-            command.contains("what day") ||
-            command.contains("which day")
+            command.contains(
+                "what day"
+            ) ||
+            command.contains(
+                "which day"
+            )
         ) {
 
             val day =
@@ -622,7 +843,10 @@ if (isAgentCommand(command)) {
                     Locale.getDefault()
                 ).format(Date())
 
-            speak("Today is $day")
+            speakOnce(
+                "Today is $day."
+            )
+
             return
         }
 
@@ -632,12 +856,24 @@ if (isAgentCommand(command)) {
 
         if (
             command == "time" ||
-            command.contains("what is the time") ||
-            command.contains("what's the time") ||
-            command.contains("tell me the time") ||
-            command.contains("current time") ||
-            command.contains("what time is it") ||
-            command.contains("time kya hai")
+            command.contains(
+                "what is the time"
+            ) ||
+            command.contains(
+                "what's the time"
+            ) ||
+            command.contains(
+                "tell me the time"
+            ) ||
+            command.contains(
+                "current time"
+            ) ||
+            command.contains(
+                "what time is it"
+            ) ||
+            command.contains(
+                "time kya hai"
+            )
         ) {
 
             val time =
@@ -646,7 +882,10 @@ if (isAgentCommand(command)) {
                     Locale.getDefault()
                 ).format(Date())
 
-            speak("The time is $time")
+            speakOnce(
+                "The time is $time."
+            )
+
             return
         }
 
@@ -655,8 +894,15 @@ if (isAgentCommand(command)) {
         // -----------------------------------------------------
 
         if (
-            command.contains("camera") ||
-            command.contains("take a photo")
+            command.contains(
+                "camera"
+            ) ||
+            command.contains(
+                "take a photo"
+            ) ||
+            command.contains(
+                "take photo"
+            )
         ) {
 
             openCamera()
@@ -668,9 +914,15 @@ if (isAgentCommand(command)) {
         // -----------------------------------------------------
 
         if (
-            command.contains("gallery") ||
-            command.contains("photos") ||
-            command.contains("photo gallery")
+            command.contains(
+                "gallery"
+            ) ||
+            command.contains(
+                "photos"
+            ) ||
+            command.contains(
+                "photo gallery"
+            )
         ) {
 
             openGallery()
@@ -683,8 +935,12 @@ if (isAgentCommand(command)) {
 
         if (
             command == "music" ||
-            command.contains("open music") ||
-            command.contains("music app")
+            command.contains(
+                "open music"
+            ) ||
+            command.contains(
+                "music app"
+            )
         ) {
 
             openMusic()
@@ -696,8 +952,12 @@ if (isAgentCommand(command)) {
         // -----------------------------------------------------
 
         if (
-            command.contains("notes") ||
-            command.contains("note app")
+            command.contains(
+                "notes"
+            ) ||
+            command.contains(
+                "note app"
+            )
         ) {
 
             openNotes()
@@ -709,8 +969,12 @@ if (isAgentCommand(command)) {
         // -----------------------------------------------------
 
         if (
-            command.contains("calculator") ||
-            command.contains("calculate")
+            command.contains(
+                "calculator"
+            ) ||
+            command.contains(
+                "calculate"
+            )
         ) {
 
             openCalculator()
@@ -722,19 +986,36 @@ if (isAgentCommand(command)) {
         // -----------------------------------------------------
 
         if (
-            command.startsWith("search youtube") ||
-            command.startsWith("youtube search") ||
-            command.startsWith("youtube par")
+            command.startsWith(
+                "search youtube"
+            ) ||
+            command.startsWith(
+                "youtube search"
+            ) ||
+            command.startsWith(
+                "youtube par"
+            )
         ) {
 
             val query =
                 command
-                    .replaceFirst("search youtube", "")
-                    .replaceFirst("youtube search", "")
-                    .replaceFirst("youtube par", "")
+                    .replaceFirst(
+                        "search youtube",
+                        ""
+                    )
+                    .replaceFirst(
+                        "youtube search",
+                        ""
+                    )
+                    .replaceFirst(
+                        "youtube par",
+                        ""
+                    )
                     .trim()
 
-            if (query.isNotBlank()) {
+            if (
+                query.isNotBlank()
+            ) {
                 searchYouTube(query)
             } else {
                 openYouTube()
@@ -758,23 +1039,40 @@ if (isAgentCommand(command)) {
         }
 
         // -----------------------------------------------------
-        // MAP SEARCH
+        // MAPS
         // -----------------------------------------------------
 
         if (
-            command.startsWith("search maps") ||
-            command.startsWith("maps search") ||
-            command.startsWith("navigate to")
+            command.startsWith(
+                "search maps"
+            ) ||
+            command.startsWith(
+                "maps search"
+            ) ||
+            command.startsWith(
+                "navigate to"
+            )
         ) {
 
             val query =
                 command
-                    .replaceFirst("search maps", "")
-                    .replaceFirst("maps search", "")
-                    .replaceFirst("navigate to", "")
+                    .replaceFirst(
+                        "search maps",
+                        ""
+                    )
+                    .replaceFirst(
+                        "maps search",
+                        ""
+                    )
+                    .replaceFirst(
+                        "navigate to",
+                        ""
+                    )
                     .trim()
 
-            if (query.isNotBlank()) {
+            if (
+                query.isNotBlank()
+            ) {
                 searchMaps(query)
             } else {
                 openMaps()
@@ -782,10 +1080,6 @@ if (isAgentCommand(command)) {
 
             return
         }
-
-        // -----------------------------------------------------
-        // MAPS
-        // -----------------------------------------------------
 
         if (
             command == "maps" ||
@@ -842,28 +1136,36 @@ if (isAgentCommand(command)) {
         }
 
         // -----------------------------------------------------
-        // WI-FI
+        // WIFI
         // -----------------------------------------------------
 
         if (
-            command.contains("wifi") ||
-            command.contains("wi fi")
+            command.contains(
+                "wifi"
+            ) ||
+            command.contains(
+                "wi fi"
+            )
         ) {
 
             openWifiSettings()
             return
         }
 
-        
-
         // -----------------------------------------------------
         // VOLUME
         // -----------------------------------------------------
 
         if (
-            command.contains("volume up") ||
-            command.contains("increase volume") ||
-            command.contains("volume badhao")
+            command.contains(
+                "volume up"
+            ) ||
+            command.contains(
+                "increase volume"
+            ) ||
+            command.contains(
+                "volume badhao"
+            )
         ) {
 
             changeVolume(true)
@@ -871,9 +1173,15 @@ if (isAgentCommand(command)) {
         }
 
         if (
-            command.contains("volume down") ||
-            command.contains("decrease volume") ||
-            command.contains("volume kam")
+            command.contains(
+                "volume down"
+            ) ||
+            command.contains(
+                "decrease volume"
+            ) ||
+            command.contains(
+                "volume kam"
+            )
         ) {
 
             changeVolume(false)
@@ -888,9 +1196,15 @@ if (isAgentCommand(command)) {
             command == "play" ||
             command == "pause" ||
             command == "resume" ||
-            command.contains("play music") ||
-            command.contains("pause music") ||
-            command.contains("resume music")
+            command.contains(
+                "play music"
+            ) ||
+            command.contains(
+                "pause music"
+            ) ||
+            command.contains(
+                "resume music"
+            )
         ) {
 
             controlMedia()
@@ -902,7 +1216,9 @@ if (isAgentCommand(command)) {
         // -----------------------------------------------------
 
         if (
-            command.contains("battery")
+            command.contains(
+                "battery"
+            )
         ) {
 
             tellBattery()
@@ -910,7 +1226,7 @@ if (isAgentCommand(command)) {
         }
 
         // -----------------------------------------------------
-        // HELLO
+        // GREETING
         // -----------------------------------------------------
 
         if (
@@ -921,7 +1237,7 @@ if (isAgentCommand(command)) {
             command == "hi aurix"
         ) {
 
-            speak(
+            speakOnce(
                 "Hello. I am AURIX. How can I help you?"
             )
 
@@ -933,29 +1249,39 @@ if (isAgentCommand(command)) {
         // -----------------------------------------------------
 
         if (
-            command.contains("who are you") ||
-            command.contains("your name") ||
-            command.contains("what are you")
+            command.contains(
+                "who are you"
+            ) ||
+            command.contains(
+                "your name"
+            ) ||
+            command.contains(
+                "what are you"
+            )
         ) {
 
-            speak(
+            speakOnce(
                 "I am AURIX, your personal AI assistant."
             )
 
             return
         }
 
-        // =====================================================
-        // SMART APP CONTROL
-        // IMPORTANT: BEFORE GOOGLE FALLBACK
-        // =====================================================
+        // -----------------------------------------------------
+        // INSTALLED APP
+        // -----------------------------------------------------
 
-        if (isAppOpenCommand(command)) {
+        if (
+            isAppOpenCommand(command)
+        ) {
 
             val appName =
                 extractAppName(command)
 
-            openInstalledApp(appName)
+            openInstalledApp(
+                appName
+            )
+
             return
         }
 
@@ -964,21 +1290,39 @@ if (isAgentCommand(command)) {
         // -----------------------------------------------------
 
         if (
-            command.startsWith("search ") ||
-            command.startsWith("google ") ||
-            command.startsWith("search for ") ||
-            command.startsWith("google search ")
+            command.startsWith(
+                "search "
+            ) ||
+            command.startsWith(
+                "google "
+            ) ||
+            command.startsWith(
+                "search for "
+            ) ||
+            command.startsWith(
+                "google search "
+            )
         ) {
 
             val query =
                 command
-                    .removePrefix("search for ")
-                    .removePrefix("search ")
-                    .removePrefix("google search ")
-                    .removePrefix("google ")
+                    .removePrefix(
+                        "search for "
+                    )
+                    .removePrefix(
+                        "search "
+                    )
+                    .removePrefix(
+                        "google search "
+                    )
+                    .removePrefix(
+                        "google "
+                    )
                     .trim()
 
-            if (query.isNotBlank()) {
+            if (
+                query.isNotBlank()
+            ) {
                 googleSearch(query)
             }
 
@@ -986,134 +1330,278 @@ if (isAgentCommand(command)) {
         }
 
         // -----------------------------------------------------
-// AURIX 2.0 COMMAND ROUTER
-// -----------------------------------------------------
+        // NORMAL AURIX ROUTER
+        // -----------------------------------------------------
 
-val aurixResponse = AurixCommandRouter.route(command)
+        val aurixResponse =
+            AurixCommandRouter.route(
+                command
+            )
 
-if (
-    aurixResponse.isNotBlank() &&
-    !aurixResponse.startsWith("I understood:")
-) {
-    speak(aurixResponse)
-    return
-}
-    googleSearch(command)
-}
+        if (
+            aurixResponse.isNotBlank() &&
+            !aurixResponse.startsWith(
+                "I understood:"
+            )
+        ) {
 
-private fun isAgentCommand(
-    command: String
-): Boolean {
+            speakOnce(
+                aurixResponse
+            )
 
-    val c =
-        command
-            .lowercase(Locale.getDefault())
-            .trim()
+            return
+        }
 
-    val hasMultipleActions =
-        c.contains(" and ") ||
-        c.contains(" then ") ||
-        c.contains("after that") ||
-        c.contains("and then")
+        // -----------------------------------------------------
+        // FINAL SEARCH FALLBACK
+        // -----------------------------------------------------
 
-    if (!hasMultipleActions) {
-        return false
+        googleSearch(command)
     }
 
-    val hasKnownAction =
-        c.contains("open") ||
-        c.contains("launch") ||
-        c.contains("start") ||
-        c.contains("play") ||
-        c.contains("bluetooth") ||
-        c.contains("settings") ||
-        c.contains("phone") ||
-        c.contains("youtube")
+    // =========================================================
+    // AGENT
+    // =========================================================
 
-    return hasKnownAction
-}
+    private fun isAgentCommand(
+        command: String
+    ): Boolean {
 
+        val c =
+            command
+                .lowercase(
+                    Locale.getDefault()
+                )
+                .trim()
 
-private fun executeAgentStep(
-    plan: AurixAgentEngine.AgentPlan,
-    index: Int
-) {
+        val multipleActions =
+            c.contains(" and ") ||
+                c.contains(" then ") ||
+                c.contains("after that") ||
+                c.contains("and then")
 
-    if (
-        index < 0 ||
-        index >= plan.steps.size
-    ) {
+        if (!multipleActions) {
+            return false
+        }
 
-        speak(
-            "Agent completed all planned steps."
-        )
-
-        return
+        return c.contains("open") ||
+            c.contains("launch") ||
+            c.contains("start") ||
+            c.contains("play") ||
+            c.contains("bluetooth") ||
+            c.contains("settings") ||
+            c.contains("phone") ||
+            c.contains("youtube")
     }
 
-    val step =
-        plan.steps[index]
-
-    sendStatus(
-        "EXECUTING: ${step.description}"
-    )
-
-    val response =
-        AurixCommandRouter.route(
-            step.command
-        )
-
-    if (
-        response.isBlank() ||
-        response.startsWith("I understood:")
+    private fun executeAgentStep(
+        plan: AurixAgentEngine.AgentPlan,
+        index: Int
     ) {
 
-        sendStatus(
-            "STEP FAILED: ${step.description}"
-        )
+        if (
+            index < 0 ||
+            index >= plan.steps.size
+        ) {
 
-    } else {
-
-        sendStatus(
-            "STEP COMPLETE: ${step.description}"
-        )
-    }
-
-    val nextIndex =
-        index + 1
-
-    if (
-        nextIndex >= plan.steps.size
-    ) {
-
-        handler.postDelayed({
-
-            speak(
+            speakOnce(
                 "Agent completed all planned steps."
             )
 
-        }, 500)
+            return
+        }
 
-        return
-    }
+        val step =
+            plan.steps[index]
 
-    /*
-     * Give Android time to bring the current
-     * activity to the foreground before the
-     * next agent step is attempted.
-     */
-    handler.postDelayed({
-
-        executeAgentStep(
-            plan = plan,
-            index = nextIndex
+        sendStatus(
+            "EXECUTING: ${step.description}"
         )
 
-    }, 2000)
-}
+        val response =
+            executeLocalCommand(
+                step.command
+            )
+
+        if (
+            response.isBlank() ||
+            response.startsWith(
+                "I understood:"
+            )
+        ) {
+
+            sendStatus(
+                "STEP FAILED: ${step.description}"
+            )
+
+        } else {
+
+            sendStatus(
+                "STEP COMPLETE: ${step.description}"
+            )
+        }
+
+        val next =
+            index + 1
+
+        if (
+            next >= plan.steps.size
+        ) {
+
+            handler.postDelayed(
+                {
+
+                    sendStatus(
+                        "VERIFYING"
+                    )
+
+                    speakOnce(
+                        "Agent completed all planned steps."
+                    )
+                },
+                500
+            )
+
+            return
+        }
+
+        handler.postDelayed(
+            {
+
+                executeAgentStep(
+                    plan,
+                    next
+                )
+
+            },
+            1500
+        )
+    }
+
+    private fun executeLocalCommand(
+        command: String
+    ): String {
+
+        val c =
+            command
+                .lowercase(
+                    Locale.getDefault()
+                )
+                .trim()
+
+        return try {
+
+            when {
+
+                c == "open youtube" ->
+                    openYouTubeForAgent()
+
+                c == "open phone" ||
+                    c == "open dialer" ->
+                    openPhoneForAgent()
+
+                c == "open settings" ->
+                    openSettingsForAgent()
+
+                c.contains(
+                    "bluetooth"
+                ) ->
+                    AurixSkillEngine.process(c)
+
+                else ->
+                    AurixCommandRouter.route(c)
+            }
+
+        } catch (_: Exception) {
+
+            "I couldn't execute this step."
+        }
+    }
+
+    private fun openYouTubeForAgent(): String {
+
+        return try {
+
+            val intent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(
+                        "https://www.youtube.com"
+                    )
+                ).apply {
+
+                    setPackage(
+                        "com.google.android.youtube"
+                    )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+            "YouTube opened."
+
+        } catch (_: Exception) {
+
+            "I couldn't open YouTube."
+        }
+    }
+
+    private fun openPhoneForAgent(): String {
+
+        return try {
+
+            val intent =
+                Intent(
+                    Intent.ACTION_DIAL
+                ).apply {
+
+                    data =
+                        Uri.parse("tel:")
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+            "Phone opened."
+
+        } catch (_: Exception) {
+
+            "I couldn't open phone."
+        }
+    }
+
+    private fun openSettingsForAgent(): String {
+
+        return try {
+
+            val intent =
+                Intent(
+                    Settings.ACTION_SETTINGS
+                ).apply {
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+            "Settings opened."
+
+        } catch (_: Exception) {
+
+            "I couldn't open settings."
+        }
+    }
 
     // =========================================================
-    // SMART APP CONTROL
+    // APP OPENING
     // =========================================================
 
     private fun isAppOpenCommand(
@@ -1122,22 +1610,24 @@ private fun executeAgentStep(
 
         val c =
             command
-                .lowercase(Locale.getDefault())
+                .lowercase(
+                    Locale.getDefault()
+                )
                 .trim()
 
         return c.startsWith("open ") ||
-                c.startsWith("launch ") ||
-                c.startsWith("start ") ||
-                c.startsWith("run ") ||
-                c.startsWith("use ") ||
-                c.startsWith("show ") ||
-                c.startsWith("khol ") ||
-                c.startsWith("kholo ") ||
-                c.startsWith("chalao ") ||
-                c.startsWith("chala ") ||
-                c.contains(" kholo") ||
-                c.contains(" open karo") ||
-                c.contains(" launch karo")
+            c.startsWith("launch ") ||
+            c.startsWith("start ") ||
+            c.startsWith("run ") ||
+            c.startsWith("use ") ||
+            c.startsWith("show ") ||
+            c.startsWith("khol ") ||
+            c.startsWith("kholo ") ||
+            c.startsWith("chalao ") ||
+            c.startsWith("chala ") ||
+            c.contains(" kholo") ||
+            c.contains(" open karo") ||
+            c.contains(" launch karo")
     }
 
     private fun extractAppName(
@@ -1146,12 +1636,16 @@ private fun executeAgentStep(
 
         var result =
             command
-                .lowercase(Locale.getDefault())
+                .lowercase(
+                    Locale.getDefault()
+                )
                 .trim()
 
         result =
             result.replace(
-                Regex("^aurix[,:]?\\s*"),
+                Regex(
+                    "^aurix[,:]?\\s*"
+                ),
                 ""
             )
 
@@ -1195,7 +1689,9 @@ private fun executeAgentStep(
     ): String {
 
         return value
-            .lowercase(Locale.getDefault())
+            .lowercase(
+                Locale.getDefault()
+            )
             .replace(
                 Regex("[^a-z0-9]"),
                 ""
@@ -1210,9 +1706,11 @@ private fun executeAgentStep(
         val requestedName =
             appName.trim()
 
-        if (requestedName.isBlank()) {
+        if (
+            requestedName.isBlank()
+        ) {
 
-            speak(
+            speakOnce(
                 "Which app should I open?"
             )
 
@@ -1223,10 +1721,6 @@ private fun executeAgentStep(
             normalizeAppName(
                 requestedName
             )
-
-        // =====================================================
-        // KNOWN PACKAGES
-        // =====================================================
 
         val knownPackages =
             mapOf(
@@ -1324,9 +1818,13 @@ private fun executeAgentStep(
         val packages =
             knownPackages[requested]
 
-        if (packages != null) {
+        if (
+            packages != null
+        ) {
 
-            for (packageName in packages) {
+            for (
+                packageName in packages
+            ) {
 
                 try {
 
@@ -1336,7 +1834,9 @@ private fun executeAgentStep(
                                 packageName
                             )
 
-                    if (launchIntent != null) {
+                    if (
+                        launchIntent != null
+                    ) {
 
                         launchIntent.addFlags(
                             Intent.FLAG_ACTIVITY_NEW_TASK
@@ -1350,8 +1850,8 @@ private fun executeAgentStep(
                             launchIntent
                         )
 
-                        speak(
-                            "Opening $requestedName"
+                        speakOnce(
+                            "Opening $requestedName."
                         )
 
                         return true
@@ -1362,9 +1862,7 @@ private fun executeAgentStep(
             }
         }
 
-        // =====================================================
-        // DYNAMIC INSTALLED APP SEARCH
-        // =====================================================
+        // Generic installed app discovery
 
         try {
 
@@ -1372,7 +1870,6 @@ private fun executeAgentStep(
                 Intent(
                     Intent.ACTION_MAIN
                 ).apply {
-
                     addCategory(
                         Intent.CATEGORY_LAUNCHER
                     )
@@ -1386,12 +1883,14 @@ private fun executeAgentStep(
                     )
 
             var bestActivity:
-                    android.content.pm.ActivityInfo? =
+                android.content.pm.ActivityInfo? =
                 null
 
             var bestScore = 0
 
-            for (resolveInfo in apps) {
+            for (
+                resolveInfo in apps
+            ) {
 
                 val activity =
                     resolveInfo.activityInfo
@@ -1408,13 +1907,12 @@ private fun executeAgentStep(
                             ?: ""
 
                     } catch (_: Exception) {
-
                         ""
                     }
 
-                if (label.isBlank()) {
-                    continue
-                }
+                if (
+                    label.isBlank()
+                ) continue
 
                 val normalizedLabel =
                     normalizeAppName(
@@ -1428,25 +1926,29 @@ private fun executeAgentStep(
                             .substringAfterLast(".")
                     )
 
-                // Exact label
                 if (
                     normalizedLabel ==
                     requested
                 ) {
 
-                    bestActivity = activity
+                    bestActivity =
+                        activity
+
                     bestScore = 100
+
                     break
                 }
 
-                // Exact package part
                 if (
                     packagePart ==
                     requested
                 ) {
 
-                    bestActivity = activity
+                    bestActivity =
+                        activity
+
                     bestScore = 95
+
                     break
                 }
 
@@ -1468,10 +1970,15 @@ private fun executeAgentStep(
                         packageScore
                     )
 
-                if (score > bestScore) {
+                if (
+                    score > bestScore
+                ) {
 
-                    bestScore = score
-                    bestActivity = activity
+                    bestScore =
+                        score
+
+                    bestActivity =
+                        activity
                 }
             }
 
@@ -1504,49 +2011,12 @@ private fun executeAgentStep(
                         )
                     }
 
-                try {
-
-                    startActivity(
-                        launchIntent
-                    )
-
-                    speak(
-                        "Opening $requestedName"
-                    )
-
-                    return true
-
-                } catch (_: Exception) {
-                }
-            }
-
-        } catch (_: Exception) {
-        }
-
-        // =====================================================
-        // DIRECT PACKAGE FALLBACK
-        // =====================================================
-
-        try {
-
-            val directIntent =
-                packageManager
-                    .getLaunchIntentForPackage(
-                        requestedName
-                    )
-
-            if (directIntent != null) {
-
-                directIntent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-
                 startActivity(
-                    directIntent
+                    launchIntent
                 )
 
-                speak(
-                    "Opening $requestedName"
+                speakOnce(
+                    "Opening $requestedName."
                 )
 
                 return true
@@ -1555,7 +2025,7 @@ private fun executeAgentStep(
         } catch (_: Exception) {
         }
 
-        speak(
+        speakOnce(
             "I couldn't find $requestedName on your phone."
         )
 
@@ -1570,20 +2040,16 @@ private fun executeAgentStep(
         if (
             a.isBlank() ||
             b.isBlank()
-        ) {
-            return 0
-        }
+        ) return 0
 
-        if (a == b) {
-            return 100
-        }
+        if (
+            a == b
+        ) return 100
 
         if (
             a.contains(b) ||
             b.contains(a)
-        ) {
-            return 85
-        }
+        ) return 85
 
         val distance =
             levenshteinDistance(
@@ -1597,9 +2063,9 @@ private fun executeAgentStep(
                 b.length
             )
 
-        if (maxLength == 0) {
-            return 0
-        }
+        if (
+            maxLength == 0
+        ) return 0
 
         return (
             (
@@ -1624,27 +2090,32 @@ private fun executeAgentStep(
                 )
             }
 
-        for (i in 0..a.length) {
+        for (
+            i in 0..a.length
+        ) {
             dp[i][0] = i
         }
 
-        for (j in 0..b.length) {
+        for (
+            j in 0..b.length
+        ) {
             dp[0][j] = j
         }
 
-        for (i in 1..a.length) {
+        for (
+            i in 1..a.length
+        ) {
 
-            for (j in 1..b.length) {
+            for (
+                j in 1..b.length
+            ) {
 
                 val cost =
                     if (
                         a[i - 1] ==
                         b[j - 1]
-                    ) {
-                        0
-                    } else {
-                        1
-                    }
+                    ) 0
+                    else 1
 
                 dp[i][j] =
                     minOf(
@@ -1659,7 +2130,7 @@ private fun executeAgentStep(
     }
 
     // =========================================================
-    // NUMBER WORDS
+    // NUMBER NORMALIZATION
     // =========================================================
 
     private fun normalizeNumberWords(
@@ -1712,11 +2183,14 @@ private fun executeAgentStep(
                 "fifty nine" to "59"
             )
 
-        compounds.forEach { (word, number) ->
+        compounds.forEach {
+            (word, number) ->
 
             text =
                 text.replace(
-                    Regex("\\b${Regex.escape(word)}\\b"),
+                    Regex(
+                        "\\b${Regex.escape(word)}\\b"
+                    ),
                     number
                 )
         }
@@ -1751,11 +2225,14 @@ private fun executeAgentStep(
                 "sixty" to "60"
             )
 
-        numbers.forEach { (word, number) ->
+        numbers.forEach {
+            (word, number) ->
 
             text =
                 text.replace(
-                    Regex("\\b${Regex.escape(word)}\\b"),
+                    Regex(
+                        "\\b${Regex.escape(word)}\\b"
+                    ),
                     number
                 )
         }
@@ -1778,7 +2255,9 @@ private fun executeAgentStep(
                 "(\\d+)\\s*(hour|hours|hr|hrs)"
             ).matcher(command)
 
-        if (hour.find()) {
+        if (
+            hour.find()
+        ) {
 
             seconds +=
                 hour.group(1)!!
@@ -1790,7 +2269,9 @@ private fun executeAgentStep(
                 "(\\d+)\\s*(minute|minutes|min|mins)"
             ).matcher(command)
 
-        if (minute.find()) {
+        if (
+            minute.find()
+        ) {
 
             seconds +=
                 minute.group(1)!!
@@ -1802,21 +2283,27 @@ private fun executeAgentStep(
                 "(\\d+)\\s*(second|seconds|sec|secs)"
             ).matcher(command)
 
-        if (second.find()) {
+        if (
+            second.find()
+        ) {
 
             seconds +=
                 second.group(1)!!
                     .toLong()
         }
 
-        if (seconds == 0L) {
+        if (
+            seconds == 0L
+        ) {
 
             val number =
                 Pattern.compile(
                     "(?:timer|for)\\s+(\\d+)"
                 ).matcher(command)
 
-            if (number.find()) {
+            if (
+                number.find()
+            ) {
 
                 val value =
                     number.group(1)!!
@@ -1824,19 +2311,28 @@ private fun executeAgentStep(
 
                 seconds =
                     if (
-                        command.contains("second") ||
-                        command.contains("sec")
+                        command.contains(
+                            "second"
+                        ) ||
+                        command.contains(
+                            "sec"
+                        )
                     ) {
+
                         value
+
                     } else {
+
                         value * 60L
                     }
             }
         }
 
-        if (seconds <= 0L) {
+        if (
+            seconds <= 0L
+        ) {
 
-            speak(
+            speakOnce(
                 "Please tell me the timer duration."
             )
 
@@ -1866,7 +2362,9 @@ private fun executeAgentStep(
                     "$seconds second timer started"
             }
 
-        speak(message)
+        speakOnce(
+            message
+        )
     }
 
     // =========================================================
@@ -1882,9 +2380,11 @@ private fun executeAgentStep(
                 "(\\d{1,2})(?:\\s*[:.]\\s*(\\d{1,2}))?\\s*(am|pm)?"
             ).matcher(command)
 
-        if (!matcher.find()) {
+        if (
+            !matcher.find()
+        ) {
 
-            speak(
+            speakOnce(
                 "Please tell me the alarm time, for example seven PM."
             )
 
@@ -1925,7 +2425,7 @@ private fun executeAgentStep(
             minute !in 0..59
         ) {
 
-            speak(
+            speakOnce(
                 "That is not a valid alarm time."
             )
 
@@ -1976,15 +2476,17 @@ private fun executeAgentStep(
             SimpleDateFormat(
                 "hh:mm a",
                 Locale.getDefault()
-            ).format(calendar.time)
+            ).format(
+                calendar.time
+            )
 
-        speak(
-            "Alarm set for $formatted"
+        speakOnce(
+            "Alarm set for $formatted."
         )
     }
 
     // =========================================================
-    // ALARM MANAGER
+    // ALERT
     // =========================================================
 
     private fun scheduleAlert(
@@ -2016,11 +2518,10 @@ private fun executeAgentStep(
             }
 
         val requestCode =
-            if (type == "timer") {
-                7001
-            } else {
-                7002
-            }
+            if (
+                type == "timer"
+            ) 7001
+            else 7002
 
         val flags =
             PendingIntent.FLAG_UPDATE_CURRENT or
@@ -2050,13 +2551,16 @@ private fun executeAgentStep(
 
                 try {
 
-                    alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerTime,
-                        pendingIntent
-                    )
+                    alarmManager
+                        .setExactAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            triggerTime,
+                            pendingIntent
+                        )
 
-                } catch (_: SecurityException) {
+                } catch (
+                    _: SecurityException
+                ) {
 
                     alarmManager.set(
                         AlarmManager.RTC_WAKEUP,
@@ -2104,12 +2608,18 @@ private fun executeAgentStep(
                     Context.CAMERA_SERVICE
                 ) as CameraManager
 
-            var cameraId: String? = null
+            var cameraId: String? =
+                null
 
-            for (id in manager.cameraIdList) {
+            for (
+                id in manager.cameraIdList
+            ) {
 
                 val characteristics =
-                    manager.getCameraCharacteristics(id)
+                    manager
+                        .getCameraCharacteristics(
+                            id
+                        )
 
                 val flash =
                     characteristics.get(
@@ -2135,10 +2645,12 @@ private fun executeAgentStep(
                 }
             }
 
-            if (cameraId == null) {
+            if (
+                cameraId == null
+            ) {
 
-                speak(
-                    "Flashlight is not available"
+                speakOnce(
+                    "Flashlight is not available."
                 )
 
                 return
@@ -2149,18 +2661,18 @@ private fun executeAgentStep(
                 enabled
             )
 
-            speak(
+            speakOnce(
                 if (enabled) {
-                    "Flashlight turned on"
+                    "Flashlight turned on."
                 } else {
-                    "Flashlight turned off"
+                    "Flashlight turned off."
                 }
             )
 
         } catch (_: Exception) {
 
-            speak(
-                "I could not control the flashlight"
+            speakOnce(
+                "I could not control the flashlight."
             )
         }
     }
@@ -2174,14 +2686,17 @@ private fun executeAgentStep(
         val intents =
             listOf(
                 Intent(
-                    MediaStore.ACTION_IMAGE_CAPTURE
+                    MediaStore
+                        .ACTION_IMAGE_CAPTURE
                 ),
                 Intent(
                     "android.media.action.IMAGE_CAPTURE"
                 )
             )
 
-        for (intent in intents) {
+        for (
+            intent in intents
+        ) {
 
             try {
 
@@ -2193,15 +2708,16 @@ private fun executeAgentStep(
                     packageManager
                         .queryIntentActivities(
                             intent,
-                            PackageManager.MATCH_DEFAULT_ONLY
+                            PackageManager
+                                .MATCH_DEFAULT_ONLY
                         )
                         .isNotEmpty()
                 ) {
 
                     startActivity(intent)
 
-                    speak(
-                        "Opening camera"
+                    speakOnce(
+                        "Opening camera."
                     )
 
                     return
@@ -2211,46 +2727,8 @@ private fun executeAgentStep(
             }
         }
 
-        val packages =
-            arrayOf(
-                "com.android.camera",
-                "com.android.camera2",
-                "com.miui.camera"
-            )
-
-        for (packageName in packages) {
-
-            try {
-
-                val launchIntent =
-                    packageManager
-                        .getLaunchIntentForPackage(
-                            packageName
-                        )
-
-                if (launchIntent != null) {
-
-                    launchIntent.addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-
-                    startActivity(
-                        launchIntent
-                    )
-
-                    speak(
-                        "Opening camera"
-                    )
-
-                    return
-                }
-
-            } catch (_: Exception) {
-            }
-        }
-
-        speak(
-            "Camera is not available"
+        speakOnce(
+            "Camera is not available."
         )
     }
 
@@ -2268,7 +2746,10 @@ private fun executeAgentStep(
                 ).apply {
 
                     setDataAndType(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        MediaStore
+                            .Images
+                            .Media
+                            .EXTERNAL_CONTENT_URI,
                         "image/*"
                     )
 
@@ -2279,37 +2760,15 @@ private fun executeAgentStep(
 
             startActivity(intent)
 
-            speak(
-                "Opening gallery"
+            speakOnce(
+                "Opening gallery."
             )
 
         } catch (_: Exception) {
 
-            try {
-
-                val intent =
-                    Intent(
-                        Intent.ACTION_VIEW
-                    ).apply {
-
-                        data =
-                            Uri.parse(
-                                "content://media/external/images/media"
-                            )
-
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK
-                        )
-                    }
-
-                startActivity(intent)
-
-            } catch (_: Exception) {
-
-                speak(
-                    "Gallery is not available"
-                )
-            }
+            speakOnce(
+                "Gallery is not available."
+            )
         }
     }
 
@@ -2326,7 +2785,9 @@ private fun executeAgentStep(
                 "com.android.music"
             )
 
-        for (packageName in packages) {
+        for (
+            packageName in packages
+        ) {
 
             try {
 
@@ -2336,7 +2797,9 @@ private fun executeAgentStep(
                             packageName
                         )
 
-                if (intent != null) {
+                if (
+                    intent != null
+                ) {
 
                     intent.addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
@@ -2344,8 +2807,8 @@ private fun executeAgentStep(
 
                     startActivity(intent)
 
-                    speak(
-                        "Opening music"
+                    speakOnce(
+                        "Opening music."
                     )
 
                     return
@@ -2355,74 +2818,9 @@ private fun executeAgentStep(
             }
         }
 
-        try {
-
-            val intent =
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse(
-                        "https://music.youtube.com"
-                    )
-                ).apply {
-
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
-
-            startActivity(intent)
-
-        } catch (_: Exception) {
-
-            speak(
-                "Music app is not available"
-            )
-        }
-    }
-
-    // =========================================================
-    // MEDIA CONTROL
-    // =========================================================
-
-    private fun controlMedia() {
-
-        try {
-
-            val audio =
-                getSystemService(
-                    Context.AUDIO_SERVICE
-                ) as AudioManager
-
-            val keyEvent =
-                android.view.KeyEvent(
-                    android.view.KeyEvent.ACTION_DOWN,
-                    android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
-                )
-
-            audio.dispatchMediaKeyEvent(
-                keyEvent
-            )
-
-            val up =
-                android.view.KeyEvent(
-                    android.view.KeyEvent.ACTION_UP,
-                    android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
-                )
-
-            audio.dispatchMediaKeyEvent(
-                up
-            )
-
-            speak(
-                "Media control executed"
-            )
-
-        } catch (_: Exception) {
-
-            speak(
-                "I could not control media"
-            )
-        }
+        speakOnce(
+            "Music app is not available."
+        )
     }
 
     // =========================================================
@@ -2437,7 +2835,9 @@ private fun executeAgentStep(
                 "com.google.android.keep"
             )
 
-        for (packageName in packages) {
+        for (
+            packageName in packages
+        ) {
 
             try {
 
@@ -2447,7 +2847,9 @@ private fun executeAgentStep(
                             packageName
                         )
 
-                if (intent != null) {
+                if (
+                    intent != null
+                ) {
 
                     intent.addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
@@ -2455,8 +2857,8 @@ private fun executeAgentStep(
 
                     startActivity(intent)
 
-                    speak(
-                        "Opening notes"
+                    speakOnce(
+                        "Opening notes."
                     )
 
                     return
@@ -2466,8 +2868,8 @@ private fun executeAgentStep(
             }
         }
 
-        speak(
-            "Notes app is not available"
+        speakOnce(
+            "Notes app is not available."
         )
     }
 
@@ -2477,35 +2879,37 @@ private fun executeAgentStep(
 
     private fun openCalculator() {
 
-        val calculatorPackages =
+        val packages =
             arrayOf(
                 "com.miui.calculator",
                 "com.android.calculator2",
                 "com.google.android.calculator"
             )
 
-        for (packageName in calculatorPackages) {
+        for (
+            packageName in packages
+        ) {
 
             try {
 
-                val launchIntent =
+                val intent =
                     packageManager
                         .getLaunchIntentForPackage(
                             packageName
                         )
 
-                if (launchIntent != null) {
+                if (
+                    intent != null
+                ) {
 
-                    launchIntent.addFlags(
+                    intent.addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
 
-                    startActivity(
-                        launchIntent
-                    )
+                    startActivity(intent)
 
-                    speak(
-                        "Opening calculator"
+                    speakOnce(
+                        "Opening calculator."
                     )
 
                     return
@@ -2515,36 +2919,8 @@ private fun executeAgentStep(
             }
         }
 
-        try {
-
-            val intent =
-                Intent().apply {
-
-                    action =
-                        Intent.ACTION_MAIN
-
-                    addCategory(
-                        "android.intent.category.APP_CALCULATOR"
-                    )
-
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
-
-            startActivity(intent)
-
-            speak(
-                "Opening calculator"
-            )
-
-            return
-
-        } catch (_: Exception) {
-        }
-
-        speak(
-            "Calculator is not available"
+        speakOnce(
+            "Calculator is not available."
         )
     }
 
@@ -2562,51 +2938,28 @@ private fun executeAgentStep(
                     Uri.parse(
                         "https://www.youtube.com"
                     )
-                )
+                ).apply {
 
-            intent.setPackage(
-                "com.google.android.youtube"
-            )
+                    setPackage(
+                        "com.google.android.youtube"
+                    )
 
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
 
             startActivity(intent)
 
-            speak(
-                "Opening YouTube"
+            speakOnce(
+                "Opening YouTube."
             )
 
         } catch (_: Exception) {
 
-            try {
-
-                val intent =
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(
-                            "https://www.youtube.com"
-                        )
-                    ).apply {
-
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK
-                        )
-                    }
-
-                startActivity(intent)
-
-                speak(
-                    "Opening YouTube"
-                )
-
-            } catch (_: Exception) {
-
-                speak(
-                    "YouTube is not available"
-                )
-            }
+            speakOnce(
+                "YouTube is not available."
+            )
         }
     }
 
@@ -2633,14 +2986,14 @@ private fun executeAgentStep(
 
             startActivity(intent)
 
-            speak(
-                "Searching YouTube for $query"
+            speakOnce(
+                "Searching YouTube for $query."
             )
 
         } catch (_: Exception) {
 
-            speak(
-                "I could not search YouTube"
+            speakOnce(
+                "I could not search YouTube."
             )
         }
     }
@@ -2659,51 +3012,28 @@ private fun executeAgentStep(
                     Uri.parse(
                         "https://www.google.com"
                     )
-                )
+                ).apply {
 
-            intent.setPackage(
-                "com.android.chrome"
-            )
+                    setPackage(
+                        "com.android.chrome"
+                    )
 
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
 
             startActivity(intent)
 
-            speak(
-                "Opening Chrome"
+            speakOnce(
+                "Opening Chrome."
             )
 
         } catch (_: Exception) {
 
-            try {
-
-                val intent =
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(
-                            "https://www.google.com"
-                        )
-                    ).apply {
-
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK
-                        )
-                    }
-
-                startActivity(intent)
-
-                speak(
-                    "Opening browser"
-                )
-
-            } catch (_: Exception) {
-
-                speak(
-                    "Browser is not available"
-                )
-            }
+            speakOnce(
+                "Browser is not available."
+            )
         }
     }
 
@@ -2721,47 +3051,28 @@ private fun executeAgentStep(
                     Uri.parse(
                         "geo:0,0?q="
                     )
-                )
+                ).apply {
 
-            intent.setPackage(
-                "com.google.android.apps.maps"
-            )
+                    setPackage(
+                        "com.google.android.apps.maps"
+                    )
 
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-            )
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
 
             startActivity(intent)
 
-            speak(
-                "Opening Maps"
+            speakOnce(
+                "Opening Maps."
             )
 
         } catch (_: Exception) {
 
-            try {
-
-                val intent =
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(
-                            "https://maps.google.com"
-                        )
-                    ).apply {
-
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK
-                        )
-                    }
-
-                startActivity(intent)
-
-            } catch (_: Exception) {
-
-                speak(
-                    "Maps is not available"
-                )
-            }
+            speakOnce(
+                "Maps is not available."
+            )
         }
     }
 
@@ -2794,39 +3105,15 @@ private fun executeAgentStep(
 
             startActivity(intent)
 
-            speak(
-                "Searching Maps for $query"
+            speakOnce(
+                "Searching Maps for $query."
             )
 
         } catch (_: Exception) {
 
-            try {
-
-                val uri =
-                    Uri.parse(
-                        "https://www.google.com/maps/search/?api=1&query=" +
-                            Uri.encode(query)
-                    )
-
-                val intent =
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        uri
-                    ).apply {
-
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK
-                        )
-                    }
-
-                startActivity(intent)
-
-            } catch (_: Exception) {
-
-                speak(
-                    "I could not open Maps"
-                )
-            }
+            speakOnce(
+                "I could not open Maps."
+            )
         }
     }
 
@@ -2853,14 +3140,14 @@ private fun executeAgentStep(
 
             startActivity(intent)
 
-            speak(
-                "Opening phone"
+            speakOnce(
+                "Opening phone."
             )
 
         } catch (_: Exception) {
 
-            speak(
-                "Phone app is not available"
+            speakOnce(
+                "Phone app is not available."
             )
         }
     }
@@ -2885,17 +3172,21 @@ private fun executeAgentStep(
 
             startActivity(intent)
 
-            speak(
-                "Opening settings"
+            speakOnce(
+                "Opening settings."
             )
 
         } catch (_: Exception) {
 
-            speak(
-                "Settings is not available"
+            speakOnce(
+                "Settings is not available."
             )
         }
     }
+
+    // =========================================================
+    // WIFI
+    // =========================================================
 
     private fun openWifiSettings() {
 
@@ -2913,75 +3204,14 @@ private fun executeAgentStep(
 
             startActivity(intent)
 
-            speak(
-                "Opening Wi-Fi settings"
+            speakOnce(
+                "Opening Wi-Fi settings."
             )
 
         } catch (_: Exception) {
 
-            speak(
-                "Wi-Fi settings are not available"
-            )
-        }
-    }
-
-    private fun openBluetoothSettings() {
-
-        try {
-
-            val intent =
-                Intent(
-                    Settings.ACTION_BLUETOOTH_SETTINGS
-                ).apply {
-
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
-
-            startActivity(intent)
-
-            speak(
-                "Opening Bluetooth settings"
-            )
-
-        } catch (_: Exception) {
-
-            speak(
-                "Bluetooth settings are not available"
-            )
-        }
-    }
-
-    private fun openNotificationSettings() {
-
-        try {
-
-            val intent =
-                Intent(
-                    Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                ).apply {
-
-                    putExtra(
-                        Settings.EXTRA_APP_PACKAGE,
-                        packageName
-                    )
-
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
-
-            startActivity(intent)
-
-            speak(
-                "Opening notification settings"
-            )
-
-        } catch (_: Exception) {
-
-            speak(
-                "Notification settings are not available"
+            speakOnce(
+                "Wi-Fi settings are not available."
             )
         }
     }
@@ -3002,26 +3232,72 @@ private fun executeAgentStep(
                 ) as AudioManager
 
             audio.adjustVolume(
-                if (increase) {
+                if (increase)
                     AudioManager.ADJUST_RAISE
-                } else {
-                    AudioManager.ADJUST_LOWER
-                },
+                else
+                    AudioManager.ADJUST_LOWER,
+
                 AudioManager.FLAG_SHOW_UI
             )
 
-            speak(
-                if (increase) {
-                    "Volume increased"
-                } else {
-                    "Volume decreased"
-                }
+            speakOnce(
+                if (increase)
+                    "Volume increased."
+                else
+                    "Volume decreased."
             )
 
         } catch (_: Exception) {
 
-            speak(
-                "I could not change the volume"
+            speakOnce(
+                "I could not change the volume."
+            )
+        }
+    }
+
+    // =========================================================
+    // MEDIA
+    // =========================================================
+
+    private fun controlMedia() {
+
+        try {
+
+            val audio =
+                getSystemService(
+                    Context.AUDIO_SERVICE
+                ) as AudioManager
+
+            val down =
+                android.view.KeyEvent(
+                    android.view.KeyEvent.ACTION_DOWN,
+                    android.view.KeyEvent
+                        .KEYCODE_MEDIA_PLAY_PAUSE
+                )
+
+            val up =
+                android.view.KeyEvent(
+                    android.view.KeyEvent.ACTION_UP,
+                    android.view.KeyEvent
+                        .KEYCODE_MEDIA_PLAY_PAUSE
+                )
+
+            audio.dispatchMediaKeyEvent(
+                down
+            )
+
+            audio.dispatchMediaKeyEvent(
+                up
+            )
+
+            speakOnce(
+                "Media control executed."
+            )
+
+        } catch (_: Exception) {
+
+            speakOnce(
+                "I could not control media."
             )
         }
     }
@@ -3030,29 +3306,43 @@ private fun executeAgentStep(
     // BATTERY
     // =========================================================
 
-    private fun tellBattery() {
+    private fun getBatteryLevel(): Int {
 
-        try {
+        return try {
 
             val manager =
                 getSystemService(
                     Context.BATTERY_SERVICE
                 ) as BatteryManager
 
-            val level =
-                manager.getIntProperty(
-                    BatteryManager
-                        .BATTERY_PROPERTY_CAPACITY
-                )
-
-            speak(
-                "Battery is at $level percent"
+            manager.getIntProperty(
+                BatteryManager
+                    .BATTERY_PROPERTY_CAPACITY
             )
 
         } catch (_: Exception) {
 
-            speak(
-                "I could not check the battery"
+            -1
+        }
+    }
+
+    private fun tellBattery() {
+
+        val level =
+            getBatteryLevel()
+
+        if (
+            level >= 0
+        ) {
+
+            speakOnce(
+                "Battery is at $level percent."
+            )
+
+        } else {
+
+            speakOnce(
+                "I could not check the battery."
             )
         }
     }
@@ -3084,14 +3374,14 @@ private fun executeAgentStep(
 
             startActivity(intent)
 
-            speak(
-                "Searching for $query"
+            speakOnce(
+                "Searching for $query."
             )
 
         } catch (_: Exception) {
 
-            speak(
-                "I could not search that"
+            speakOnce(
+                "I could not search that."
             )
         }
     }
@@ -3100,14 +3390,22 @@ private fun executeAgentStep(
     // HOME
     // =========================================================
 
-    private fun isCloseCommand(command: String): Boolean {
+    private fun isCloseCommand(
+        command: String
+    ): Boolean {
 
-    val c = command
-        .lowercase(Locale.getDefault())
-        .trim()
-        .replace(Regex("\\s+"), " ")
+        val c =
+            command
+                .lowercase(
+                    Locale.getDefault()
+                )
+                .trim()
+                .replace(
+                    Regex("\\s+"),
+                    " "
+                )
 
-    return c == "home" ||
+        return c == "home" ||
             c == "go home" ||
             c == "going home" ||
             c == "go to home" ||
@@ -3115,7 +3413,6 @@ private fun executeAgentStep(
             c == "home screen" ||
             c == "go home screen" ||
             c == "go to home screen" ||
-            c == "going to home screen" ||
             c == "back to home" ||
             c == "return home" ||
             c == "return to home" ||
@@ -3127,29 +3424,41 @@ private fun executeAgentStep(
             c == "band app" ||
             c == "aurix home"
     }
-  
-private fun goHome() {
 
-    speak("Going to home screen")
+    private fun goHome() {
 
-    try {
+        sendStatus(
+            "EXECUTING"
+        )
 
-        val intent =
-            Intent("com.example.myaiassistant.GO_HOME").apply {
-                setPackage(packageName)
-            }
+        try {
 
-        sendBroadcast(intent)
+            val intent =
+                Intent(
+                    Intent.ACTION_MAIN
+                ).apply {
 
-    } catch (_: Exception) {
+                    addCategory(
+                        Intent.CATEGORY_HOME
+                    )
 
-        speak("Unable to go to home screen")
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+        } catch (_: Exception) {
+
+            speakOnce(
+                "Unable to go to home screen."
+            )
+        }
     }
-}
-            
 
     // =========================================================
-    // TTS
+    // SPEECH
     // =========================================================
 
     override fun onInit(
@@ -3170,34 +3479,54 @@ private fun goHome() {
             }
         }
     }
-private var currentUserCommand: String = ""
 
-private fun speak(
-    text: String
-) {
-AurixMemoryBridge.saveTurn(
-    this,
-    currentUserCommand,
-    text
-)
+    private fun speakOnce(
+        text: String
+    ) {
 
-    sendSpeak(text)
+        if (
+            text.isBlank()
+        ) return
 
-    try {
-        textToSpeech?.speak(
-            text,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "AURIX"
+        if (
+            currentResponseSent
+        ) return
+
+        currentResponseSent = true
+
+        sendStatus(
+            "SPEAKING"
         )
 
-    } catch (_: Exception) {
-    }
-}
+        sendSpeak(text)
 
-    // =========================================================
-    // EVENTS
-    // =========================================================
+        try {
+
+            textToSpeech?.speak(
+                text,
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                "AURIX"
+            )
+
+        } catch (_: Exception) {
+        }
+
+        try {
+
+            AurixMemoryBridge.saveTurn(
+                this,
+                currentUserCommand,
+                text
+            )
+
+        } catch (_: Exception) {
+        }
+
+        sendStatus(
+            "LISTENING"
+        )
+    }
 
     private fun sendStatus(
         text: String
@@ -3258,7 +3587,7 @@ AurixMemoryBridge.saveTurn(
     }
 
     // =========================================================
-    // CLEANUP
+    // DESTROY
     // =========================================================
 
     override fun onDestroy() {
@@ -3268,7 +3597,9 @@ AurixMemoryBridge.saveTurn(
         listening = false
         restarting = true
 
-        handler.removeCallbacksAndMessages(null)
+        handler.removeCallbacksAndMessages(
+            null
+        )
 
         try {
 
@@ -3292,14 +3623,9 @@ AurixMemoryBridge.saveTurn(
         super.onDestroy()
     }
 
-    // =========================================================
-    // BIND
-    // =========================================================
-
     override fun onBind(
         intent: Intent?
     ): IBinder? {
-
         return null
     }
 }
