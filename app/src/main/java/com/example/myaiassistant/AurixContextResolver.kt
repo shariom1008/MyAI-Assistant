@@ -491,6 +491,16 @@ if (
                 )
                 .trim()
         }
+        if (
+            lower.startsWith("search ")
+) {
+
+            return previous
+              .substring(
+                "search ".length
+        )
+        .trim()
+        }
 
         return null
     }
