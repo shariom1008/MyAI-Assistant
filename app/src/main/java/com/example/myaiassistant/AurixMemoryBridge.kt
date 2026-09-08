@@ -13,7 +13,10 @@ object AurixMemoryBridge {
         user: String,
         aurix: String
     ) {
-        if (user.isBlank() || aurix.isBlank()) {
+        if (
+            user.isBlank() ||
+            aurix.isBlank()
+        ) {
             return
         }
 
@@ -23,12 +26,16 @@ object AurixMemoryBridge {
             aurix
         )
 
-        AurixContextEngine.addUserMessage(user)
-        AurixContextEngine.addAurixMessage(aurix)
+        AurixContextEngine.addUserMessage(
+            user
+        )
+
+        AurixContextEngine.addAurixMessage(
+            aurix
+        )
     }
 
     fun getContext(): String {
-
         return ConversationMemoryEngine.getContext()
     }
 
@@ -45,7 +52,6 @@ object AurixMemoryBridge {
     }
 
     fun hasMemory(): Boolean {
-
         return ConversationMemoryEngine.hasMemory()
     }
 
@@ -56,5 +62,49 @@ object AurixMemoryBridge {
         ConversationMemoryEngine.clear(
             context
         )
+    }
+
+    // -----------------------------------------------------
+    // DIRECT MEMORY SAVE
+    // -----------------------------------------------------
+
+    fun remember(
+        context: Context,
+        userStatement: String,
+        aurixResponse: String
+    ) {
+
+        if (
+            userStatement.isBlank() ||
+            aurixResponse.isBlank()
+        ) {
+            return
+        }
+
+        saveTurn(
+            context,
+            userStatement,
+            aurixResponse
+        )
+    }
+
+    // -----------------------------------------------------
+    // MEMORY CONTEXT
+    // -----------------------------------------------------
+
+    fun getMemoryContext(): String {
+
+        if (
+            !ConversationMemoryEngine.hasMemory()
+        ) {
+            return ""
+        }
+
+        return ConversationMemoryEngine
+            .getRecentTurns()
+            .takeLast(12)
+            .joinToString("\n") {
+                "User: ${it.user}\nAURIX: ${it.assistant}"
+            }
     }
 }
