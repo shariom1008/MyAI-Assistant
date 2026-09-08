@@ -447,56 +447,6 @@ class AurixService :
         sendStatus("THINKING")
 
 
-
-            is AurixContextResolver.Resolution.ClearMemory -> {
-
-                if (resolution.all) {
-
-                    AurixMemoryBridge.clearAll(
-                        this
-                    )
-
-                    speakOnce(
-                        "I've cleared my personal memory."
-                    )
-
-                } else {
-
-                    val key =
-                        resolution.key
-
-                    if (
-                        key.isNullOrBlank()
-                    ) {
-
-                        speakOnce(
-                            "Tell me what you want me to forget."
-                        )
-
-                    } else {
-
-                        AurixMemoryBridge
-                            .clearMemoryKey(
-                                this,
-                                key
-                            )
-
-                        speakOnce(
-                            "Okay. I'll forget that."
-                        )
-                    }
-                }
-
-                return
-            }
-
-            is AurixContextResolver.Resolution.Command -> {
-                command =
-                    resolution.command
-            }
-    }
-
-
     // -----------------------------------------------------
     // CONTEXT RESOLUTION
     // -----------------------------------------------------
