@@ -1105,10 +1105,11 @@ if (
             return
         }
 
-// -----------------------------------------------------
-// CONTEXTUAL YOUTUBE PLAY / SEARCH
-// -----------------------------------------------------
+// =========================================================
+// YOUTUBE
+// =========================================================
 
+// PLAY <song / artist / video>
 if (
     command.startsWith("play ")
 ) {
@@ -1127,6 +1128,55 @@ if (
         openYouTube()
     }
 
+    return
+}
+
+// YOUTUBE SEARCH
+if (
+    command.startsWith("search youtube") ||
+    command.startsWith("youtube search") ||
+    command.startsWith("youtube par")
+) {
+
+    val query =
+        when {
+
+            command.startsWith("search youtube") ->
+                command.removePrefix(
+                    "search youtube"
+                )
+
+            command.startsWith("youtube search") ->
+                command.removePrefix(
+                    "youtube search"
+                )
+
+            else ->
+                command.removePrefix(
+                    "youtube par"
+                )
+        }.trim()
+
+    if (query.isNotBlank()) {
+
+        searchYouTube(query)
+
+    } else {
+
+        openYouTube()
+    }
+
+    return
+}
+
+// OPEN YOUTUBE
+if (
+    command == "youtube" ||
+    command == "open youtube" ||
+    command == "launch youtube"
+) {
+
+    openYouTube()
     return
 }
 
@@ -1333,25 +1383,6 @@ if (
             changeVolume(false)
             return
         }
-        // -----------------------------------------------------
-        // CONTEXTUAL YOUTUBE PLAY
-        // -----------------------------------------------------
-
-if (
-    command.startsWith("play ")
-) {
-
-    val target =
-        command
-            .removePrefix("play ")
-            .trim()
-
-    if (target.isNotBlank()) {
-
-        searchYouTube(target)
-        return
-    }
-}
 
         // -----------------------------------------------------
         // MEDIA
@@ -3129,16 +3160,48 @@ if (
     }
 
     private fun searchYouTube(
-        query: String
-    ) {
+    query: String
+) {
+
+    if (query.isBlank()) {
+        openYouTube()
+        return
+    }
+
+    val url =
+        "https://www.youtube.com/results?search_query=" +
+            Uri.encode(query)
+
+    try {
+
+        // First try YouTube app
+        val youtubeIntent =
+            Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(url)
+            ).apply {
+
+                setPackage(
+                    "com.google.android.youtube"
+                )
+
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+            }
+
+        startActivity(youtubeIntent)
+
+        speakOnce(
+            "Searching YouTube for $query."
+        )
+
+    } catch (_: Exception) {
 
         try {
 
-            val url =
-                "https://www.youtube.com/results?search_query=" +
-                    Uri.encode(query)
-
-            val intent =
+            // Browser fallback
+            val browserIntent =
                 Intent(
                     Intent.ACTION_VIEW,
                     Uri.parse(url)
@@ -3149,20 +3212,20 @@ if (
                     )
                 }
 
-            startActivity(intent)
+            startActivity(browserIntent)
 
             speakOnce(
-                "Searching YouTube for $query."
+                "Opening YouTube search for $query."
             )
 
         } catch (_: Exception) {
 
             speakOnce(
-                "I could not search YouTube."
+                "I could not open YouTube."
             )
         }
     }
-
+}
     // =========================================================
     // CHROME
     // =========================================================
