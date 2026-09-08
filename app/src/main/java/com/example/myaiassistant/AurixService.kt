@@ -429,7 +429,7 @@ class AurixService :
         rawCommand: String
     ) {
 
-        val command =
+        var command =
             normalizeNumberWords(
                 rawCommand
                     .lowercase(
@@ -450,7 +450,10 @@ class AurixService :
         }
     
         AurixMemoryBridge.initialize(this)
-        currentUserCommand = command
+        val resolvedCommand =
+        AurixContextResolver.resolve(command)
+        command = resolvedCommand
+        currentUserCommand = Command
 
         // -----------------------------------------------------
         // STOP AURIX
