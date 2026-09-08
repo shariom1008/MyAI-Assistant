@@ -3139,11 +3139,11 @@ private var currentUserCommand: String = ""
 private fun speak(
     text: String
 ) {
-
-    ConversationMemoryEngine.addTurn(
-        currentUserCommand,
-        text
-    )
+ConversationMemoryEngine.addTurn(
+    this,
+    currentUserCommand,
+    text
+)
 
     sendSpeak(text)
 
