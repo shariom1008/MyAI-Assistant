@@ -448,7 +448,7 @@ class AurixService :
         if (command.isBlank()) {
             return
         }
-        AurixContextEngine.addUserMessage(command)
+    
         AurixMemoryBridge.initialize(this)
         currentUserCommand = command
 
