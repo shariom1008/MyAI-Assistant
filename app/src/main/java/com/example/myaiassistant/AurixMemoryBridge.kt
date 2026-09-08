@@ -53,6 +53,15 @@ object AurixMemoryBridge {
             }
         }
     }
+    fun getRecentContext(limit: Int = 6): String {
+
+    val items =
+        AurixContextEngine.getLastMessages(limit)
+
+    return items.joinToString("\n") {
+        "${it.role}: ${it.text}"
+    }
+    }
 
     fun clear(context: Context) {
 
