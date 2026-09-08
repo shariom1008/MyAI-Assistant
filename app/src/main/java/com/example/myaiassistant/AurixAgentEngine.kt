@@ -1,10 +1,5 @@
 package com.example.myaiassistant
 
-/**
- * AURIX 2.0
- *
- * Multi-Step Agent Planner
- */
 object AurixAgentEngine {
 
     data class AgentTask(
@@ -16,6 +11,7 @@ object AurixAgentEngine {
     data class AgentStep(
         val id: Int,
         val action: String,
+        val command: String,
         val description: String
     )
 
@@ -40,73 +36,170 @@ object AurixAgentEngine {
 
     fun createPlan(task: AgentTask): AgentPlan {
 
-        val command = task.command.lowercase()
+        val command = task.command.lowercase().trim()
 
         val steps = mutableListOf<AgentStep>()
 
-        // OPEN YOUTUBE
-        if (command.contains("youtube")) {
+        /*
+         * YOUTUBE + PHONE
+         */
+        if (
+            command.contains("youtube") &&
+            command.contains("phone")
+        ) {
+
             steps.add(
                 AgentStep(
                     id = steps.size + 1,
                     action = "OPEN_YOUTUBE",
+                    command = "open youtube",
                     description = "Open YouTube."
                 )
             )
-        }
 
-        // OPEN PHONE
-        if (
-            command.contains("phone") ||
-            command.contains("dialer")
-        ) {
             steps.add(
                 AgentStep(
                     id = steps.size + 1,
                     action = "OPEN_PHONE",
-                    description = "Open the phone dialer."
+                    command = "open phone",
+                    description = "Open the phone app."
                 )
             )
         }
 
-        // OPEN SETTINGS
-        if (command.contains("settings")) {
+        /*
+         * YOUTUBE + SETTINGS
+         */
+        else if (
+            command.contains("youtube") &&
+            command.contains("settings")
+        ) {
+
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "OPEN_YOUTUBE",
+                    command = "open youtube",
+                    description = "Open YouTube."
+                )
+            )
+
             steps.add(
                 AgentStep(
                     id = steps.size + 1,
                     action = "OPEN_SETTINGS",
+                    command = "open settings",
                     description = "Open Android settings."
                 )
             )
         }
 
-        // BLUETOOTH
-        if (command.contains("bluetooth")) {
+        /*
+         * PHONE + SETTINGS
+         */
+        else if (
+            command.contains("phone") &&
+            command.contains("settings")
+        ) {
+
             steps.add(
                 AgentStep(
                     id = steps.size + 1,
+                    action = "OPEN_PHONE",
+                    command = "open phone",
+                    description = "Open the phone app."
+                )
+            )
+
+            steps.add(
+                AgentStep(
+                    id = steps.size + 1,
+                    action = "OPEN_SETTINGS",
+                    command = "open settings",
+                    description = "Open Android settings."
+                )
+            )
+        }
+
+        /*
+         * SINGLE YOUTUBE
+         */
+        else if (command.contains("youtube")) {
+
+            steps.add(
+                AgentStep(
+                    id = 1,
+                    action = "OPEN_YOUTUBE",
+                    command = "open youtube",
+                    description = "Open YouTube."
+                )
+            )
+        }
+
+        /*
+         * SINGLE PHONE
+         */
+        else if (
+            command.contains("open phone") ||
+            command.contains("open dialer")
+        ) {
+
+            steps.add(
+                AgentStep(
+                    id = 1,
+                    action = "OPEN_PHONE",
+                    command = "open phone",
+                    description = "Open the phone app."
+                )
+            )
+        }
+
+        /*
+         * SINGLE SETTINGS
+         */
+        else if (command.contains("open settings")) {
+
+            steps.add(
+                AgentStep(
+                    id = 1,
+                    action = "OPEN_SETTINGS",
+                    command = "open settings",
+                    description = "Open Android settings."
+                )
+            )
+        }
+
+        /*
+         * BLUETOOTH
+         */
+        else if (
+            command.contains("bluetooth") &&
+            (
+                command.contains("paired") ||
+                command.contains("devices")
+            )
+        ) {
+
+            steps.add(
+                AgentStep(
+                    id = 1,
                     action = "BLUETOOTH",
-                    description = "Handle Bluetooth audio."
+                    command = "show my paired bluetooth devices",
+                    description = "Show paired Bluetooth devices."
                 )
             )
         }
 
-        // PLAY
-        if (command.contains("play")) {
-            steps.add(
-                AgentStep(
-                    id = steps.size + 1,
-                    action = "PLAY",
-                    description = "Start media playback."
-                )
-            )
-        }
+        /*
+         * UNKNOWN COMMAND
+         */
+        else {
 
-        if (steps.isEmpty()) {
             steps.add(
                 AgentStep(
                     id = 1,
                     action = "GENERAL",
+                    command = task.command,
                     description = task.command
                 )
             )
@@ -118,79 +211,64 @@ object AurixAgentEngine {
         )
     }
 
-    fun execute(plan: AgentPlan): AgentResult {
+    fun executeStep(step: AgentStep): String {
 
-        if (plan.steps.isEmpty()) {
-            return AgentResult(
-                success = false,
-                message = "No execution steps were created."
+        return try {
+
+            AurixCommandRouter.route(
+                step.command
             )
+
+        } catch (_: Exception) {
+
+            "I couldn't execute this step."
         }
-
-        var completedSteps = 0
-
-        for (step in plan.steps) {
-
-            val command = when (step.action) {
-
-                "OPEN_YOUTUBE" ->
-                    "open youtube"
-
-                "OPEN_PHONE" ->
-                    "open phone"
-
-                "OPEN_SETTINGS" ->
-                    "open settings"
-
-                "BLUETOOTH" ->
-                    "show my paired bluetooth devices"
-
-                "PLAY" ->
-                    "play music"
-
-                "GENERAL" ->
-                    step.description
-
-                else ->
-                    continue
-            }
-
-            val response =
-                AurixCommandRouter.route(command)
-
-            if (
-                response.isNotBlank() &&
-                !response.startsWith("I understood:")
-            ) {
-                completedSteps++
-            }
-        }
-
-        return AgentResult(
-            success = completedSteps == plan.steps.size,
-            message =
-                if (completedSteps == plan.steps.size) {
-                    "Agent completed all planned steps."
-                } else {
-                    "Agent completed $completedSteps of ${plan.steps.size} steps."
-                },
-            completedSteps = completedSteps,
-            totalSteps = plan.steps.size
-        )
     }
 
     fun run(command: String): AgentResult {
 
         if (command.isBlank()) {
+
             return AgentResult(
                 success = false,
                 message = "No command provided."
             )
         }
 
-        val task = createTask(command)
-        val plan = createPlan(task)
+        val task =
+            createTask(command)
 
-        return execute(plan)
+        val plan =
+            createPlan(task)
+
+        var completed = 0
+
+        for (step in plan.steps) {
+
+            val response =
+                executeStep(step)
+
+            if (
+                response.isNotBlank() &&
+                !response.startsWith("I understood:")
+            ) {
+                completed++
+            }
+        }
+
+        return AgentResult(
+            success =
+                completed == plan.steps.size,
+
+            message =
+                if (completed == plan.steps.size) {
+                    "Agent completed all planned steps."
+                } else {
+                    "Agent completed $completed of ${plan.steps.size} steps."
+                },
+
+            completedSteps = completed,
+            totalSteps = plan.steps.size
+        )
     }
 }
