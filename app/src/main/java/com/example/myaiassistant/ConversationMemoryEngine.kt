@@ -54,6 +54,9 @@ object ConversationMemoryEngine {
     fun getRecentTurns(): List<Turn> {
         return turns.toList()
     }
+    fun hasMemory(): Boolean {
+    return turns.isNotEmpty()
+    }
 
     fun getContext(): String {
 
