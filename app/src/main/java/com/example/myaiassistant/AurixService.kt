@@ -454,6 +454,23 @@ class AurixService :
         AurixContextResolver.resolve(command)
         command = resolvedCommand
         currentUserCommand = command
+        if (
+    command.startsWith(
+        "AURIX_DIRECT_RESPONSE:"
+    )
+) {
+
+    val response =
+        command.removePrefix(
+            "AURIX_DIRECT_RESPONSE:"
+        )
+
+    currentUserCommand =
+        rawCommand
+
+    speak(response)
+    return
+        }
 
         // -----------------------------------------------------
         // STOP AURIX
