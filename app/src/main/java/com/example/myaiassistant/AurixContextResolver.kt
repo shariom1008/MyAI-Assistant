@@ -126,7 +126,7 @@ object AurixContextResolver {
     }
 
     private fun buildConversationAnswer(
-        turns: List<ConversationMemoryEngine.Turn
+        turns: List<ConversationMemoryEngine.Turn>
     ): String {
 
         if (turns.isEmpty()) {
