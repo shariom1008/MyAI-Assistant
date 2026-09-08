@@ -449,6 +449,7 @@ class AurixService :
             return
         }
         AurixContextEngine.addUserMessage(command)
+        AurixMemoryBridge.initialize(this)
         currentUserCommand = command
 
         // -----------------------------------------------------
