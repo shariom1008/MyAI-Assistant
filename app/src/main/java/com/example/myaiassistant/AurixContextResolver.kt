@@ -2,264 +2,388 @@ package com.example.myaiassistant
 
 object AurixContextResolver {
 
-    private const val DIRECT_RESPONSE_PREFIX =
-        "AURIX_DIRECT_RESPONSE:"
+    sealed class Resolution {
 
-    private const val MEMORY_STATEMENT_PREFIX =
-        "AURIX_MEMORY_STATEMENT:"
+        data class Command(
+            val command: String
+        ) : Resolution()
 
-    fun resolve(command: String): String {
+        data class MemoryStatement(
+            val original: String
+        ) : Resolution()
+
+        data class DirectResponse(
+            val response: String
+        ) : Resolution()
+
+        data class ClearMemory(
+            val all: Boolean,
+            val key: String?
+        ) : Resolution()
+    }
+
+    fun resolve(
+        context: android.content.Context,
+        command: String
+    ): Resolution {
 
         val current =
             command
-                .lowercase()
                 .trim()
+                .replace(
+                    Regex("\\s+"),
+                    " "
+                )
 
         if (current.isBlank()) {
-            return current
+            return Resolution.Command("")
         }
 
-        // -----------------------------------------------------
-        // NAME MEMORY
-        // -----------------------------------------------------
+        val lower =
+            current.lowercase()
+
+        // =====================================================
+        // MEMORY STATEMENTS
+        // =====================================================
 
         if (
-            current.startsWith("my name is ") ||
-            current.startsWith("mera naam ") ||
-            current.startsWith("mera name ")
+            lower.startsWith("my name is ") ||
+            lower.startsWith("mera naam ") ||
+            lower.startsWith("mera name ")
         ) {
 
-            return MEMORY_STATEMENT_PREFIX +
-                    command.trim()
+            return Resolution.MemoryStatement(
+                current
+            )
         }
-
-        // -----------------------------------------------------
-        // LOCATION MEMORY
-        // -----------------------------------------------------
 
         if (
-            current.startsWith("i live in ") ||
-            current.startsWith("i am from ") ||
-            current.startsWith("i'm from ") ||
-            current.startsWith("main ") &&
-            current.contains("mein rehta") ||
-            current.startsWith("main ") &&
-            current.contains("mein rehti")
+            lower.startsWith("i live in ") ||
+            lower.startsWith("i am from ") ||
+            lower.startsWith("i'm from ") ||
+            lower.startsWith("main ") &&
+            (
+                lower.contains("rehta hoon") ||
+                lower.contains("rehti hoon")
+            )
         ) {
 
-            return MEMORY_STATEMENT_PREFIX +
-                    command.trim()
+            return Resolution.MemoryStatement(
+                current
+            )
         }
-
-        // -----------------------------------------------------
-        // NO MEMORY
-        // -----------------------------------------------------
-
-        if (!ConversationMemoryEngine.hasMemory()) {
-            return current
-        }
-
-        val recent =
-            ConversationMemoryEngine
-                .getRecentTurns()
-                .takeLast(12)
-
-        // -----------------------------------------------------
-        // NAME QUESTION
-        // -----------------------------------------------------
 
         if (
-            current.contains("what is my name") ||
-            current.contains("what's my name") ||
-            current.contains("do you know my name") ||
-            current.contains("mera naam kya hai") ||
-            current.contains("mera name kya hai")
+            lower.startsWith("i work as ") ||
+            lower.startsWith("i am working as ") ||
+            lower.startsWith("my job is ")
         ) {
 
-            return DIRECT_RESPONSE_PREFIX +
-                    buildMemoryAnswer(
-                        recent,
-                        "name"
-                    )
+            return Resolution.MemoryStatement(
+                current
+            )
         }
-
-        // -----------------------------------------------------
-        // LOCATION QUESTION
-        // -----------------------------------------------------
 
         if (
-            current.contains("where do i live") ||
-            current.contains("where am i from") ||
-            current.contains("do you know where i live") ||
-            current.contains("main kahan rehta hoon") ||
-            current.contains("main kahan rehti hoon")
+            lower.startsWith("i like ") ||
+            lower.startsWith("i love ") ||
+            lower.startsWith("i don't like ") ||
+            lower.startsWith("i hate ")
         ) {
 
-            return DIRECT_RESPONSE_PREFIX +
-                    buildMemoryAnswer(
-                        recent,
-                        "location"
-                    )
+            return Resolution.MemoryStatement(
+                current
+            )
         }
 
-        // -----------------------------------------------------
+        if (
+            lower.startsWith("my favourite ") ||
+            lower.startsWith("my favorite ")
+        ) {
+
+            return Resolution.MemoryStatement(
+                current
+            )
+        }
+
+        if (
+            lower.startsWith("remember that ") ||
+            lower.startsWith("remember this ") ||
+            lower.startsWith("yaad rakhna ") ||
+            lower.startsWith("ye yaad rakhna ")
+        ) {
+
+            return Resolution.MemoryStatement(
+                current
+            )
+        }
+
+        // =====================================================
+        // FORGET
+        // =====================================================
+
+        if (
+            lower.contains("forget everything") ||
+            lower.contains("forget all my memory") ||
+            lower.contains("forget all memories") ||
+            lower.contains("sab kuch bhool jao") ||
+            lower.contains("meri saari memory delete")
+        ) {
+
+            return Resolution.ClearMemory(
+                all = true,
+                key = null
+            )
+        }
+
+        if (
+            lower.contains("forget my name") ||
+            lower.contains("mera naam bhool jao")
+        ) {
+
+            return Resolution.ClearMemory(
+                all = false,
+                key = "name"
+            )
+        }
+
+        if (
+            lower.contains("forget where i live") ||
+            lower.contains("meri location bhool jao")
+        ) {
+
+            return Resolution.ClearMemory(
+                all = false,
+                key = "location"
+            )
+        }
+
+        // =====================================================
+        // PERSONAL QUESTIONS
+        // =====================================================
+
+        if (
+            lower.contains("what is my name") ||
+            lower.contains("what's my name") ||
+            lower.contains("do you know my name") ||
+            lower.contains("mera naam kya hai") ||
+            lower.contains("mera name kya hai")
+        ) {
+
+            val name =
+                PersonalMemoryEngine.get(
+                    context,
+                    "name"
+                )
+
+            return Resolution.DirectResponse(
+                if (name.isNullOrBlank()) {
+                    "I don't remember your name yet."
+                } else {
+                    "Your name is $name."
+                }
+            )
+        }
+
+        if (
+            lower.contains("where do i live") ||
+            lower.contains("where am i from") ||
+            lower.contains("do you know where i live") ||
+            lower.contains("main kahan rehta hoon") ||
+            lower.contains("main kahan rehti hoon")
+        ) {
+
+            val location =
+                PersonalMemoryEngine.get(
+                    context,
+                    "location"
+                )
+
+            return Resolution.DirectResponse(
+                if (location.isNullOrBlank()) {
+                    "I don't remember your location yet."
+                } else {
+                    "You live in $location."
+                }
+            )
+        }
+
+        // =====================================================
+        // WHAT DO YOU KNOW ABOUT ME
+        // =====================================================
+
+        if (
+            lower.contains("what do you know about me") ||
+            lower.contains("what all do you know about me") ||
+            lower.contains("tell me about myself") ||
+            lower.contains("mere baare mein kya jaante ho") ||
+            lower.contains("mere bare mein kya pata hai")
+        ) {
+
+            return Resolution.DirectResponse(
+                PersonalMemoryEngine
+                    .buildSummary(context)
+            )
+        }
+
+        // =====================================================
         // PREVIOUS CONVERSATION
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
-            current.contains("what did i say") ||
-            current.contains("what did i tell you") ||
-            current.contains("what we talked about") ||
-            current.contains("maine kya bola") ||
-            current.contains("maine kya kaha") ||
-            current.contains("humne kya baat ki")
+            lower.contains("what did i tell you") ||
+            lower.contains("what did i say") ||
+            lower.contains("what have i told you") ||
+            lower.contains("what we talked about") ||
+            lower.contains("what were we talking about") ||
+            lower.contains("maine kya bola") ||
+            lower.contains("maine kya kaha") ||
+            lower.contains("maine tumhe kya bataya") ||
+            lower.contains("humne kya baat ki")
         ) {
 
-            return DIRECT_RESPONSE_PREFIX +
-                    buildConversationAnswer(
-                        recent
-                    )
-        }
+            val turns =
+                ConversationMemoryEngine
+                    .getRecentTurns()
+                    .takeLast(5)
 
-        return current
-    }
+            if (turns.isEmpty()) {
 
-    // ---------------------------------------------------------
-    // MEMORY ANSWER
-    // ---------------------------------------------------------
-
-    private fun buildMemoryAnswer(
-        turns: List<ConversationMemoryEngine.Turn>,
-        type: String
-    ): String {
-
-        if (turns.isEmpty()) {
-            return "I don't have that information yet."
-        }
-
-        for (turn in turns.asReversed()) {
-
-            val user =
-                turn.user.lowercase()
-
-            if (type == "name") {
-
-                val patterns =
-                    listOf(
-                        "my name is ",
-                        "mera naam ",
-                        "mera name "
-                    )
-
-                for (pattern in patterns) {
-
-                    val index =
-                        user.indexOf(pattern)
-
-                    if (index >= 0) {
-
-                        val name =
-                            cleanValue(
-                                turn.user.substring(
-                                    index + pattern.length
-                                )
-                            )
-
-                        if (
-                            name.isNotBlank() &&
-                            name.length <= 40
-                        ) {
-
-                            return "Your name is $name."
-                        }
-                    }
-                }
+                return Resolution.DirectResponse(
+                    "We don't have any previous conversation yet."
+                )
             }
 
-            if (type == "location") {
+            val response =
+                turns
+                    .joinToString(". ") {
+                        "You said ${it.user}"
+                    }
 
-                val patterns =
-                    listOf(
-                        "i live in ",
-                        "i am from ",
-                        "i'm from ",
-                        "mein rehta hoon",
-                        "mein rehti hoon"
+            return Resolution.DirectResponse(
+                response
+            )
+        }
+
+        // =====================================================
+        // CONTEXT REFERENCES
+        // =====================================================
+
+        if (
+            lower == "open it" ||
+            lower == "open that" ||
+            lower == "open this" ||
+            lower == "isko kholo" ||
+            lower == "use kholo"
+        ) {
+
+            val previous =
+                AurixContextEngine
+                    .getLastUserMessage()
+
+            if (!previous.isNullOrBlank()) {
+
+                val resolved =
+                    extractPreviousTarget(
+                        previous
                     )
 
-                for (pattern in patterns) {
+                if (resolved != null) {
 
-                    val index =
-                        user.indexOf(pattern)
-
-                    if (index >= 0) {
-
-                        val location =
-                            cleanValue(
-                                turn.user.substring(
-                                    index + pattern.length
-                                )
-                            )
-
-                        if (
-                            location.isNotBlank() &&
-                            location.length <= 60
-                        ) {
-
-                            return "You live in $location."
-                        }
-                    }
+                    return Resolution.Command(
+                        "open $resolved"
+                    )
                 }
             }
         }
 
-        return when (type) {
+        if (
+            lower == "play it" ||
+            lower == "play that" ||
+            lower == "play this" ||
+            lower == "isko chalao"
+        ) {
 
-            "name" ->
-                "I don't remember your name yet."
+            val previous =
+                AurixContextEngine
+                    .getLastUserMessage()
 
-            "location" ->
-                "I don't remember where you live yet."
+            if (!previous.isNullOrBlank()) {
 
-            else ->
-                "I don't have that information yet."
+                val resolved =
+                    extractPreviousTarget(
+                        previous
+                    )
+
+                if (resolved != null) {
+
+                    return Resolution.Command(
+                        "play $resolved"
+                    )
+                }
+            }
         }
+
+        // =====================================================
+        // OTHERWISE NORMAL COMMAND
+        // =====================================================
+
+        return Resolution.Command(
+            current
+        )
     }
 
-    // ---------------------------------------------------------
-    // CLEAN MEMORY VALUE
-    // ---------------------------------------------------------
+    private fun extractPreviousTarget(
+        previous: String
+    ): String? {
 
-    private fun cleanValue(
-        value: String
-    ): String {
+        val lower =
+            previous.lowercase().trim()
 
-        return value
-            .trim()
-            .removeSuffix(".")
-            .removeSuffix("!")
-            .removeSuffix("?")
-            .trim()
-    }
+        val openPrefixes =
+            listOf(
+                "open ",
+                "launch ",
+                "start ",
+                "run ",
+                "use ",
+                "show "
+            )
 
-    // ---------------------------------------------------------
-    // CONVERSATION SUMMARY
-    // ---------------------------------------------------------
+        for (prefix in openPrefixes) {
 
-    private fun buildConversationAnswer(
-        turns: List<ConversationMemoryEngine.Turn>
-    ): String {
+            if (lower.startsWith(prefix)) {
 
-        if (turns.isEmpty()) {
-            return "I don't have any previous conversation yet."
+                return previous
+                    .substring(
+                        prefix.length
+                    )
+                    .trim()
+            }
         }
 
-        val recent =
-            turns
-                .takeLast(3)
+        if (
+            lower.startsWith("search youtube ")
+        ) {
 
-        return recent.joinToString(". ") {
-            "You said ${it.user}"
+            return previous
+                .substring(
+                    "search youtube ".length
+                )
+                .trim()
         }
+
+        if (
+            lower.startsWith("youtube search ")
+        ) {
+
+            return previous
+                .substring(
+                    "youtube search ".length
+                )
+                .trim()
+        }
+
+        return null
     }
 }
