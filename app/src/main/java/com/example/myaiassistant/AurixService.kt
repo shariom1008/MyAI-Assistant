@@ -992,24 +992,6 @@ private fun isAgentCommand(
     return hasKnownAction
 }
 
-private fun executeAgentSteps(
-    plan: AurixAgentEngine.AgentPlan
-) {
-
-    if (plan.steps.isEmpty()) {
-
-        speak(
-            "I could not create an execution plan."
-        )
-
-        return
-    }
-
-    executeAgentStep(
-        plan = plan,
-        index = 0
-    )
-}
 
 private fun executeAgentStep(
     plan: AurixAgentEngine.AgentPlan,
