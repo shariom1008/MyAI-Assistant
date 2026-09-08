@@ -456,6 +456,21 @@ class AurixService :
         currentUserCommand = command
         if (
     command.startsWith(
+        "AURIX_MEMORY_STATEMENT:"
+    )
+) {
+
+    currentUserCommand =
+        rawCommand
+
+    speak(
+        "Got it. I'll remember that."
+    )
+
+    return
+        }
+        if (
+    command.startsWith(
         "AURIX_DIRECT_RESPONSE:"
     )
 ) {
