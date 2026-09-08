@@ -22,10 +22,13 @@ object PersonalMemoryEngine {
     )
 
     private val facts = LinkedHashMap<String, Fact>()
-
     private val freeFacts = ArrayList<String>()
 
     private var initialized = false
+
+    // =========================================================
+    // INITIALIZE
+    // =========================================================
 
     fun initialize(context: Context) {
 
@@ -78,8 +81,7 @@ object PersonalMemoryEngine {
 
         initialize(context)
 
-        val cleanStatement =
-            clean(statement)
+        val cleanStatement = clean(statement)
 
         if (cleanStatement.isBlank()) {
             return
@@ -93,10 +95,7 @@ object PersonalMemoryEngine {
                 )
             }
         ) {
-
-            freeFacts.add(
-                cleanStatement
-            )
+            freeFacts.add(cleanStatement)
         }
 
         while (freeFacts.size > 50) {
@@ -194,42 +193,41 @@ object PersonalMemoryEngine {
 
         initialize(context)
 
-        val parts =
-            mutableListOf<String>()
+        val parts = mutableListOf<String>()
 
-        get("name")?.let {
+        get(context, "name")?.let {
             parts.add("Your name is $it")
         }
 
-        get("location")?.let {
+        get(context, "location")?.let {
             parts.add("You live in $it")
         }
 
-        get("job")?.let {
+        get(context, "job")?.let {
             parts.add("You work as $it")
         }
 
-        get("favorite_color")?.let {
+        get(context, "favorite_color")?.let {
             parts.add("Your favourite colour is $it")
         }
 
-        get("favorite_food")?.let {
+        get(context, "favorite_food")?.let {
             parts.add("Your favourite food is $it")
         }
 
-        get("favorite_song")?.let {
+        get(context, "favorite_song")?.let {
             parts.add("Your favourite song is $it")
         }
 
-        get("favorite_movie")?.let {
+        get(context, "favorite_movie")?.let {
             parts.add("Your favourite movie is $it")
         }
 
-        get("likes")?.let {
+        get(context, "likes")?.let {
             parts.add("You like $it")
         }
 
-        get("dislikes")?.let {
+        get(context, "dislikes")?.let {
             parts.add("You don't like $it")
         }
 
@@ -293,7 +291,7 @@ object PersonalMemoryEngine {
     }
 
     // =========================================================
-    // PERSISTENCE
+    // PERSISTENCE - SAVE
     // =========================================================
 
     private fun save(
@@ -354,6 +352,10 @@ object PersonalMemoryEngine {
             )
             .apply()
     }
+
+    // =========================================================
+    // PERSISTENCE - LOAD
+    // =========================================================
 
     private fun load(
         context: Context
