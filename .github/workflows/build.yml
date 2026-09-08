@@ -7,7 +7,6 @@ on:
       - main
 
 jobs:
-
   build:
 
     runs-on: ubuntu-latest
@@ -24,163 +23,16 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Create Android Project
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Debug APK
         run: |
-
-          mkdir -p app/src/main/java/com/example/myaiassistant
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/drawable
-
-          if [ -f MainActivity.kt ]; then
-            cp MainActivity.kt \
-            app/src/main/java/com/example/myaiassistant/MainActivity.kt
-          fi
-
-          if [ -f AurixService.kt ]; then
-            cp AurixService.kt \
-            app/src/main/java/com/example/myaiassistant/AurixService.kt
-          fi
-
-          if [ -f AndroidManifest.xml ]; then
-            cp AndroidManifest.xml \
-            app/src/main/AndroidManifest.xml
-          fi
-
-          if [ -f styles.xml ]; then
-            cp styles.xml \
-            app/src/main/res/values/styles.xml
-          fi
-
-          if [ -f aurix_logo.xml ]; then
-            cp aurix_logo.xml \
-            app/src/main/res/drawable/aurix_logo.xml
-          fi
-
-          cat > settings.gradle.kts <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-
-          rootProject.name = "AURIX"
-
-          include(":app")
-          EOF
-
-          cat > build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application") version "8.2.0" apply false
-              id("org.jetbrains.kotlin.android") version "1.9.10" apply false
-          }
-          EOF
-
-          cat > app/build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application")
-              id("org.jetbrains.kotlin.android")
-          }
-
-          android {
-
-              namespace = "com.example.myaiassistant"
-
-              compileSdk = 34
-
-              defaultConfig {
-
-                  applicationId =
-                      "com.example.myaiassistant"
-
-                  minSdk = 24
-
-                  targetSdk = 34
-
-                  versionCode = 6
-
-                  versionName = "6.0"
-              }
-
-              buildTypes {
-
-                  release {
-
-                      isMinifyEnabled = false
-
-                      proguardFiles(
-                          getDefaultProguardFile(
-                              "proguard-android-optimize.txt"
-                          ),
-                          "proguard-rules.pro"
-                      )
-                  }
-              }
-
-              compileOptions {
-
-                  sourceCompatibility =
-                      JavaVersion.VERSION_17
-
-                  targetCompatibility =
-                      JavaVersion.VERSION_17
-              }
-
-              kotlinOptions {
-
-                  jvmTarget = "17"
-              }
-          }
-
-          dependencies {
-
-              implementation(
-                  "androidx.core:core-ktx:1.12.0"
-              )
-
-              implementation(
-                  "androidx.activity:activity-ktx:1.8.2"
-              )
-          }
-          EOF
-
-      - name: Install Gradle
-        run: |
-
-          curl -L \
-            -o gradle.zip \
-            https://services.gradle.org/distributions/gradle-8.9-bin.zip
-
-          unzip -q gradle.zip \
-            -d "$HOME/gradle"
-
-          echo "$HOME/gradle/gradle-8.9/bin" \
-            >> "$GITHUB_PATH"
-
-      - name: Build APK
-        run: |
-
-          gradle \
-            --no-daemon \
-            --stacktrace \
-            assembleDebug
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
-
         with:
-
-          name: AURIX-v6
-
-          path:
-            app/build/outputs/apk/debug/app-debug.apk
+          name: AURIX-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
