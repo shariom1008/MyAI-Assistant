@@ -75,34 +75,311 @@ object PersonalMemoryEngine {
     // =========================================================
 
     fun rememberThat(
-        context: Context,
-        statement: String
+    context: Context,
+    statement: String
+) {
+
+    initialize(context)
+
+    val cleanStatement =
+        clean(statement)
+
+    if (cleanStatement.isBlank()) {
+        return
+    }
+
+    // ---------------------------------------------------------
+    // STRUCTURED PERSONAL MEMORY
+    // ---------------------------------------------------------
+
+    val lower =
+        cleanStatement.lowercase()
+
+    fun saveStructured(
+        key: String,
+        value: String
     ) {
 
-        initialize(context)
+        val cleanKey =
+            normalizeKey(key)
 
-        val cleanStatement = clean(statement)
-
-        if (cleanStatement.isBlank()) {
-            return
-        }
+        val cleanValue =
+            clean(value)
 
         if (
-            !freeFacts.any {
-                it.equals(
-                    cleanStatement,
-                    ignoreCase = true
-                )
-            }
+            cleanKey.isNotBlank() &&
+            cleanValue.isNotBlank()
         ) {
-            freeFacts.add(cleanStatement)
-        }
 
-        while (freeFacts.size > 50) {
-            freeFacts.removeAt(0)
+            facts[cleanKey] =
+                Fact(
+                    key = cleanKey,
+                    value = cleanValue
+                )
         }
+    }
 
-        save(context)
+    // NAME
+    if (
+        lower.startsWith("my name is ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "my name is ".length
+                )
+                .trim()
+
+        saveStructured(
+            "name",
+            value
+        )
+    }
+
+    // LOCATION
+    else if (
+        lower.startsWith("i live in ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "i live in ".length
+                )
+                .trim()
+
+        saveStructured(
+            "location",
+            value
+        )
+    }
+
+    else if (
+        lower.startsWith("i am from ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "i am from ".length
+                )
+                .trim()
+
+        saveStructured(
+            "location",
+            value
+        )
+    }
+
+    // JOB
+    else if (
+        lower.startsWith("i work as ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "i work as ".length
+                )
+                .trim()
+
+        saveStructured(
+            "job",
+            value
+        )
+    }
+
+    else if (
+        lower.startsWith("my job is ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "my job is ".length
+                )
+                .trim()
+
+        saveStructured(
+            "job",
+            value
+        )
+    }
+
+    // FAVOURITE / FAVORITE
+    else if (
+        lower.startsWith("my favourite ") ||
+        lower.startsWith("my favorite ")
+    ) {
+
+        val prefixLength =
+            if (
+                lower.startsWith("my favourite ")
+            ) {
+                "my favourite ".length
+            } else {
+                "my favorite ".length
+            }
+
+        val remainder =
+            cleanStatement
+                .substring(
+                    prefixLength
+                )
+                .trim()
+
+        val separator =
+            Regex(
+                "\\s+is\\s+"
+            )
+
+        val match =
+            separator.find(
+                remainder
+            )
+
+        if (match != null) {
+
+            val type =
+                remainder
+                    .substring(
+                        0,
+                        match.range.first
+                    )
+                    .trim()
+
+            val value =
+                remainder
+                    .substring(
+                        match.range.last + 1
+                    )
+                    .trim()
+
+            val key =
+                when (
+                    normalizeKey(type)
+                ) {
+
+                    "color",
+                    "colour" ->
+                        "favorite_color"
+
+                    "food" ->
+                        "favorite_food"
+
+                    "song" ->
+                        "favorite_song"
+
+                    "movie" ->
+                        "favorite_movie"
+
+                    else ->
+                        "favorite_${normalizeKey(type)}"
+                }
+
+            saveStructured(
+                key,
+                value
+            )
+        }
+    }
+
+    // LIKES
+    else if (
+        lower.startsWith("i like ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "i like ".length
+                )
+                .trim()
+
+        saveStructured(
+            "likes",
+            value
+        )
+    }
+
+    else if (
+        lower.startsWith("i love ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "i love ".length
+                )
+                .trim()
+
+        saveStructured(
+            "likes",
+            value
+        )
+    }
+
+    // DISLIKES
+    else if (
+        lower.startsWith("i don't like ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "i don't like ".length
+                )
+                .trim()
+
+        saveStructured(
+            "dislikes",
+            value
+        )
+    }
+
+    else if (
+        lower.startsWith("i hate ")
+    ) {
+
+        val value =
+            cleanStatement
+                .substring(
+                    "i hate ".length
+                )
+                .trim()
+
+        saveStructured(
+            "dislikes",
+            value
+        )
+    }
+
+    // ---------------------------------------------------------
+    // ALWAYS KEEP ORIGINAL FREE-FORM MEMORY TOO
+    // ---------------------------------------------------------
+
+    if (
+        !freeFacts.any {
+            it.equals(
+                cleanStatement,
+                ignoreCase = true
+            )
+        }
+    ) {
+
+        freeFacts.add(
+            cleanStatement
+        )
+    }
+
+    while (
+        freeFacts.size > 50
+    ) {
+        freeFacts.removeAt(0)
+    }
+
+    save(context)
     }
 
     // =========================================================
