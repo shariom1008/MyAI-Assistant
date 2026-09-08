@@ -5,6 +5,9 @@ object AurixContextResolver {
     private const val DIRECT_RESPONSE_PREFIX =
         "AURIX_DIRECT_RESPONSE:"
 
+    private const val MEMORY_STATEMENT_PREFIX =
+        "AURIX_MEMORY_STATEMENT:"
+
     fun resolve(command: String): String {
 
         val current =
@@ -15,6 +18,23 @@ object AurixContextResolver {
         if (current.isBlank()) {
             return current
         }
+
+        // -----------------------------------------------------
+        // MEMORY STATEMENTS
+        // -----------------------------------------------------
+
+        if (
+            current.startsWith("my name is ") ||
+            current.startsWith("mera naam ") ||
+            current.startsWith("mera name ")
+        ) {
+
+            return MEMORY_STATEMENT_PREFIX + command.trim()
+        }
+
+        // -----------------------------------------------------
+        // NO MEMORY
+        // -----------------------------------------------------
 
         if (!ConversationMemoryEngine.hasMemory()) {
             return current
