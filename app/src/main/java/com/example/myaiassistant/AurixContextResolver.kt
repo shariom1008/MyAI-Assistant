@@ -207,6 +207,91 @@ object AurixContextResolver {
                 }
             )
         }
+        // =====================================================
+// PERSONAL FAVOURITES
+// =====================================================
+
+val favouriteKey =
+    when {
+
+        lower.matches(
+            Regex(".*what('?s| is) my favou?rite song.*")
+        ) ->
+            "favorite_song"
+
+        lower.matches(
+            Regex(".*what('?s| is) my favou?rite food.*")
+        ) ->
+            "favorite_food"
+
+        lower.matches(
+            Regex(".*what('?s| is) my favou?rite movie.*")
+        ) ->
+            "favorite_movie"
+
+        lower.matches(
+            Regex(".*what('?s| is) my favou?rite (color|colour).*")
+        ) ->
+            "favorite_color"
+
+        else ->
+            ""
+    }
+
+if (favouriteKey.isNotBlank()) {
+
+    val value =
+        PersonalMemoryEngine.get(
+            context,
+            favouriteKey
+        )
+
+    val response =
+        if (value.isNullOrBlank()) {
+
+            when (favouriteKey) {
+
+                "favorite_song" ->
+                    "I don't remember your favourite song yet."
+
+                "favorite_food" ->
+                    "I don't remember your favourite food yet."
+
+                "favorite_movie" ->
+                    "I don't remember your favourite movie yet."
+
+                "favorite_color" ->
+                    "I don't remember your favourite colour yet."
+
+                else ->
+                    "I don't remember that yet."
+            }
+
+        } else {
+
+            when (favouriteKey) {
+
+                "favorite_song" ->
+                    "Your favourite song is $value."
+
+                "favorite_food" ->
+                    "Your favourite food is $value."
+
+                "favorite_movie" ->
+                    "Your favourite movie is $value."
+
+                "favorite_color" ->
+                    "Your favourite colour is $value."
+
+                else ->
+                    "You told me $value."
+            }
+        }
+
+    return Resolution.DirectResponse(
+        response
+    )
+}
 
         // =====================================================
         // WHAT DO YOU KNOW ABOUT ME
