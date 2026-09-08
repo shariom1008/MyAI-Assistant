@@ -982,61 +982,79 @@ class AurixService :
         }
 
         // -----------------------------------------------------
-        // YOUTUBE SEARCH
-        // -----------------------------------------------------
+// CONTEXTUAL YOUTUBE PLAY / SEARCH
+// -----------------------------------------------------
 
-        if (
-            command.startsWith(
-                "search youtube"
-            ) ||
-            command.startsWith(
-                "youtube search"
-            ) ||
-            command.startsWith(
-                "youtube par"
+if (
+    command.startsWith("play ")
+) {
+
+    val target =
+        command
+            .removePrefix("play ")
+            .trim()
+
+    if (target.isNotBlank()) {
+        searchYouTube(target)
+    } else {
+        openYouTube()
+    }
+
+    return
+}
+
+
+// -----------------------------------------------------
+// YOUTUBE SEARCH
+// -----------------------------------------------------
+
+if (
+    command.startsWith("search youtube") ||
+    command.startsWith("youtube search") ||
+    command.startsWith("youtube par")
+) {
+
+    val query =
+        command
+            .replaceFirst(
+                "search youtube",
+                ""
             )
-        ) {
+            .replaceFirst(
+                "youtube search",
+                ""
+            )
+            .replaceFirst(
+                "youtube par",
+                ""
+            )
+            .trim()
 
-            val query =
-                command
-                    .replaceFirst(
-                        "search youtube",
-                        ""
-                    )
-                    .replaceFirst(
-                        "youtube search",
-                        ""
-                    )
-                    .replaceFirst(
-                        "youtube par",
-                        ""
-                    )
-                    .trim()
+    if (query.isNotBlank()) {
+        searchYouTube(query)
+    } else {
+        openYouTube()
+    }
 
-            if (
-                query.isNotBlank()
-            ) {
-                searchYouTube(query)
-            } else {
-                openYouTube()
-            }
+    return
+}
 
-            return
-        }
 
-        // -----------------------------------------------------
-        // YOUTUBE
-        // -----------------------------------------------------
+// -----------------------------------------------------
+// YOUTUBE
+// -----------------------------------------------------
 
-        if (
-            command == "youtube" ||
-            command == "open youtube" ||
-            command == "launch youtube"
-        ) {
+if (
+    command == "youtube" ||
+    command == "open youtube" ||
+    command == "launch youtube"
+) {
 
-            openYouTube()
-            return
-        }
+    openYouTube()
+    return
+}
+
+
 
         // -----------------------------------------------------
         // MAPS
@@ -1187,6 +1205,25 @@ class AurixService :
             changeVolume(false)
             return
         }
+        // -----------------------------------------------------
+        // CONTEXTUAL YOUTUBE PLAY
+        // -----------------------------------------------------
+
+if (
+    command.startsWith("play ")
+) {
+
+    val target =
+        command
+            .removePrefix("play ")
+            .trim()
+
+    if (target.isNotBlank()) {
+
+        searchYouTube(target)
+        return
+    }
+}
 
         // -----------------------------------------------------
         // MEDIA
