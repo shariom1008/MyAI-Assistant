@@ -491,7 +491,10 @@ if (isAgentCommand(command)) {
 
     sendStatus("EXECUTING")
 
-    executeAgentSteps(plan)
+    executeAgentStep(
+    plan = plan,
+    index = 0
+)
 
     return
 }
