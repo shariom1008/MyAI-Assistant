@@ -529,6 +529,79 @@ class AurixService :
             }
         }
 
+         // -----------------------------------------------------
+         // FORCE CONTEXTUAL PLAY FALLBACK
+         // -----------------------------------------------------
+
+if (
+    command == "play it" ||
+    command == "play that" ||
+    command == "play this" ||
+    command == "isko chalao" ||
+    command == "ise chalao" ||
+    command == "usko chalao"
+) {
+
+    val history =
+        AurixContextEngine.getRecentHistory(10)
+
+    val previous =
+        history
+            .asReversed()
+            .firstOrNull {
+                it.role == "user" &&
+                it.text.lowercase().trim() != command
+            }
+            ?.text
+            ?.trim()
+
+    if (!previous.isNullOrBlank()) {
+
+        val previousLower =
+            previous.lowercase()
+
+        val target =
+            when {
+
+                previousLower.startsWith(
+                    "search youtube "
+                ) ->
+                    previous.substring(
+                        "search youtube ".length
+                    ).trim()
+
+                previousLower.startsWith(
+                    "youtube search "
+                ) ->
+                    previous.substring(
+                        "youtube search ".length
+                    ).trim()
+
+                previousLower.startsWith(
+                    "youtube par "
+                ) ->
+                    previous.substring(
+                        "youtube par ".length
+                    ).trim()
+
+                previousLower.startsWith(
+                    "search "
+                ) ->
+                    previous.substring(
+                        "search ".length
+                    ).trim()
+
+                else -> null
+            }
+
+        if (!target.isNullOrBlank()) {
+
+            command =
+                "play $target"
+        }
+    }
+}
+
         currentUserCommand =
             command
 
