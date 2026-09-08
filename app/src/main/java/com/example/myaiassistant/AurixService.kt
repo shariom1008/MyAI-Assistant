@@ -448,6 +448,8 @@ class AurixService :
         if (command.isBlank()) {
             return
         }
+        AurixContextEngine.addUserMessage(command)
+        currentUserCommand = command
 
         // -----------------------------------------------------
         // STOP AURIX
@@ -3132,25 +3134,30 @@ private fun goHome() {
             }
         }
     }
+private var currentUserCommand: String = ""
 
-    private fun speak(
-        text: String
-    ) {
+private fun speak(
+    text: String
+) {
 
-        sendSpeak(text)
+    ConversationMemoryEngine.addTurn(
+        currentUserCommand,
+        text
+    )
 
-        try {
+    sendSpeak(text)
 
-            textToSpeech?.speak(
-                text,
-                TextToSpeech.QUEUE_FLUSH,
-                null,
-                "AURIX"
-            )
+    try {
+        textToSpeech?.speak(
+            text,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "AURIX"
+        )
 
-        } catch (_: Exception) {
-        }
+    } catch (_: Exception) {
     }
+}
 
     // =========================================================
     // EVENTS
