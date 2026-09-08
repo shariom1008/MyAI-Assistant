@@ -446,40 +446,7 @@ class AurixService :
 
         sendStatus("THINKING")
 
-        // -----------------------------------------------------
-        // CONTEXT RESOLUTION
-        // -----------------------------------------------------
 
-        when (
-            val resolution =
-                AurixContextResolver.resolve(
-                    this,
-                    command
-                )
-        ) {
-
-            is AurixContextResolver.Resolution.MemoryStatement -> {
-
-                AurixMemoryBridge.rememberThat(
-                    this,
-                    resolution.original
-                )
-
-                speakOnce(
-                    "Got it. I'll remember that."
-                )
-
-                return
-            }
-
-            is AurixContextResolver.Resolution.DirectResponse -> {
-
-                speakOnce(
-                    resolution.response
-                )
-
-                return
-            }
 
             is AurixContextResolver.Resolution.ClearMemory -> {
 
@@ -527,17 +494,90 @@ class AurixService :
                 command =
                     resolution.command
             }
+    }
+
+
+    // -----------------------------------------------------
+    // CONTEXT RESOLUTION
+    // -----------------------------------------------------
+
+when (
+    val resolution =
+        AurixContextResolver.resolve(
+            this,
+            command
+        )
+) {
+
+    is AurixContextResolver.Resolution.MemoryStatement -> {
+
+        AurixMemoryBridge.rememberThat(
+            this,
+            resolution.original
+        )
+
+        speakOnce(
+            "Got it. I'll remember that."
+        )
+
+        return
+    }
+
+    is AurixContextResolver.Resolution.DirectResponse -> {
+
+        speakOnce(
+            resolution.response
+        )
+
+        return
+    }
+
+    is AurixContextResolver.Resolution.ClearMemory -> {
+
+        if (resolution.all) {
+
+            AurixMemoryBridge.clearAll(
+                this
+            )
+
+            speakOnce(
+                "I've cleared my personal memory."
+            )
+
+        } else {
+
+            val key =
+                resolution.key
+
+            if (key.isNullOrBlank()) {
+
+                speakOnce(
+                    "Tell me what you want me to forget."
+                )
+
+            } else {
+
+                AurixMemoryBridge.clearMemoryKey(
+                    this,
+                    key
+                )
+
+                speakOnce(
+                    "Okay. I'll forget that."
+                )
+            }
         }
 
-        // -----------------------------------------------------
-        // DEBUG COMMAND
-        // -----------------------------------------------------
+        return
+    }
 
-speakOnce(
-    "Debug command is $command"
-)
+    is AurixContextResolver.Resolution.Command -> {
 
-return
+        command =
+            resolution.command
+    }
+}
+
 
 
          // -----------------------------------------------------
