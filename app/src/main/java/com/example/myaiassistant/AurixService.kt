@@ -3140,7 +3140,7 @@ private var currentUserCommand: String = ""
 private fun speak(
     text: String
 ) {
-ConversationMemoryEngine.addTurn(
+AurixMemoryBridge.saveTurn(
     this,
     currentUserCommand,
     text
