@@ -29,38 +29,24 @@ object AurixMemoryBridge {
 
     fun getContext(): String {
 
-        val currentContext =
-            AurixContextEngine.getConversationText()
-
-        val savedContext =
-            ConversationMemoryEngine.getContext()
-
-        return buildString {
-
-            if (savedContext.isNotBlank()) {
-                append(savedContext)
-            }
-
-            if (
-                currentContext.isNotBlank() &&
-                savedContext.isNotBlank()
-            ) {
-                append("\n")
-            }
-
-            if (currentContext.isNotBlank()) {
-                append(currentContext)
-            }
-        }
+        return ConversationMemoryEngine.getContext()
     }
-    fun getRecentContext(limit: Int = 6): String {
 
-    val items =
-        AurixContextEngine.getLastMessages(limit)
+    fun getRecentContext(
+        limit: Int = 6
+    ): String {
 
-    return items.joinToString("\n") {
-        "${it.role}: ${it.text}"
+        return ConversationMemoryEngine
+            .getRecentTurns()
+            .takeLast(limit)
+            .joinToString("\n") {
+                "User: ${it.user}\nAURIX: ${it.assistant}"
+            }
     }
+
+    fun hasMemory(): Boolean {
+
+        return ConversationMemoryEngine.hasMemory()
     }
 
     fun clear(context: Context) {
