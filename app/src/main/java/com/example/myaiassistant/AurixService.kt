@@ -991,12 +991,17 @@ private fun isAgentCommand(
 
     return hasKnownAction
 }
+
 private fun executeAgentSteps(
     plan: AurixAgentEngine.AgentPlan
 ) {
 
     if (plan.steps.isEmpty()) {
-        speak("I could not create an execution plan.")
+
+        speak(
+            "I could not create an execution plan."
+        )
+
         return
     }
 
@@ -1006,6 +1011,83 @@ private fun executeAgentSteps(
     )
 }
 
+private fun executeAgentStep(
+    plan: AurixAgentEngine.AgentPlan,
+    index: Int
+) {
+
+    if (
+        index < 0 ||
+        index >= plan.steps.size
+    ) {
+
+        speak(
+            "Agent completed all planned steps."
+        )
+
+        return
+    }
+
+    val step =
+        plan.steps[index]
+
+    sendStatus(
+        "EXECUTING: ${step.description}"
+    )
+
+    val response =
+        AurixCommandRouter.route(
+            step.command
+        )
+
+    if (
+        response.isBlank() ||
+        response.startsWith("I understood:")
+    ) {
+
+        sendStatus(
+            "STEP FAILED: ${step.description}"
+        )
+
+    } else {
+
+        sendStatus(
+            "STEP COMPLETE: ${step.description}"
+        )
+    }
+
+    val nextIndex =
+        index + 1
+
+    if (
+        nextIndex >= plan.steps.size
+    ) {
+
+        handler.postDelayed({
+
+            speak(
+                "Agent completed all planned steps."
+            )
+
+        }, 500)
+
+        return
+    }
+
+    /*
+     * Give Android time to bring the current
+     * activity to the foreground before the
+     * next agent step is attempted.
+     */
+    handler.postDelayed({
+
+        executeAgentStep(
+            plan = plan,
+            index = nextIndex
+        )
+
+    }, 2000)
+}
 private fun executeAgentStep(
     plan: AurixAgentEngine.AgentPlan,
     index: Int
