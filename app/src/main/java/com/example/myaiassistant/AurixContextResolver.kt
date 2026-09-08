@@ -2,6 +2,9 @@ package com.example.myaiassistant
 
 object AurixContextResolver {
 
+    private const val DIRECT_RESPONSE_PREFIX =
+        "AURIX_DIRECT_RESPONSE:"
+
     fun resolve(command: String): String {
 
         val current =
@@ -34,10 +37,11 @@ object AurixContextResolver {
             current.contains("mera name kya hai")
         ) {
 
-            return buildMemoryAnswer(
-                recent,
-                "name"
-            )
+            return DIRECT_RESPONSE_PREFIX +
+                    buildMemoryAnswer(
+                        recent,
+                        "name"
+                    )
         }
 
         // -----------------------------------------------------
@@ -53,9 +57,10 @@ object AurixContextResolver {
             current.contains("humne kya baat ki")
         ) {
 
-            return buildConversationAnswer(
-                recent
-            )
+            return DIRECT_RESPONSE_PREFIX +
+                    buildConversationAnswer(
+                        recent
+                    )
         }
 
         return current
@@ -121,7 +126,7 @@ object AurixContextResolver {
     }
 
     private fun buildConversationAnswer(
-        turns: List<ConversationMemoryEngine.Turn>
+        turns: List<ConversationMemoryEngine.Turn
     ): String {
 
         if (turns.isEmpty()) {
@@ -132,11 +137,8 @@ object AurixContextResolver {
             turns
                 .takeLast(3)
 
-        val summary =
-            recent.joinToString(". ") {
-                "You said ${it.user}"
-            }
-
-        return summary
+        return recent.joinToString(". ") {
+            "You said ${it.user}"
+        }
     }
 }
