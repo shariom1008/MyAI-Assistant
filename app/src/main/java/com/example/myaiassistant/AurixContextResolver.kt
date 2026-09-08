@@ -383,30 +383,72 @@ if (favouriteKey.isNotBlank()) {
         }
 
         if (
-            lower == "play it" ||
-            lower == "play that" ||
-            lower == "play this" ||
-            lower == "isko chalao"
-        ) {
+    lower == "play it" ||
+    lower == "play that" ||
+    lower == "play this" ||
+    lower == "isko chalao" ||
+    lower == "ise chalao" ||
+    lower == "usko chalao"
+) {
 
-            val previous =
-                AurixContextEngine
-                    .getLastUserMessage()
+    val history =
+        AurixContextEngine.getRecentHistory(8)
 
-            if (!previous.isNullOrBlank()) {
-
-                val resolved =
-                    extractPreviousTarget(
-                        previous
-                    )
-
-                if (resolved != null) {
-
-                    return Resolution.Command(
-                        "play $resolved"
-                    )
-                }
+    val previousCommand =
+        history
+            .lastOrNull {
+                it.role == "user" &&
+                it.text.lowercase() != lower
             }
+            ?.text
+            ?.trim()
+
+    if (!previousCommand.isNullOrBlank()) {
+
+        val previousLower =
+            previousCommand.lowercase()
+
+        val target =
+            when {
+
+                previousLower.startsWith(
+                    "search youtube "
+                ) ->
+                    previousCommand.substring(
+                        "search youtube ".length
+                    ).trim()
+
+                previousLower.startsWith(
+                    "youtube search "
+                ) ->
+                    previousCommand.substring(
+                        "youtube search ".length
+                    ).trim()
+
+                previousLower.startsWith(
+                    "youtube par "
+                ) ->
+                    previousCommand.substring(
+                        "youtube par ".length
+                    ).trim()
+
+                previousLower.startsWith(
+                    "search "
+                ) ->
+                    previousCommand.substring(
+                        "search ".length
+                    ).trim()
+
+                else -> null
+            }
+
+        if (!target.isNullOrBlank()) {
+
+            return Resolution.Command(
+                "play $target"
+            )
+        }
+    }
         }
         
         // =====================================================
