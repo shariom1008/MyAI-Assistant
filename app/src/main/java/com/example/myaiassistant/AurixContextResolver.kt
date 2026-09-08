@@ -408,6 +408,29 @@ if (favouriteKey.isNotBlank()) {
                 }
             }
         }
+        
+        // =====================================================
+        // AURIX SURPRISE MODE 🎁
+        // =====================================================
+
+if (
+    lower == "aurix surprise me" ||
+    lower == "surprise me" ||
+    lower == "aurix surprise"
+) {
+
+    val surprises = listOf(
+        "Surprise mode activated. 😎",
+        "I was waiting for you to ask that. AURIX is ready.",
+        "Here's your surprise: you're building something pretty cool.",
+        "Surprise! I'm still listening. What's next?",
+        "AURIX says: mission accepted. 🚀"
+    )
+
+    return Resolution.DirectResponse(
+        surprises.random()
+    )
+}
 
         // =====================================================
         // OTHERWISE NORMAL COMMAND
