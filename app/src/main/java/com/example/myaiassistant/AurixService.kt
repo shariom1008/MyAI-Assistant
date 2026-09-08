@@ -453,7 +453,7 @@ class AurixService :
         val resolvedCommand =
         AurixContextResolver.resolve(command)
         command = resolvedCommand
-        currentUserCommand = Command
+        currentUserCommand = command
 
         // -----------------------------------------------------
         // STOP AURIX
