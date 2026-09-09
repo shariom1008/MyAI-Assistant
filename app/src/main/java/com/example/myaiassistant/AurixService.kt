@@ -76,7 +76,12 @@ class AurixService :
     private var currentUserCommand = ""
     private var currentResponseSent = false
 
+    // =========================================================
+    // CREATE
+    // =========================================================
+
     override fun onCreate() {
+
         super.onCreate()
 
         serviceDestroyed = false
@@ -97,10 +102,17 @@ class AurixService :
         startForegroundNotification()
 
         textToSpeech =
-            TextToSpeech(this, this)
+            TextToSpeech(
+                this,
+                this
+            )
 
         startListening()
     }
+
+    // =========================================================
+    // START COMMAND
+    // =========================================================
 
     override fun onStartCommand(
         intent: Intent?,
@@ -111,11 +123,14 @@ class AurixService :
         when (intent?.action) {
 
             ACTION_STOP -> {
+
                 stopAurix()
+
                 return START_NOT_STICKY
             }
 
             ACTION_START -> {
+
                 isRunning = true
                 restarting = false
 
@@ -125,6 +140,7 @@ class AurixService :
             }
 
             else -> {
+
                 if (!listening) {
                     startListening()
                 }
@@ -144,18 +160,24 @@ class AurixService :
         listening = false
         restarting = true
 
-        handler.removeCallbacksAndMessages(null)
+        handler.removeCallbacksAndMessages(
+            null
+        )
 
         try {
+
             speechRecognizer?.cancel()
             speechRecognizer?.destroy()
+
         } catch (_: Exception) {
         }
 
         speechRecognizer = null
 
         try {
+
             textToSpeech?.stop()
+
         } catch (_: Exception) {
         }
 
@@ -189,9 +211,15 @@ class AurixService :
                     Context.NOTIFICATION_SERVICE
                 ) as NotificationManager
 
-            manager.createNotificationChannel(channel)
+            manager.createNotificationChannel(
+                channel
+            )
         }
     }
+
+    // =========================================================
+    // FOREGROUND NOTIFICATION
+    // =========================================================
 
     private fun startForegroundNotification() {
 
@@ -205,7 +233,9 @@ class AurixService :
                     this,
                     CHANNEL_ID
                 )
-                    .setContentTitle("AURIX")
+                    .setContentTitle(
+                        "AURIX"
+                    )
                     .setContentText(
                         "AURIX voice assistant is active"
                     )
@@ -217,8 +247,12 @@ class AurixService :
 
             } else {
 
-                Notification.Builder(this)
-                    .setContentTitle("AURIX")
+                Notification.Builder(
+                    this
+                )
+                    .setContentTitle(
+                        "AURIX"
+                    )
                     .setContentText(
                         "AURIX voice assistant is active"
                     )
@@ -262,122 +296,135 @@ class AurixService :
 
         try {
 
-            // -------------------------------------------------
             // IMPORTANT:
-            // Create SpeechRecognizer ONLY ONCE.
-            // Do not destroy/recreate it every time.
-            // -------------------------------------------------
+            // SpeechRecognizer is created only once.
+            // Do NOT destroy/recreate it on every listening cycle.
 
             if (speechRecognizer == null) {
 
                 speechRecognizer =
                     SpeechRecognizer
-                        .createSpeechRecognizer(this)
+                        .createSpeechRecognizer(
+                            this
+                        )
 
-                speechRecognizer?.setRecognitionListener(
-                    object : RecognitionListener {
+                speechRecognizer
+                    ?.setRecognitionListener(
+                        object :
+                            RecognitionListener {
 
-                        override fun onReadyForSpeech(
-                            params: Bundle?
-                        ) {
+                            override fun
+                                onReadyForSpeech(
+                                    params: Bundle?
+                                ) {
 
-                            listening = true
+                                listening = true
 
-                            sendStatus(
-                                "LISTENING"
-                            )
-                        }
-
-                        override fun onBeginningOfSpeech() {
-
-                            sendStatus(
-                                "THINKING"
-                            )
-                        }
-
-                        override fun onRmsChanged(
-                            rmsdB: Float
-                        ) {
-                        }
-
-                        override fun onBufferReceived(
-                            buffer: ByteArray?
-                        ) {
-                        }
-
-                        override fun onEndOfSpeech() {
-                        }
-
-                        override fun onError(
-                            error: Int
-                        ) {
-
-                            listening = false
-
-                            if (
-                                isRunning &&
-                                !serviceDestroyed
-                            ) {
-
-                                restartListening()
-                            }
-                        }
-
-                        override fun onResults(
-                            results: Bundle?
-                        ) {
-
-                            listening = false
-
-                            val list =
-                                results
-                                    ?.getStringArrayList(
-                                        SpeechRecognizer
-                                            .RESULTS_RECOGNITION
-                                    )
-
-                            val command =
-                                list
-                                    ?.firstOrNull()
-                                    ?.trim()
-                                    ?.lowercase(
-                                        Locale.getDefault()
-                                    )
-
-                            if (
-                                !command.isNullOrBlank()
-                            ) {
-
-                                sendCommand(
-                                    command
-                                )
-
-                                processCommand(
-                                    command
+                                sendStatus(
+                                    "LISTENING"
                                 )
                             }
 
-                            if (
-                                isRunning &&
-                                !serviceDestroyed
-                            ) {
+                            override fun
+                                onBeginningOfSpeech() {
 
-                                restartListening()
+                                sendStatus(
+                                    "THINKING"
+                                )
+                            }
+
+                            override fun
+                                onRmsChanged(
+                                    rmsdB: Float
+                                ) {
+                            }
+
+                            override fun
+                                onBufferReceived(
+                                    buffer: ByteArray?
+                                ) {
+                            }
+
+                            override fun
+                                onEndOfSpeech() {
+                            }
+
+                            override fun
+                                onError(
+                                    error: Int
+                                ) {
+
+                                listening = false
+
+                                if (
+                                    isRunning &&
+                                    !serviceDestroyed
+                                ) {
+
+                                    restartListening()
+                                }
+                            }
+
+                            override fun
+                                onResults(
+                                    results: Bundle?
+                                ) {
+
+                                listening = false
+
+                                val list =
+                                    results
+                                        ?.getStringArrayList(
+                                            SpeechRecognizer
+                                                .RESULTS_RECOGNITION
+                                        )
+
+                                val command =
+                                    list
+                                        ?.firstOrNull()
+                                        ?.trim()
+                                        ?.lowercase(
+                                            Locale.getDefault()
+                                        )
+
+                                if (
+                                    !command
+                                        .isNullOrBlank()
+                                ) {
+
+                                    sendCommand(
+                                        command
+                                    )
+
+                                    processCommand(
+                                        command
+                                    )
+                                }
+
+                                if (
+                                    isRunning &&
+                                    !serviceDestroyed
+                                ) {
+
+                                    restartListening()
+                                }
+                            }
+
+                            override fun
+                                onPartialResults(
+                                    partialResults:
+                                    Bundle?
+                                ) {
+                            }
+
+                            override fun
+                                onEvent(
+                                    eventType: Int,
+                                    params: Bundle?
+                                ) {
                             }
                         }
-
-                        override fun onPartialResults(
-                            partialResults: Bundle?
-                        ) {
-                        }
-
-                        override fun onEvent(
-                            eventType: Int,
-                            params: Bundle?
-                        ) {
-                        }
-                    }
-                )
+                    )
             }
 
             val intent =
@@ -413,7 +460,9 @@ class AurixService :
                 }
 
             speechRecognizer
-                ?.startListening(intent)
+                ?.startListening(
+                    intent
+                )
 
         } catch (_: Exception) {
 
@@ -422,7 +471,7 @@ class AurixService :
     }
 
     // =========================================================
-    // SAFE LISTENING RESTART
+    // SAFE RESTART
     // =========================================================
 
     private fun restartListening() {
@@ -454,7 +503,7 @@ class AurixService :
     }
 
     // =========================================================
-    // MAIN AURIX COMMAND ENGINE
+    // MAIN COMMAND ENGINE
     // =========================================================
 
     private fun processCommand(
@@ -479,9 +528,13 @@ class AurixService :
         currentUserCommand =
             rawCommand.trim()
 
-        AurixMemoryBridge.initialize(this)
+        AurixMemoryBridge.initialize(
+            this
+        )
 
-        sendStatus("THINKING")
+        sendStatus(
+            "THINKING"
+        )
 
         // =====================================================
         // CONTEXT RESOLUTION
@@ -543,10 +596,11 @@ class AurixService :
 
                     } else {
 
-                        AurixMemoryBridge.clearMemoryKey(
-                            this,
-                            key
-                        )
+                        AurixMemoryBridge
+                            .clearMemoryKey(
+                                this,
+                                key
+                            )
 
                         speakOnce(
                             "Okay. I'll forget that."
@@ -565,7 +619,7 @@ class AurixService :
         }
 
         // =====================================================
-        // FORCE CONTEXTUAL PLAY FALLBACK
+        // CONTEXTUAL PLAY
         // =====================================================
 
         if (
@@ -585,6 +639,7 @@ class AurixService :
                 history
                     .asReversed()
                     .firstOrNull {
+
                         it.role == "user" &&
                             it.text
                                 .lowercase()
@@ -593,7 +648,9 @@ class AurixService :
                     ?.text
                     ?.trim()
 
-            if (!previous.isNullOrBlank()) {
+            if (
+                !previous.isNullOrBlank()
+            ) {
 
                 val previousLower =
                     previous.lowercase()
@@ -629,10 +686,13 @@ class AurixService :
                                 "search ".length
                             ).trim()
 
-                        else -> null
+                        else ->
+                            null
                     }
 
-                if (!target.isNullOrBlank()) {
+                if (
+                    !target.isNullOrBlank()
+                ) {
 
                     command =
                         "play $target"
@@ -782,8 +842,7 @@ class AurixService :
 
             val memory =
                 if (
-                    AurixMemoryBridge
-                        .hasMemory()
+                    AurixMemoryBridge.hasMemory()
                 ) {
                     "available"
                 } else {
@@ -925,7 +984,9 @@ class AurixService :
                 SimpleDateFormat(
                     "EEEE, dd MMMM yyyy",
                     Locale.getDefault()
-                ).format(Date())
+                ).format(
+                    Date()
+                )
 
             speakOnce(
                 "Today is $date."
@@ -952,7 +1013,9 @@ class AurixService :
                 SimpleDateFormat(
                     "EEEE",
                     Locale.getDefault()
-                ).format(Date())
+                ).format(
+                    Date()
+                )
 
             speakOnce(
                 "Today is $day."
@@ -991,7 +1054,9 @@ class AurixService :
                 SimpleDateFormat(
                     "hh:mm a",
                     Locale.getDefault()
-                ).format(Date())
+                ).format(
+                    Date()
+                )
 
             speakOnce(
                 "The time is $time."
@@ -1093,7 +1158,7 @@ class AurixService :
         }
 
         // =====================================================
-        // YOUTUBE
+        // YOUTUBE PLAY
         // =====================================================
 
         if (
@@ -1102,12 +1167,18 @@ class AurixService :
 
             val target =
                 command
-                    .removePrefix("play ")
+                    .removePrefix(
+                        "play "
+                    )
                     .trim()
 
-            if (target.isNotBlank()) {
+            if (
+                target.isNotBlank()
+            ) {
 
-                searchYouTube(target)
+                searchYouTube(
+                    target
+                )
 
             } else {
 
@@ -1122,9 +1193,15 @@ class AurixService :
         // =====================================================
 
         if (
-            command.startsWith("search youtube") ||
-            command.startsWith("youtube search") ||
-            command.startsWith("youtube par")
+            command.startsWith(
+                "search youtube"
+            ) ||
+            command.startsWith(
+                "youtube search"
+            ) ||
+            command.startsWith(
+                "youtube par"
+            )
         ) {
 
             val query =
@@ -1150,9 +1227,13 @@ class AurixService :
                         )
                 }.trim()
 
-            if (query.isNotBlank()) {
+            if (
+                query.isNotBlank()
+            ) {
 
-                searchYouTube(query)
+                searchYouTube(
+                    query
+                )
 
             } else {
 
@@ -1212,7 +1293,9 @@ class AurixService :
                 query.isNotBlank()
             ) {
 
-                searchMaps(query)
+                searchMaps(
+                    query
+                )
 
             } else {
 
@@ -1379,7 +1462,7 @@ class AurixService :
         ) {
 
             speakOnce(
-                "Hello. I am AURIX. How can I help you?"
+                "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?"
             )
 
             return
@@ -1402,7 +1485,7 @@ class AurixService :
         ) {
 
             speakOnce(
-                "I am AURIX, your personal AI assistant."
+                "Main AURIX hoon, aapka personal AI assistant."
             )
 
             return
@@ -1417,7 +1500,9 @@ class AurixService :
         ) {
 
             val appName =
-                extractAppName(command)
+                extractAppName(
+                    command
+                )
 
             openInstalledApp(
                 appName
@@ -1465,7 +1550,9 @@ class AurixService :
                 query.isNotBlank()
             ) {
 
-                googleSearch(query)
+                googleSearch(
+                    query
+                )
             }
 
             return
@@ -1475,20 +1562,20 @@ class AurixService :
         // NORMAL AURIX ROUTER
         // =====================================================
 
-        val aurixResponse =
+        val aurixRouterResponse =
             AurixCommandRouter.route(
                 command
             )
 
         if (
-            aurixResponse.isNotBlank() &&
-            !aurixResponse.startsWith(
+            aurixRouterResponse.isNotBlank() &&
+            !aurixRouterResponse.startsWith(
                 "I understood:"
             )
         ) {
 
             speakOnce(
-                aurixResponse
+                aurixRouterResponse
             )
 
             return
@@ -1498,7 +1585,9 @@ class AurixService :
         // FINAL SEARCH FALLBACK
         // =====================================================
 
-        googleSearch(command)
+        googleSearch(
+            command
+        )
     }
 
     // =========================================================
@@ -1648,10 +1737,14 @@ class AurixService :
                 c.contains(
                     "bluetooth"
                 ) ->
-                    AurixSkillEngine.process(c)
+                    AurixSkillEngine.process(
+                        c
+                    )
 
                 else ->
-                    AurixCommandRouter.route(c)
+                    AurixCommandRouter.route(
+                        c
+                    )
             }
 
         } catch (_: Exception) {
@@ -1701,7 +1794,9 @@ class AurixService :
                 ).apply {
 
                     data =
-                        Uri.parse("tel:")
+                        Uri.parse(
+                            "tel:"
+                        )
 
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
@@ -1835,7 +1930,9 @@ class AurixService :
                 Locale.getDefault()
             )
             .replace(
-                Regex("[^a-z0-9]"),
+                Regex(
+                    "[^a-z0-9]"
+                ),
                 ""
             )
             .trim()
@@ -2005,7 +2102,7 @@ class AurixService :
         }
 
         // =====================================================
-        // GENERIC INSTALLED APP DISCOVERY
+        // GENERIC APP DISCOVERY
         // =====================================================
 
         try {
@@ -2031,7 +2128,8 @@ class AurixService :
                 android.content.pm.ActivityInfo? =
                 null
 
-            var bestScore = 0
+            var bestScore =
+                0
 
             for (
                 resolveInfo in apps
@@ -2082,7 +2180,8 @@ class AurixService :
                     bestActivity =
                         activity
 
-                    bestScore = 100
+                    bestScore =
+                        100
 
                     break
                 }
@@ -2095,7 +2194,8 @@ class AurixService :
                     bestActivity =
                         activity
 
-                    bestScore = 95
+                    bestScore =
+                        95
 
                     break
                 }
@@ -2180,6 +2280,10 @@ class AurixService :
         return true
     }
 
+    // =========================================================
+    // SIMILARITY
+    // =========================================================
+
     private fun similarityScore(
         a: String,
         b: String
@@ -2250,14 +2354,16 @@ class AurixService :
             i in 0..a.length
         ) {
 
-            dp[i][0] = i
+            dp[i][0] =
+                i
         }
 
         for (
             j in 0..b.length
         ) {
 
-            dp[0][j] = j
+            dp[0][j] =
+                j
         }
 
         for (
@@ -2298,7 +2404,8 @@ class AurixService :
         input: String
     ): String {
 
-        var text = input
+        var text =
+            input
 
         val compounds =
             mapOf(
@@ -2409,12 +2516,15 @@ class AurixService :
         command: String
     ) {
 
-        var seconds = 0L
+        var seconds =
+            0L
 
         val hour =
             Pattern.compile(
                 "(\\d+)\\s*(hour|hours|hr|hrs)"
-            ).matcher(command)
+            ).matcher(
+                command
+            )
 
         if (
             hour.find()
@@ -2428,7 +2538,9 @@ class AurixService :
         val minute =
             Pattern.compile(
                 "(\\d+)\\s*(minute|minutes|min|mins)"
-            ).matcher(command)
+            ).matcher(
+                command
+            )
 
         if (
             minute.find()
@@ -2442,7 +2554,9 @@ class AurixService :
         val second =
             Pattern.compile(
                 "(\\d+)\\s*(second|seconds|sec|secs)"
-            ).matcher(command)
+            ).matcher(
+                command
+            )
 
         if (
             second.find()
@@ -2460,7 +2574,9 @@ class AurixService :
             val number =
                 Pattern.compile(
                     "(?:timer|for)\\s+(\\d+)"
-                ).matcher(command)
+                ).matcher(
+                    command
+                )
 
             if (
                 number.find()
@@ -2539,7 +2655,9 @@ class AurixService :
         val matcher =
             Pattern.compile(
                 "(\\d{1,2})(?:\\s*[:.]\\s*(\\d{1,2}))?\\s*(am|pm)?"
-            ).matcher(command)
+            ).matcher(
+                command
+            )
 
         if (
             !matcher.find()
@@ -2806,7 +2924,9 @@ class AurixService :
                         .LENS_FACING_BACK
                 ) {
 
-                    cameraId = id
+                    cameraId =
+                        id
+
                     break
                 }
             }
@@ -2880,7 +3000,9 @@ class AurixService :
                         .isNotEmpty()
                 ) {
 
-                    startActivity(intent)
+                    startActivity(
+                        intent
+                    )
 
                     speakOnce(
                         "Opening camera."
@@ -2924,7 +3046,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Opening gallery."
@@ -2971,7 +3095,9 @@ class AurixService :
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
 
-                    startActivity(intent)
+                    startActivity(
+                        intent
+                    )
 
                     speakOnce(
                         "Opening music."
@@ -3021,7 +3147,9 @@ class AurixService :
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
 
-                    startActivity(intent)
+                    startActivity(
+                        intent
+                    )
 
                     speakOnce(
                         "Opening notes."
@@ -3072,7 +3200,9 @@ class AurixService :
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
 
-                    startActivity(intent)
+                    startActivity(
+                        intent
+                    )
 
                     speakOnce(
                         "Opening calculator."
@@ -3115,7 +3245,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Opening YouTube."
@@ -3133,7 +3265,9 @@ class AurixService :
         query: String
     ) {
 
-        if (query.isBlank()) {
+        if (
+            query.isBlank()
+        ) {
 
             openYouTube()
             return
@@ -3141,11 +3275,12 @@ class AurixService :
 
         val url =
             "https://www.youtube.com/results?search_query=" +
-                Uri.encode(query)
+                Uri.encode(
+                    query
+                )
 
         try {
 
-            // First try YouTube app
             val youtubeIntent =
                 Intent(
                     Intent.ACTION_VIEW,
@@ -3161,7 +3296,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(youtubeIntent)
+            startActivity(
+                youtubeIntent
+            )
 
             speakOnce(
                 "Searching YouTube for $query."
@@ -3171,7 +3308,6 @@ class AurixService :
 
             try {
 
-                // Browser fallback
                 val browserIntent =
                     Intent(
                         Intent.ACTION_VIEW,
@@ -3183,7 +3319,9 @@ class AurixService :
                         )
                     }
 
-                startActivity(browserIntent)
+                startActivity(
+                    browserIntent
+                )
 
                 speakOnce(
                     "Opening YouTube search for $query."
@@ -3223,7 +3361,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Opening Chrome."
@@ -3262,7 +3402,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Opening Maps."
@@ -3285,7 +3427,9 @@ class AurixService :
             val uri =
                 Uri.parse(
                     "geo:0,0?q=" +
-                        Uri.encode(query)
+                        Uri.encode(
+                            query
+                        )
                 )
 
             val intent =
@@ -3303,7 +3447,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Searching Maps for $query."
@@ -3331,14 +3477,18 @@ class AurixService :
                 ).apply {
 
                     data =
-                        Uri.parse("tel:")
+                        Uri.parse(
+                            "tel:"
+                        )
 
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Opening phone."
@@ -3370,7 +3520,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Opening settings."
@@ -3402,7 +3554,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Opening Wi-Fi settings."
@@ -3436,7 +3590,6 @@ class AurixService :
                     AudioManager.ADJUST_RAISE
                 else
                     AudioManager.ADJUST_LOWER,
-
                 AudioManager.FLAG_SHOW_UI
             )
 
@@ -3559,7 +3712,9 @@ class AurixService :
 
             val url =
                 "https://www.google.com/search?q=" +
-                    Uri.encode(query)
+                    Uri.encode(
+                        query
+                    )
 
             val intent =
                 Intent(
@@ -3572,7 +3727,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
             speakOnce(
                 "Searching for $query."
@@ -3587,7 +3744,7 @@ class AurixService :
     }
 
     // =========================================================
-    // HOME
+    // HOME / CLOSE
     // =========================================================
 
     private fun isCloseCommand(
@@ -3647,7 +3804,9 @@ class AurixService :
                     )
                 }
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
 
         } catch (_: Exception) {
 
@@ -3658,10 +3817,12 @@ class AurixService :
     }
 
     // =========================================================
-    // SPEECH / AURIX VOICE
+    // TTS INIT
     // =========================================================
 
-    override fun onInit(status: Int) {
+    override fun onInit(
+        status: Int
+    ) {
 
         if (
             status !=
@@ -3678,7 +3839,7 @@ class AurixService :
         try {
 
             // -------------------------------------------------
-            // ENGLISH / US BASE VOICE
+            // BASE LANGUAGE
             // -------------------------------------------------
 
             tts.language =
@@ -3720,9 +3881,9 @@ class AurixService :
                     maleVoice
             }
 
-            // =================================================
-            // AURIX DEEP + CALM VOICE
-            // =================================================
+            // -------------------------------------------------
+            // AURIX VOICE
+            // -------------------------------------------------
 
             tts.setSpeechRate(
                 0.84f
@@ -3732,9 +3893,9 @@ class AurixService :
                 0.78f
             )
 
-            // =================================================
-            // AURIX GREETING
-            // =================================================
+            // -------------------------------------------------
+            // GREETING
+            // -------------------------------------------------
 
             speakAurixGreeting()
 
@@ -3742,127 +3903,378 @@ class AurixService :
         }
     }
 
-    private fun aurixResponse(text: String): String {
+    // =========================================================
+    // AURIX RESPONSE LOCALIZATION
+    // =========================================================
 
-    val t = text.trim()
+    private fun aurixResponse(
+        text: String
+    ): String {
 
-    if (t.isBlank()) {
-        return t
-    }
+        val t =
+            text.trim()
 
-    return when {
+        if (
+            t.isBlank()
+        ) {
+            return t
+        }
 
-        t == "Opening YouTube." ->
-            "Sure Boss, YouTube khol raha hoon."
+        return when {
 
-        t == "Opening camera." ->
-            "Boss, camera open kar raha hoon."
+            // -------------------------------------------------
+            // APP OPENING
+            // -------------------------------------------------
 
-        t == "Opening gallery." ->
-            "Boss, gallery khol raha hoon."
+            t == "Opening YouTube." ->
+                "Sure Boss, YouTube khol raha hoon."
 
-        t == "Opening music." ->
-            "Boss, music app khol raha hoon."
+            t == "Opening camera." ->
+                "Boss, camera open kar raha hoon."
 
-        t == "Opening notes." ->
-            "Boss, notes khol raha hoon."
+            t == "Opening gallery." ->
+                "Boss, gallery khol raha hoon."
 
-        t == "Opening calculator." ->
-            "Boss, calculator khol raha hoon."
+            t == "Opening music." ->
+                "Boss, music app khol raha hoon."
 
-        t == "Opening Chrome." ->
-            "Boss, Chrome khol raha hoon."
+            t == "Opening notes." ->
+                "Boss, notes khol raha hoon."
 
-        t == "Opening Maps." ->
-            "Boss, Maps khol raha hoon."
+            t == "Opening calculator." ->
+                "Boss, calculator khol raha hoon."
 
-        t == "Opening phone." ->
-            "Boss, phone open kar raha hoon."
+            t == "Opening Chrome." ->
+                "Boss, Chrome khol raha hoon."
 
-        t == "Opening settings." ->
-            "Boss, settings khol raha hoon."
+            t == "Opening Maps." ->
+                "Boss, Maps khol raha hoon."
 
-        t == "Opening Wi-Fi settings." ->
-            "Boss, Wi-Fi settings khol raha hoon."
+            t == "Opening phone." ->
+                "Boss, phone open kar raha hoon."
 
-        t == "Volume increased." ->
-            "Sure Boss, volume badha diya."
+            t == "Opening settings." ->
+                "Boss, settings khol raha hoon."
 
-        t == "Volume decreased." ->
-            "Sure Boss, volume kam kar diya."
+            t == "Opening Wi-Fi settings." ->
+                "Boss, Wi-Fi settings khol raha hoon."
 
-        t == "Media control executed." ->
-            "Done Boss, media control kar diya."
+            // -------------------------------------------------
+            // VOLUME / MEDIA
+            // -------------------------------------------------
 
-        t == "Flashlight turned on." ->
-            "Sure Boss, flashlight on kar di."
+            t == "Volume increased." ->
+                "Sure Boss, volume badha diya."
 
-        t == "Flashlight turned off." ->
-            "Boss, flashlight off kar di."
+            t == "Volume decreased." ->
+                "Sure Boss, volume kam kar diya."
 
-        t == "Flashlight is not available." ->
-            "Sorry Boss, flashlight available nahi hai."
+            t == "Media control executed." ->
+                "Done Boss, media control kar diya."
 
-        t == "Camera is not available." ->
-            "Sorry Boss, camera available nahi hai."
+            // -------------------------------------------------
+            // FLASHLIGHT
+            // -------------------------------------------------
 
-        t == "Gallery is not available." ->
-            "Sorry Boss, gallery available nahi hai."
+            t == "Flashlight turned on." ->
+                "Sure Boss, flashlight on kar di."
 
-        t == "Music app is not available." ->
-            "Sorry Boss, music app nahi mili."
+            t == "Flashlight turned off." ->
+                "Boss, flashlight off kar di."
 
-        t == "Notes app is not available." ->
-            "Sorry Boss, notes app nahi mili."
+            t == "Flashlight is not available." ->
+                "Sorry Boss, flashlight available nahi hai."
 
-        t == "Calculator is not available." ->
-            "Sorry Boss, calculator nahi mila."
+            // -------------------------------------------------
+            // DEVICE ERRORS
+            // -------------------------------------------------
 
-        t == "YouTube is not available." ->
-            "Sorry Boss, YouTube available nahi hai."
+            t == "Camera is not available." ->
+                "Sorry Boss, camera available nahi hai."
 
-        t == "Browser is not available." ->
-            "Sorry Boss, browser available nahi hai."
+            t == "Gallery is not available." ->
+                "Sorry Boss, gallery available nahi hai."
 
-        t == "Maps is not available." ->
-            "Sorry Boss, Maps available nahi hai."
+            t == "Music app is not available." ->
+                "Sorry Boss, music app nahi mili."
 
-        t == "Phone app is not available." ->
-            "Sorry Boss, phone app available nahi hai."
+            t == "Notes app is not available." ->
+                "Sorry Boss, notes app nahi mili."
 
-        t == "Settings is not available." ->
-            "Sorry Boss, settings open nahi ho paayi."
+            t == "Calculator is not available." ->
+                "Sorry Boss, calculator nahi mila."
 
-        t == "Wi-Fi settings are not available." ->
-            "Sorry Boss, Wi-Fi settings available nahi hain."
+            t == "YouTube is not available." ->
+                "Sorry Boss, YouTube available nahi hai."
 
-        t == "I could not control the flashlight." ->
-            "Sorry Boss, flashlight control nahi kar paya."
+            t == "Browser is not available." ->
+                "Sorry Boss, browser available nahi hai."
 
-        t == "I could not change the volume." ->
-            "Sorry Boss, volume change nahi kar paya."
+            t == "Maps is not available." ->
+                "Sorry Boss, Maps available nahi hai."
 
-        t == "I could not control media." ->
-            "Sorry Boss, media control nahi kar paya."
+            t == "Phone app is not available." ->
+                "Sorry Boss, phone app available nahi hai."
 
-        t == "I could not check the battery." ->
-            "Sorry Boss, battery check nahi kar paya."
+            t == "Settings is not available." ->
+                "Sorry Boss, settings open nahi ho paayi."
 
-        t == "I could not search that." ->
-            "Sorry Boss, ye search nahi kar paya."
+            t == "Wi-Fi settings are not available." ->
+                "Sorry Boss, Wi-Fi settings available nahi hain."
 
-        t == "I could not open YouTube." ->
-            "Sorry Boss, YouTube open nahi ho paya."
+            // -------------------------------------------------
+            // CONTROL ERRORS
+            // -------------------------------------------------
 
-        t == "I could not open Maps." ->
-            "Sorry Boss, Maps open nahi ho paya."
+            t == "I could not control the flashlight." ->
+                "Sorry Boss, flashlight control nahi kar paya."
 
-        t == "Searching for $currentUserCommand." ->
-            "Boss, search kar raha hoon."
+            t == "I could not change the volume." ->
+                "Sorry Boss, volume change nahi kar paya."
 
-        else ->
-            t
-    }
+            t == "I could not control media." ->
+                "Sorry Boss, media control nahi kar paya."
+
+            t == "I could not check the battery." ->
+                "Sorry Boss, battery check nahi kar paya."
+
+            t == "I could not search that." ->
+                "Sorry Boss, ye search nahi kar paya."
+
+            t == "I could not open YouTube." ->
+                "Sorry Boss, YouTube open nahi ho paya."
+
+            t == "I could not open Maps." ->
+                "Sorry Boss, Maps open nahi ho paya."
+
+            // -------------------------------------------------
+            // MEMORY
+            // -------------------------------------------------
+
+            t == "Got it. I'll remember that." ->
+                "Got it Boss, main yaad rakhunga."
+
+            t == "I've cleared my personal memory." ->
+                "Done Boss, personal memory clear kar di."
+
+            t == "Okay. I'll forget that." ->
+                "Okay Boss, main ise bhool jaunga."
+
+            t == "Tell me what you want me to forget." ->
+                "Boss, batao kya bhoolna hai."
+
+            t == "I don't have any personal memory about you yet." ->
+                "Boss, abhi mere paas aapki koi personal memory nahi hai."
+
+            t == "All personal memory has been cleared." ->
+                "Done Boss, saari personal memory clear kar di."
+
+            // -------------------------------------------------
+            // TIMER
+            // -------------------------------------------------
+
+            Regex(
+                "(\\d+) hour timer started"
+            ).matches(t) -> {
+
+                val value =
+                    Regex(
+                        "(\\d+) hour timer started"
+                    )
+                        .find(t)
+                        ?.groupValues
+                        ?.get(1)
+
+                "Boss, $value hour ka timer start kar diya."
+            }
+
+            Regex(
+                "(\\d+) minute timer started"
+            ).matches(t) -> {
+
+                val value =
+                    Regex(
+                        "(\\d+) minute timer started"
+                    )
+                        .find(t)
+                        ?.groupValues
+                        ?.get(1)
+
+                "Boss, $value minute ka timer start kar diya."
+            }
+
+            Regex(
+                "(\\d+) second timer started"
+            ).matches(t) -> {
+
+                val value =
+                    Regex(
+                        "(\\d+) second timer started"
+                    )
+                        .find(t)
+                        ?.groupValues
+                        ?.get(1)
+
+                "Boss, $value second ka timer start kar diya."
+            }
+
+            t == "Please tell me the timer duration." ->
+                "Boss, timer kitne time ka lagana hai?"
+
+            // -------------------------------------------------
+            // ALARM
+            // -------------------------------------------------
+
+            t == "That is not a valid alarm time." ->
+                "Boss, ye valid alarm time nahi hai."
+
+            t == "Please tell me the alarm time, for example seven PM." ->
+                "Boss, alarm kis time set karna hai?"
+
+            t.startsWith(
+                "Alarm set for "
+            ) &&
+                t.endsWith(".") -> {
+
+                val time =
+                    t.removePrefix(
+                        "Alarm set for "
+                    ).removeSuffix(".")
+
+                "Boss, alarm $time ke liye set kar diya."
+            }
+
+            // -------------------------------------------------
+            // DATE / DAY / TIME
+            // -------------------------------------------------
+
+            t.startsWith(
+                "Today is "
+            ) &&
+                t.endsWith(".") -> {
+
+                val value =
+                    t.removePrefix(
+                        "Today is "
+                    ).removeSuffix(".")
+
+                "Boss, aaj $value hai."
+            }
+
+            t.startsWith(
+                "The time is "
+            ) &&
+                t.endsWith(".") -> {
+
+                val value =
+                    t.removePrefix(
+                        "The time is "
+                    ).removeSuffix(".")
+
+                "Boss, abhi time $value hai."
+            }
+
+            // -------------------------------------------------
+            // BATTERY
+            // -------------------------------------------------
+
+            t.startsWith(
+                "Battery is at "
+            ) &&
+                t.endsWith(
+                    " percent."
+                ) -> {
+
+                val value =
+                    t.removePrefix(
+                        "Battery is at "
+                    ).removeSuffix(
+                        " percent."
+                    )
+
+                "Boss, battery abhi $value percent hai."
+            }
+
+            // -------------------------------------------------
+            // SEARCH
+            // -------------------------------------------------
+
+            t.startsWith(
+                "Searching YouTube for "
+            ) &&
+                t.endsWith(".") -> {
+
+                val query =
+                    t.removePrefix(
+                        "Searching YouTube for "
+                    ).removeSuffix(".")
+
+                "Boss, YouTube par $query search kar raha hoon."
+            }
+
+            t.startsWith(
+                "Opening YouTube search for "
+            ) &&
+                t.endsWith(".") -> {
+
+                val query =
+                    t.removePrefix(
+                        "Opening YouTube search for "
+                    ).removeSuffix(".")
+
+                "Boss, YouTube par $query search open kar raha hoon."
+            }
+
+            t.startsWith(
+                "Searching Maps for "
+            ) &&
+                t.endsWith(".") -> {
+
+                val query =
+                    t.removePrefix(
+                        "Searching Maps for "
+                    ).removeSuffix(".")
+
+                "Boss, Maps par $query search kar raha hoon."
+            }
+
+            t.startsWith(
+                "Searching for "
+            ) &&
+                t.endsWith(".") -> {
+
+                val query =
+                    t.removePrefix(
+                        "Searching for "
+                    ).removeSuffix(".")
+
+                "Boss, $query search kar raha hoon."
+            }
+
+            // -------------------------------------------------
+            // GENERIC APP OPENING
+            // -------------------------------------------------
+
+            t.startsWith(
+                "Opening "
+            ) &&
+                t.endsWith(".") -> {
+
+                val app =
+                    t.removePrefix(
+                        "Opening "
+                    ).removeSuffix(".")
+
+                "Boss, $app khol raha hoon."
+            }
+
+            // -------------------------------------------------
+            // FALLBACK
+            // -------------------------------------------------
+
+            else ->
+                t
+        }
     }
 
     // =========================================================
@@ -3870,56 +4282,62 @@ class AurixService :
     // =========================================================
 
     private fun speakOnce(
-    text: String
-) {
+        text: String
+    ) {
 
-    if (text.isBlank()) {
-        return
-    }
+        if (
+            text.isBlank()
+        ) {
+            return
+        }
 
-    if (currentResponseSent) {
-        return
-    }
+        if (
+            currentResponseSent
+        ) {
+            return
+        }
 
-    currentResponseSent = true
+        currentResponseSent =
+            true
 
-    val finalText =
-        aurixResponse(text)
+        val finalText =
+            aurixResponse(
+                text
+            )
 
-    sendStatus(
-        "SPEAKING"
-    )
-
-    sendSpeak(
-        finalText
-    )
-
-    try {
-
-        textToSpeech?.speak(
-            finalText,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "AURIX"
+        sendStatus(
+            "SPEAKING"
         )
 
-    } catch (_: Exception) {
-    }
-
-    try {
-
-        AurixMemoryBridge.saveTurn(
-            this,
-            currentUserCommand,
+        sendSpeak(
             finalText
         )
 
-    } catch (_: Exception) {
-    }
-    }
+        try {
+
+            textToSpeech?.speak(
+                finalText,
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                "AURIX"
+            )
+
+        } catch (_: Exception) {
+        }
+
+        try {
+
+            AurixMemoryBridge.saveTurn(
+                this,
+                currentUserCommand,
+                finalText
+            )
+
+        } catch (_: Exception) {
+        }
 
         // IMPORTANT:
-        // Do not immediately send LISTENING here.
+        // Do NOT immediately send LISTENING here.
         // TTS needs time to finish.
     }
 
@@ -3927,11 +4345,13 @@ class AurixService :
     // AURIX GREETING
     // =========================================================
 
-        private fun speakAurixGreeting() {
+    private fun speakAurixGreeting() {
 
         val hour =
             Calendar.getInstance()
-                .get(Calendar.HOUR_OF_DAY)
+                .get(
+                    Calendar.HOUR_OF_DAY
+                )
 
         val greeting =
             when {
@@ -4067,6 +4487,10 @@ class AurixService :
 
         super.onDestroy()
     }
+
+    // =========================================================
+    // BIND
+    // =========================================================
 
     override fun onBind(
         intent: Intent?
