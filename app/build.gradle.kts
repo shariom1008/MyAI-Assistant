@@ -8,14 +8,19 @@ android {
 
     compileSdk = 34
 
-    defaultConfig {
-        applicationId = "com.example.myaiassistant"
-        minSdk = 24
-        targetSdk = 34
-        versionCode = 6
-        versionName = "6.0"
-    }
+defaultConfig {
+    applicationId = "com.example.myaiassistant"
+    minSdk = 24
+    targetSdk = 34
+    versionCode = 6
+    versionName = "6.0"
 
+    buildConfigField(
+        "String",
+        "GEMINI_API_KEY",
+        "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\""
+    )
+}
     buildTypes {
         release {
             isMinifyEnabled = false
