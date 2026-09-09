@@ -34,10 +34,11 @@ jobs:
 
                  echo "$HOME/gradle/gradle-8.9/bin" \
                >> "$GITHUB_PATH"
-
-      - name: Build Debug APK
-        run: |
-         gradle assembleDebug --stacktrace
+               - name: Build Debug APK
+                   env:
+                     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+            run: |
+                 gradle assembleDebug -PGEMINI_API_KEY="$GEMINI_API_KEY" --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
