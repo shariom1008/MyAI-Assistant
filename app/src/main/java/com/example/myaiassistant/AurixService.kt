@@ -1630,9 +1630,13 @@ val localCommand =
     aiCommand.contains("youtube")
 
 if (localCommand) {
-    // Local command ko Gemini ke paas mat bhejo.
-    // Existing local command handling ko continue hone do.
-} 
+
+    speakOnce(
+        "Boss, ye command local system se handle honi chahiye."
+    )
+
+    return
+}
 
         // =====================================================
         // FINAL AI FALLBACK
