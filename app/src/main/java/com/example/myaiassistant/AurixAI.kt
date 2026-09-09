@@ -111,19 +111,24 @@ object AurixAI {
 
                 val responseCode =
                     connection.responseCode
+if (responseCode !in 200..299) {
 
-                if (
-                    responseCode !in 200..299
-                ) {
+    val errorText =
+        try {
+            connection.errorStream
+                ?.bufferedReader()
+                ?.use { it.readText() }
+        } catch (_: Exception) {
+            ""
+        }
 
-                    postResult(
-                        "Sorry boss, abhi answer nahi mil paaya.",
-                        callback
-                    )
+    postResult(
+        "AI ERROR $responseCode $errorText",
+        callback
+    )
 
-                    return@Thread
-                }
-
+    return@Thread
+}
                 val responseText =
                     connection.inputStream
                         .bufferedReader()
@@ -168,19 +173,10 @@ object AurixAI {
                 }
 
                 connection.disconnect()
-
-            } catch (
-                e: Exception
-            ) {
-
-                postResult(
-                    "Sorry boss, AI service se connection nahi ho paaya.",
-                    callback
-                )
-            }
-
-        }.start()
-    }
+postResult(
+    "AI ERROR: ${e.javaClass.simpleName} ${e.message}",
+    callback
+)
 
     private fun postResult(
         result: String,
