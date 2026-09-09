@@ -373,50 +373,61 @@ private var aiRequestInProgress = false
                                 }
                             }
 
-                            override fun
-                                onResults(
-                                    results: Bundle?
-                                ) {
+override fun
+    onResults(
+        results: Bundle?
+    ) {
 
-                                listening = false
+    listening = false
 
-                                val list =
-                                    results
-                                        ?.getStringArrayList(
-                                            SpeechRecognizer
-                                                .RESULTS_RECOGNITION
-                                        )
+    val list =
+        results
+            ?.getStringArrayList(
+                SpeechRecognizer
+                    .RESULTS_RECOGNITION
+            )
 
-                                val command =
-                                    list
-                                        ?.firstOrNull()
-                                        ?.trim()
-                                        ?.lowercase(
-                                            Locale.getDefault()
-                                        )
-if (
-    !command
-        .isNullOrBlank()
-) {
+    val command =
+        list
+            ?.firstOrNull()
+            ?.trim()
+            ?.lowercase(
+                Locale.getDefault()
+            )
 
-    sendCommand(
-        command
-    )
-    processCommand(
-        command
-    )
-}
+    if (
+        !command.isNullOrBlank()
+    ) {
 
-    
+        sendCommand(
+            command
+        )
 
-                                if (
-                                    isRunning &&
-                                    !serviceDestroyed
-                                ) {
+        // Give the recognizer result a moment
+        // before processing the command.
+        handler.postDelayed({
 
-                                    restartListening()
-                                }
-                            }
+            if (
+                isRunning &&
+                !serviceDestroyed
+            ) {
+
+                processCommand(
+                    command
+                )
+            }
+
+        }, 500)
+    }
+
+    if (
+        isRunning &&
+        !serviceDestroyed
+    ) {
+
+        restartListening()
+    }
+    }
 
                             override fun
                                 onPartialResults(
