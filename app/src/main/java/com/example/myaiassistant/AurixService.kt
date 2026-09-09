@@ -3742,65 +3742,181 @@ class AurixService :
         }
     }
 
+    private fun aurixResponse(text: String): String {
+
+    val t = text.trim()
+
+    if (t.isBlank()) {
+        return t
+    }
+
+    return when {
+
+        t == "Opening YouTube." ->
+            "Sure Boss, YouTube khol raha hoon."
+
+        t == "Opening camera." ->
+            "Boss, camera open kar raha hoon."
+
+        t == "Opening gallery." ->
+            "Boss, gallery khol raha hoon."
+
+        t == "Opening music." ->
+            "Boss, music app khol raha hoon."
+
+        t == "Opening notes." ->
+            "Boss, notes khol raha hoon."
+
+        t == "Opening calculator." ->
+            "Boss, calculator khol raha hoon."
+
+        t == "Opening Chrome." ->
+            "Boss, Chrome khol raha hoon."
+
+        t == "Opening Maps." ->
+            "Boss, Maps khol raha hoon."
+
+        t == "Opening phone." ->
+            "Boss, phone open kar raha hoon."
+
+        t == "Opening settings." ->
+            "Boss, settings khol raha hoon."
+
+        t == "Opening Wi-Fi settings." ->
+            "Boss, Wi-Fi settings khol raha hoon."
+
+        t == "Volume increased." ->
+            "Sure Boss, volume badha diya."
+
+        t == "Volume decreased." ->
+            "Sure Boss, volume kam kar diya."
+
+        t == "Media control executed." ->
+            "Done Boss, media control kar diya."
+
+        t == "Flashlight turned on." ->
+            "Sure Boss, flashlight on kar di."
+
+        t == "Flashlight turned off." ->
+            "Boss, flashlight off kar di."
+
+        t == "Flashlight is not available." ->
+            "Sorry Boss, flashlight available nahi hai."
+
+        t == "Camera is not available." ->
+            "Sorry Boss, camera available nahi hai."
+
+        t == "Gallery is not available." ->
+            "Sorry Boss, gallery available nahi hai."
+
+        t == "Music app is not available." ->
+            "Sorry Boss, music app nahi mili."
+
+        t == "Notes app is not available." ->
+            "Sorry Boss, notes app nahi mili."
+
+        t == "Calculator is not available." ->
+            "Sorry Boss, calculator nahi mila."
+
+        t == "YouTube is not available." ->
+            "Sorry Boss, YouTube available nahi hai."
+
+        t == "Browser is not available." ->
+            "Sorry Boss, browser available nahi hai."
+
+        t == "Maps is not available." ->
+            "Sorry Boss, Maps available nahi hai."
+
+        t == "Phone app is not available." ->
+            "Sorry Boss, phone app available nahi hai."
+
+        t == "Settings is not available." ->
+            "Sorry Boss, settings open nahi ho paayi."
+
+        t == "Wi-Fi settings are not available." ->
+            "Sorry Boss, Wi-Fi settings available nahi hain."
+
+        t == "I could not control the flashlight." ->
+            "Sorry Boss, flashlight control nahi kar paya."
+
+        t == "I could not change the volume." ->
+            "Sorry Boss, volume change nahi kar paya."
+
+        t == "I could not control media." ->
+            "Sorry Boss, media control nahi kar paya."
+
+        t == "I could not check the battery." ->
+            "Sorry Boss, battery check nahi kar paya."
+
+        t == "I could not search that." ->
+            "Sorry Boss, ye search nahi kar paya."
+
+        t == "I could not open YouTube." ->
+            "Sorry Boss, YouTube open nahi ho paya."
+
+        t == "I could not open Maps." ->
+            "Sorry Boss, Maps open nahi ho paya."
+
+        t == "Searching for $currentUserCommand." ->
+            "Boss, search kar raha hoon."
+
+        else ->
+            t
+    }
+    }
+
     // =========================================================
     // SPEAK ONCE
     // =========================================================
 
     private fun speakOnce(
-        text: String
-    ) {
+    text: String
+) {
 
-        if (
-            text.isBlank()
-        ) {
+    if (text.isBlank()) {
+        return
+    }
 
-            return
-        }
+    if (currentResponseSent) {
+        return
+    }
 
-        if (
-            currentResponseSent
-        ) {
+    currentResponseSent = true
 
-            return
-        }
+    val finalText =
+        aurixResponse(text)
 
-        currentResponseSent =
-            true
+    sendStatus(
+        "SPEAKING"
+    )
 
-        sendStatus(
-            "SPEAKING"
+    sendSpeak(
+        finalText
+    )
+
+    try {
+
+        textToSpeech?.speak(
+            finalText,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "AURIX"
         )
 
-        sendSpeak(
-            text
+    } catch (_: Exception) {
+    }
+
+    try {
+
+        AurixMemoryBridge.saveTurn(
+            this,
+            currentUserCommand,
+            finalText
         )
 
-        try {
-
-            textToSpeech?.speak(
-                text,
-                TextToSpeech.QUEUE_FLUSH,
-                null,
-                "AURIX"
-            )
-
-        } catch (_: Exception) {
-        }
-
-        // -----------------------------------------------------
-        // SAVE CONVERSATION
-        // -----------------------------------------------------
-
-        try {
-
-            AurixMemoryBridge.saveTurn(
-                this,
-                currentUserCommand,
-                text
-            )
-
-        } catch (_: Exception) {
-        }
+    } catch (_: Exception) {
+    }
+    }
 
         // IMPORTANT:
         // Do not immediately send LISTENING here.
