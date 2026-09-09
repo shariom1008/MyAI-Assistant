@@ -134,6 +134,10 @@ class AurixService :
         return START_STICKY
     }
 
+    // =========================================================
+    // STOP AURIX
+    // =========================================================
+
     private fun stopAurix() {
 
         isRunning = false
@@ -159,9 +163,14 @@ class AurixService :
         stopSelf()
     }
 
+    // =========================================================
+    // NOTIFICATION CHANNEL
+    // =========================================================
+
     private fun createNotificationChannel() {
 
-        if (Build.VERSION.SDK_INT >=
+        if (
+            Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.O
         ) {
 
@@ -226,12 +235,18 @@ class AurixService :
         )
     }
 
+    // =========================================================
+    // SPEECH RECOGNITION
+    // =========================================================
+
     private fun startListening() {
 
         if (
             serviceDestroyed ||
             !isRunning
-        ) return
+        ) {
+            return
+        }
 
         if (
             !SpeechRecognizer
@@ -246,152 +261,169 @@ class AurixService :
         }
 
         try {
-            speechRecognizer?.cancel()
-            speechRecognizer?.destroy()
-        } catch (_: Exception) {
-        }
 
-        speechRecognizer =
-            SpeechRecognizer
-                .createSpeechRecognizer(this)
+            // -------------------------------------------------
+            // IMPORTANT:
+            // Create SpeechRecognizer ONLY ONCE.
+            // Do not destroy/recreate it every time.
+            // -------------------------------------------------
 
-        speechRecognizer?.setRecognitionListener(
-            object : RecognitionListener {
+            if (speechRecognizer == null) {
 
-                override fun onReadyForSpeech(
-                    params: Bundle?
-                ) {
+                speechRecognizer =
+                    SpeechRecognizer
+                        .createSpeechRecognizer(this)
 
-                    listening = true
+                speechRecognizer?.setRecognitionListener(
+                    object : RecognitionListener {
 
-                    sendStatus(
-                        "LISTENING"
-                    )
-                }
+                        override fun onReadyForSpeech(
+                            params: Bundle?
+                        ) {
 
-                override fun onBeginningOfSpeech() {
+                            listening = true
 
-                    sendStatus(
-                        "THINKING"
-                    )
-                }
-
-                override fun onRmsChanged(
-                    rmsdB: Float
-                ) {
-                }
-
-                override fun onBufferReceived(
-                    buffer: ByteArray?
-                ) {
-                }
-
-                override fun onEndOfSpeech() {
-                }
-
-                override fun onError(
-                    error: Int
-                ) {
-
-                    listening = false
-
-                    if (
-                        isRunning &&
-                        !serviceDestroyed
-                    ) {
-                        restartListening()
-                    }
-                }
-
-                override fun onResults(
-                    results: Bundle?
-                ) {
-
-                    val list =
-                        results?.getStringArrayList(
-                            SpeechRecognizer
-                                .RESULTS_RECOGNITION
-                        )
-
-                    val command =
-                        list
-                            ?.firstOrNull()
-                            ?.trim()
-                            ?.lowercase(
-                                Locale.getDefault()
+                            sendStatus(
+                                "LISTENING"
                             )
+                        }
 
-                    if (
-                        !command.isNullOrBlank()
-                    ) {
+                        override fun onBeginningOfSpeech() {
 
-                        sendCommand(command)
+                            sendStatus(
+                                "THINKING"
+                            )
+                        }
 
-                        processCommand(command)
+                        override fun onRmsChanged(
+                            rmsdB: Float
+                        ) {
+                        }
+
+                        override fun onBufferReceived(
+                            buffer: ByteArray?
+                        ) {
+                        }
+
+                        override fun onEndOfSpeech() {
+                        }
+
+                        override fun onError(
+                            error: Int
+                        ) {
+
+                            listening = false
+
+                            if (
+                                isRunning &&
+                                !serviceDestroyed
+                            ) {
+
+                                restartListening()
+                            }
+                        }
+
+                        override fun onResults(
+                            results: Bundle?
+                        ) {
+
+                            listening = false
+
+                            val list =
+                                results
+                                    ?.getStringArrayList(
+                                        SpeechRecognizer
+                                            .RESULTS_RECOGNITION
+                                    )
+
+                            val command =
+                                list
+                                    ?.firstOrNull()
+                                    ?.trim()
+                                    ?.lowercase(
+                                        Locale.getDefault()
+                                    )
+
+                            if (
+                                !command.isNullOrBlank()
+                            ) {
+
+                                sendCommand(
+                                    command
+                                )
+
+                                processCommand(
+                                    command
+                                )
+                            }
+
+                            if (
+                                isRunning &&
+                                !serviceDestroyed
+                            ) {
+
+                                restartListening()
+                            }
+                        }
+
+                        override fun onPartialResults(
+                            partialResults: Bundle?
+                        ) {
+                        }
+
+                        override fun onEvent(
+                            eventType: Int,
+                            params: Bundle?
+                        ) {
+                        }
                     }
-
-                    listening = false
-
-                    if (
-                        isRunning &&
-                        !serviceDestroyed
-                    ) {
-                        restartListening()
-                    }
-                }
-
-                override fun onPartialResults(
-                    partialResults: Bundle?
-                ) {
-                }
-
-                override fun onEvent(
-                    eventType: Int,
-                    params: Bundle?
-                ) {
-                }
-            }
-        )
-
-        val intent =
-            Intent(
-                RecognizerIntent
-                    .ACTION_RECOGNIZE_SPEECH
-            ).apply {
-
-                putExtra(
-                    RecognizerIntent
-                        .EXTRA_LANGUAGE_MODEL,
-                    RecognizerIntent
-                        .LANGUAGE_MODEL_FREE_FORM
-                )
-
-                putExtra(
-                    RecognizerIntent
-                        .EXTRA_LANGUAGE,
-                    Locale.getDefault()
-                )
-
-                putExtra(
-                    RecognizerIntent
-                        .EXTRA_PARTIAL_RESULTS,
-                    false
-                )
-
-                putExtra(
-                    RecognizerIntent
-                        .EXTRA_MAX_RESULTS,
-                    3
                 )
             }
 
-        try {
+            val intent =
+                Intent(
+                    RecognizerIntent
+                        .ACTION_RECOGNIZE_SPEECH
+                ).apply {
+
+                    putExtra(
+                        RecognizerIntent
+                            .EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent
+                            .LANGUAGE_MODEL_FREE_FORM
+                    )
+
+                    putExtra(
+                        RecognizerIntent
+                            .EXTRA_LANGUAGE,
+                        Locale.getDefault()
+                    )
+
+                    putExtra(
+                        RecognizerIntent
+                            .EXTRA_PARTIAL_RESULTS,
+                        false
+                    )
+
+                    putExtra(
+                        RecognizerIntent
+                            .EXTRA_MAX_RESULTS,
+                        3
+                    )
+                }
+
             speechRecognizer
                 ?.startListening(intent)
+
         } catch (_: Exception) {
+
             restartListening()
         }
     }
+
+    // =========================================================
+    // SAFE LISTENING RESTART
+    // =========================================================
 
     private fun restartListening() {
 
@@ -399,7 +431,9 @@ class AurixService :
             restarting ||
             !isRunning ||
             serviceDestroyed
-        ) return
+        ) {
+            return
+        }
 
         restarting = true
         listening = false
@@ -412,10 +446,11 @@ class AurixService :
                 isRunning &&
                 !serviceDestroyed
             ) {
+
                 startListening()
             }
 
-        }, 700)
+        }, 1200)
     }
 
     // =========================================================
@@ -437,7 +472,9 @@ class AurixService :
                     .trim()
             )
 
-        if (command.isBlank()) return
+        if (command.isBlank()) {
+            return
+        }
 
         currentUserCommand =
             rawCommand.trim()
@@ -446,169 +483,169 @@ class AurixService :
 
         sendStatus("THINKING")
 
+        // =====================================================
+        // CONTEXT RESOLUTION
+        // =====================================================
 
-    // -----------------------------------------------------
-    // CONTEXT RESOLUTION
-    // -----------------------------------------------------
-
-when (
-    val resolution =
-        AurixContextResolver.resolve(
-            this,
-            command
-        )
-) {
-
-    is AurixContextResolver.Resolution.MemoryStatement -> {
-
-        AurixMemoryBridge.rememberThat(
-            this,
-            resolution.original
-        )
-
-        speakOnce(
-            "Got it. I'll remember that."
-        )
-
-        return
-    }
-
-    is AurixContextResolver.Resolution.DirectResponse -> {
-
-        speakOnce(
-            resolution.response
-        )
-
-        return
-    }
-
-    is AurixContextResolver.Resolution.ClearMemory -> {
-
-        if (resolution.all) {
-
-            AurixMemoryBridge.clearAll(
-                this
-            )
-
-            speakOnce(
-                "I've cleared my personal memory."
-            )
-
-        } else {
-
-            val key =
-                resolution.key
-
-            if (key.isNullOrBlank()) {
-
-                speakOnce(
-                    "Tell me what you want me to forget."
-                )
-
-            } else {
-
-                AurixMemoryBridge.clearMemoryKey(
+        when (
+            val resolution =
+                AurixContextResolver.resolve(
                     this,
-                    key
+                    command
+                )
+        ) {
+
+            is AurixContextResolver.Resolution.MemoryStatement -> {
+
+                AurixMemoryBridge.rememberThat(
+                    this,
+                    resolution.original
                 )
 
                 speakOnce(
-                    "Okay. I'll forget that."
+                    "Got it. I'll remember that."
                 )
+
+                return
+            }
+
+            is AurixContextResolver.Resolution.DirectResponse -> {
+
+                speakOnce(
+                    resolution.response
+                )
+
+                return
+            }
+
+            is AurixContextResolver.Resolution.ClearMemory -> {
+
+                if (resolution.all) {
+
+                    AurixMemoryBridge.clearAll(
+                        this
+                    )
+
+                    speakOnce(
+                        "I've cleared my personal memory."
+                    )
+
+                } else {
+
+                    val key =
+                        resolution.key
+
+                    if (key.isNullOrBlank()) {
+
+                        speakOnce(
+                            "Tell me what you want me to forget."
+                        )
+
+                    } else {
+
+                        AurixMemoryBridge.clearMemoryKey(
+                            this,
+                            key
+                        )
+
+                        speakOnce(
+                            "Okay. I'll forget that."
+                        )
+                    }
+                }
+
+                return
+            }
+
+            is AurixContextResolver.Resolution.Command -> {
+
+                command =
+                    resolution.command
             }
         }
 
-        return
-    }
+        // =====================================================
+        // FORCE CONTEXTUAL PLAY FALLBACK
+        // =====================================================
 
-    is AurixContextResolver.Resolution.Command -> {
+        if (
+            command == "play it" ||
+            command == "play that" ||
+            command == "play this" ||
+            command == "isko chalao" ||
+            command == "ise chalao" ||
+            command == "usko chalao"
+        ) {
 
-        command =
-            resolution.command
-    }
-}
+            val history =
+                AurixContextEngine
+                    .getRecentHistory(10)
 
+            val previous =
+                history
+                    .asReversed()
+                    .firstOrNull {
+                        it.role == "user" &&
+                            it.text
+                                .lowercase()
+                                .trim() != command
+                    }
+                    ?.text
+                    ?.trim()
 
+            if (!previous.isNullOrBlank()) {
 
-         // -----------------------------------------------------
-         // FORCE CONTEXTUAL PLAY FALLBACK
-         // -----------------------------------------------------
+                val previousLower =
+                    previous.lowercase()
 
-if (
-    command == "play it" ||
-    command == "play that" ||
-    command == "play this" ||
-    command == "isko chalao" ||
-    command == "ise chalao" ||
-    command == "usko chalao"
-) {
+                val target =
+                    when {
 
-    val history =
-        AurixContextEngine.getRecentHistory(10)
+                        previousLower.startsWith(
+                            "search youtube "
+                        ) ->
+                            previous.substring(
+                                "search youtube ".length
+                            ).trim()
 
-    val previous =
-        history
-            .asReversed()
-            .firstOrNull {
-                it.role == "user" &&
-                it.text.lowercase().trim() != command
+                        previousLower.startsWith(
+                            "youtube search "
+                        ) ->
+                            previous.substring(
+                                "youtube search ".length
+                            ).trim()
+
+                        previousLower.startsWith(
+                            "youtube par "
+                        ) ->
+                            previous.substring(
+                                "youtube par ".length
+                            ).trim()
+
+                        previousLower.startsWith(
+                            "search "
+                        ) ->
+                            previous.substring(
+                                "search ".length
+                            ).trim()
+
+                        else -> null
+                    }
+
+                if (!target.isNullOrBlank()) {
+
+                    command =
+                        "play $target"
+                }
             }
-            ?.text
-            ?.trim()
-
-    if (!previous.isNullOrBlank()) {
-
-        val previousLower =
-            previous.lowercase()
-
-        val target =
-            when {
-
-                previousLower.startsWith(
-                    "search youtube "
-                ) ->
-                    previous.substring(
-                        "search youtube ".length
-                    ).trim()
-
-                previousLower.startsWith(
-                    "youtube search "
-                ) ->
-                    previous.substring(
-                        "youtube search ".length
-                    ).trim()
-
-                previousLower.startsWith(
-                    "youtube par "
-                ) ->
-                    previous.substring(
-                        "youtube par ".length
-                    ).trim()
-
-                previousLower.startsWith(
-                    "search "
-                ) ->
-                    previous.substring(
-                        "search ".length
-                    ).trim()
-
-                else -> null
-            }
-
-        if (!target.isNullOrBlank()) {
-
-            command =
-                "play $target"
         }
-    }
-}
 
         currentUserCommand =
             command
 
-        // -----------------------------------------------------
+        // =====================================================
         // STOP
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "stop" ||
@@ -632,9 +669,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // HOME / CLOSE
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             isCloseCommand(command)
@@ -644,9 +681,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // MEMORY
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -716,9 +753,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // DIAGNOSTICS
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -764,9 +801,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // AGENT MODE
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             isAgentCommand(command)
@@ -792,9 +829,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // FLASHLIGHT
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -846,9 +883,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // TIMER
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains("timer")
@@ -858,9 +895,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // ALARM
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains("alarm")
@@ -870,9 +907,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // DATE
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains("date") ||
@@ -897,9 +934,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // DAY
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "day" ||
@@ -924,9 +961,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // TIME
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "time" ||
@@ -963,9 +1000,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // CAMERA
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -983,9 +1020,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // GALLERY
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -1003,9 +1040,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // MUSIC
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "music" ||
@@ -1021,9 +1058,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // NOTES
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -1038,9 +1075,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // CALCULATOR
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -1055,138 +1092,93 @@ if (
             return
         }
 
-// =========================================================
-// YOUTUBE
-// =========================================================
+        // =====================================================
+        // YOUTUBE
+        // =====================================================
 
-// PLAY <song / artist / video>
-if (
-    command.startsWith("play ")
-) {
+        if (
+            command.startsWith("play ")
+        ) {
 
-    val target =
-        command
-            .removePrefix("play ")
-            .trim()
+            val target =
+                command
+                    .removePrefix("play ")
+                    .trim()
 
-    if (target.isNotBlank()) {
+            if (target.isNotBlank()) {
 
-        searchYouTube(target)
+                searchYouTube(target)
 
-    } else {
+            } else {
 
-        openYouTube()
-    }
+                openYouTube()
+            }
 
-    return
-}
+            return
+        }
 
-// YOUTUBE SEARCH
-if (
-    command.startsWith("search youtube") ||
-    command.startsWith("youtube search") ||
-    command.startsWith("youtube par")
-) {
+        // =====================================================
+        // YOUTUBE SEARCH
+        // =====================================================
 
-    val query =
-        when {
+        if (
+            command.startsWith("search youtube") ||
+            command.startsWith("youtube search") ||
+            command.startsWith("youtube par")
+        ) {
 
-            command.startsWith("search youtube") ->
-                command.removePrefix(
-                    "search youtube"
-                )
+            val query =
+                when {
 
-            command.startsWith("youtube search") ->
-                command.removePrefix(
-                    "youtube search"
-                )
+                    command.startsWith(
+                        "search youtube"
+                    ) ->
+                        command.removePrefix(
+                            "search youtube"
+                        )
 
-            else ->
-                command.removePrefix(
-                    "youtube par"
-                )
-        }.trim()
+                    command.startsWith(
+                        "youtube search"
+                    ) ->
+                        command.removePrefix(
+                            "youtube search"
+                        )
 
-    if (query.isNotBlank()) {
+                    else ->
+                        command.removePrefix(
+                            "youtube par"
+                        )
+                }.trim()
 
-        searchYouTube(query)
+            if (query.isNotBlank()) {
 
-    } else {
+                searchYouTube(query)
 
-        openYouTube()
-    }
+            } else {
 
-    return
-}
+                openYouTube()
+            }
 
-// OPEN YOUTUBE
-if (
-    command == "youtube" ||
-    command == "open youtube" ||
-    command == "launch youtube"
-) {
+            return
+        }
 
-    openYouTube()
-    return
-}
+        // =====================================================
+        // OPEN YOUTUBE
+        // =====================================================
 
+        if (
+            command == "youtube" ||
+            command == "open youtube" ||
+            command == "launch youtube"
+        ) {
 
+            openYouTube()
+            return
+        }
 
-// -----------------------------------------------------
-// YOUTUBE SEARCH
-// -----------------------------------------------------
-
-if (
-    command.startsWith("search youtube") ||
-    command.startsWith("youtube search") ||
-    command.startsWith("youtube par")
-) {
-
-    val query =
-        command
-            .replaceFirst(
-                "search youtube",
-                ""
-            )
-            .replaceFirst(
-                "youtube search",
-                ""
-            )
-            .replaceFirst(
-                "youtube par",
-                ""
-            )
-            .trim()
-
-    if (query.isNotBlank()) {
-        searchYouTube(query)
-    } else {
-        openYouTube()
-    }
-
-    return
-}
-
-
-// -----------------------------------------------------
-// YOUTUBE
-// -----------------------------------------------------
-
-if (
-    command == "youtube" ||
-    command == "open youtube" ||
-    command == "launch youtube"
-) {
-
-    openYouTube()
-    return
-}
-
-
-
-        // -----------------------------------------------------
+        // =====================================================
         // MAPS
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.startsWith(
@@ -1219,8 +1211,11 @@ if (
             if (
                 query.isNotBlank()
             ) {
+
                 searchMaps(query)
+
             } else {
+
                 openMaps()
             }
 
@@ -1237,9 +1232,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // CHROME
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "chrome" ||
@@ -1252,9 +1247,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // PHONE
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "phone" ||
@@ -1267,9 +1262,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // SETTINGS
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "settings" ||
@@ -1281,9 +1276,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // WIFI
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -1298,9 +1293,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // VOLUME
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -1334,9 +1329,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // MEDIA
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "play" ||
@@ -1357,9 +1352,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // BATTERY
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -1371,9 +1366,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // GREETING
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command == "hello" ||
@@ -1390,9 +1385,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // IDENTITY
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.contains(
@@ -1413,9 +1408,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // INSTALLED APP
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             isAppOpenCommand(command)
@@ -1431,9 +1426,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // GOOGLE SEARCH
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             command.startsWith(
@@ -1469,15 +1464,16 @@ if (
             if (
                 query.isNotBlank()
             ) {
+
                 googleSearch(query)
             }
 
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // NORMAL AURIX ROUTER
-        // -----------------------------------------------------
+        // =====================================================
 
         val aurixResponse =
             AurixCommandRouter.route(
@@ -1498,9 +1494,9 @@ if (
             return
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // FINAL SEARCH FALLBACK
-        // -----------------------------------------------------
+        // =====================================================
 
         googleSearch(command)
     }
@@ -2008,7 +2004,9 @@ if (
             }
         }
 
-        // Generic installed app discovery
+        // =====================================================
+        // GENERIC INSTALLED APP DISCOVERY
+        // =====================================================
 
         try {
 
@@ -2016,6 +2014,7 @@ if (
                 Intent(
                     Intent.ACTION_MAIN
                 ).apply {
+
                     addCategory(
                         Intent.CATEGORY_LAUNCHER
                     )
@@ -2053,12 +2052,15 @@ if (
                             ?: ""
 
                     } catch (_: Exception) {
+
                         ""
                     }
 
                 if (
                     label.isBlank()
-                ) continue
+                ) {
+                    continue
+                }
 
                 val normalizedLabel =
                     normalizeAppName(
@@ -2186,16 +2188,22 @@ if (
         if (
             a.isBlank() ||
             b.isBlank()
-        ) return 0
+        ) {
+            return 0
+        }
 
         if (
             a == b
-        ) return 100
+        ) {
+            return 100
+        }
 
         if (
             a.contains(b) ||
             b.contains(a)
-        ) return 85
+        ) {
+            return 85
+        }
 
         val distance =
             levenshteinDistance(
@@ -2211,7 +2219,9 @@ if (
 
         if (
             maxLength == 0
-        ) return 0
+        ) {
+            return 0
+        }
 
         return (
             (
@@ -2239,12 +2249,14 @@ if (
         for (
             i in 0..a.length
         ) {
+
             dp[i][0] = i
         }
 
         for (
             j in 0..b.length
         ) {
+
             dp[0][j] = j
         }
 
@@ -2260,8 +2272,11 @@ if (
                     if (
                         a[i - 1] ==
                         b[j - 1]
-                    ) 0
-                    else 1
+                    ) {
+                        0
+                    } else {
+                        1
+                    }
 
                 dp[i][j] =
                     minOf(
@@ -2556,6 +2571,7 @@ if (
             ampm == "pm" &&
             hour < 12
         ) {
+
             hour += 12
         }
 
@@ -2563,6 +2579,7 @@ if (
             ampm == "am" &&
             hour == 12
         ) {
+
             hour = 0
         }
 
@@ -2666,8 +2683,11 @@ if (
         val requestCode =
             if (
                 type == "timer"
-            ) 7001
-            else 7002
+            ) {
+                7001
+            } else {
+                7002
+            }
 
         val flags =
             PendingIntent.FLAG_UPDATE_CURRENT or
@@ -3110,72 +3130,74 @@ if (
     }
 
     private fun searchYouTube(
-    query: String
-) {
+        query: String
+    ) {
 
-    if (query.isBlank()) {
-        openYouTube()
-        return
-    }
+        if (query.isBlank()) {
 
-    val url =
-        "https://www.youtube.com/results?search_query=" +
-            Uri.encode(query)
+            openYouTube()
+            return
+        }
 
-    try {
-
-        // First try YouTube app
-        val youtubeIntent =
-            Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse(url)
-            ).apply {
-
-                setPackage(
-                    "com.google.android.youtube"
-                )
-
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-            }
-
-        startActivity(youtubeIntent)
-
-        speakOnce(
-            "Searching YouTube for $query."
-        )
-
-    } catch (_: Exception) {
+        val url =
+            "https://www.youtube.com/results?search_query=" +
+                Uri.encode(query)
 
         try {
 
-            // Browser fallback
-            val browserIntent =
+            // First try YouTube app
+            val youtubeIntent =
                 Intent(
                     Intent.ACTION_VIEW,
                     Uri.parse(url)
                 ).apply {
+
+                    setPackage(
+                        "com.google.android.youtube"
+                    )
 
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK
                     )
                 }
 
-            startActivity(browserIntent)
+            startActivity(youtubeIntent)
 
             speakOnce(
-                "Opening YouTube search for $query."
+                "Searching YouTube for $query."
             )
 
         } catch (_: Exception) {
 
-            speakOnce(
-                "I could not open YouTube."
-            )
+            try {
+
+                // Browser fallback
+                val browserIntent =
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse(url)
+                    ).apply {
+
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                        )
+                    }
+
+                startActivity(browserIntent)
+
+                speakOnce(
+                    "Opening YouTube search for $query."
+                )
+
+            } catch (_: Exception) {
+
+                speakOnce(
+                    "I could not open YouTube."
+                )
+            }
         }
     }
-}
+
     // =========================================================
     // CHROME
     // =========================================================
@@ -3635,159 +3657,203 @@ if (
         }
     }
 
-    
-// =========================================================
-// SPEECH / AURIX VOICE
-// =========================================================
+    // =========================================================
+    // SPEECH / AURIX VOICE
+    // =========================================================
 
-override fun onInit(status: Int) {
+    override fun onInit(status: Int) {
 
-    if (status != TextToSpeech.SUCCESS) {
-        return
-    }
+        if (
+            status !=
+            TextToSpeech.SUCCESS
+        ) {
 
-    val tts = textToSpeech ?: return
-
-    try {
-
-        // English / US voice
-        tts.language = Locale.US
-
-        // Keep the working male voice selection
-        val voices =
-            tts.voices
-                ?.filter {
-                    it.locale.language == "en" &&
-                    !it.isNetworkConnectionRequired
-                }
-                ?: emptyList()
-
-        val maleVoice =
-            voices.firstOrNull {
-
-                val name =
-                    it.name.lowercase(
-                        Locale.getDefault()
-                    )
-
-                name.contains("male") ||
-                name.contains("man") ||
-                name.contains("david") ||
-                name.contains("mark") ||
-                name.contains("daniel")
-            }
-
-        if (maleVoice != null) {
-            tts.voice = maleVoice
+            return
         }
 
-        // =================================================
-        // AURIX DEEP + CALM VOICE
-        // =================================================
+        val tts =
+            textToSpeech
+                ?: return
 
-        // Slightly slower = calm / controlled
-        tts.setSpeechRate(0.84f)
+        try {
 
-        // Lower pitch = deeper voice
-        tts.setPitch(0.78f)
+            // -------------------------------------------------
+            // ENGLISH / US BASE VOICE
+            // -------------------------------------------------
 
-        // Start AURIX greeting
-        speakAurixGreeting()
+            tts.language =
+                Locale.US
 
-    } catch (_: Exception) {
+            // -------------------------------------------------
+            // MALE VOICE
+            // -------------------------------------------------
+
+            val voices =
+                tts.voices
+                    ?.filter {
+
+                        it.locale.language == "en" &&
+                            !it.isNetworkConnectionRequired
+                    }
+                    ?: emptyList()
+
+            val maleVoice =
+                voices.firstOrNull {
+
+                    val name =
+                        it.name.lowercase(
+                            Locale.getDefault()
+                        )
+
+                    name.contains("male") ||
+                        name.contains("man") ||
+                        name.contains("david") ||
+                        name.contains("mark") ||
+                        name.contains("daniel")
+                }
+
+            if (
+                maleVoice != null
+            ) {
+
+                tts.voice =
+                    maleVoice
+            }
+
+            // =================================================
+            // AURIX DEEP + CALM VOICE
+            // =================================================
+
+            tts.setSpeechRate(
+                0.84f
+            )
+
+            tts.setPitch(
+                0.78f
+            )
+
+            // =================================================
+            // AURIX GREETING
+            // =================================================
+
+            speakAurixGreeting()
+
+        } catch (_: Exception) {
+        }
     }
-}
 
+    // =========================================================
+    // SPEAK ONCE
+    // =========================================================
 
-private fun speakOnce(
-    text: String
-) {
+    private fun speakOnce(
+        text: String
+    ) {
 
-    if (text.isBlank()) {
-        return
-    }
+        if (
+            text.isBlank()
+        ) {
 
-    if (currentResponseSent) {
-        return
-    }
+            return
+        }
 
-    currentResponseSent = true
+        if (
+            currentResponseSent
+        ) {
 
-    sendStatus(
-        "SPEAKING"
-    )
+            return
+        }
 
-    sendSpeak(
-        text
-    )
+        currentResponseSent =
+            true
 
-    try {
-
-        textToSpeech?.speak(
-            text,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "AURIX"
+        sendStatus(
+            "SPEAKING"
         )
 
-    } catch (_: Exception) {
-    }
-
-    // Save conversation to memory
-    try {
-
-        AurixMemoryBridge.saveTurn(
-            this,
-            currentUserCommand,
+        sendSpeak(
             text
         )
 
-    } catch (_: Exception) {
-    }
+        try {
 
-    // Don't immediately change SPEAKING to LISTENING.
-    // TTS needs time to finish.
-}
+            textToSpeech?.speak(
+                text,
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                "AURIX"
+            )
 
-
-private fun speakAurixGreeting() {
-
-    val hour =
-        Calendar.getInstance()
-            .get(Calendar.HOUR_OF_DAY)
-
-    val greeting =
-        when {
-
-            hour < 5 -> {
-
-                "Hello Boss. You're up late. Is there an important mission?"
-            }
-
-            hour < 12 -> {
-
-                "Good morning, Boss. How are you today? What can I handle for you?"
-            }
-
-            hour < 17 -> {
-
-                "Good afternoon, Boss. How's your day going? What would you like me to handle?"
-            }
-
-            hour < 22 -> {
-
-                "Good evening, Boss. How did your day go? What are we working on?"
-            }
-
-            else -> {
-
-                "Hello Boss. It's getting late. Is there something important we need to take care of?"
-            }
+        } catch (_: Exception) {
         }
 
-    speakOnce( greeting
-    )
-}
+        // -----------------------------------------------------
+        // SAVE CONVERSATION
+        // -----------------------------------------------------
+
+        try {
+
+            AurixMemoryBridge.saveTurn(
+                this,
+                currentUserCommand,
+                text
+            )
+
+        } catch (_: Exception) {
+        }
+
+        // IMPORTANT:
+        // Do not immediately send LISTENING here.
+        // TTS needs time to finish.
+    }
+
+    // =========================================================
+    // AURIX GREETING
+    // =========================================================
+
+    private fun speakAurixGreeting() {
+
+        val hour =
+            Calendar.getInstance()
+                .get(Calendar.HOUR_OF_DAY)
+
+        val greeting =
+            when {
+
+                hour < 5 -> {
+
+                    "Hello Boss. You're up late. Is there an important mission?"
+                }
+
+                hour < 12 -> {
+
+                    "Good morning, Boss. How are you today? What can I handle for you?"
+                }
+
+                hour < 17 -> {
+
+                    "Good afternoon, Boss. How's your day going? What would you like me to handle?"
+                }
+
+                hour < 22 -> {
+
+                    "Good evening, Boss. How did your day go? What are we working on?"
+                }
+
+                else -> {
+
+                    "Hello Boss. It's getting late. Is there something important we need to take care of?"
+                }
+            }
+
+        speakOnce(
+            greeting
+        )
+    }
+
+    // =========================================================
+    // EVENTS
+    // =========================================================
 
     private fun sendStatus(
         text: String
@@ -3844,7 +3910,9 @@ private fun speakAurixGreeting() {
                 )
             }
 
-        sendBroadcast(intent)
+        sendBroadcast(
+            intent
+        )
     }
 
     // =========================================================
@@ -3853,10 +3921,17 @@ private fun speakAurixGreeting() {
 
     override fun onDestroy() {
 
-        serviceDestroyed = true
-        isRunning = false
-        listening = false
-        restarting = true
+        serviceDestroyed =
+            true
+
+        isRunning =
+            false
+
+        listening =
+            false
+
+        restarting =
+            true
 
         handler.removeCallbacksAndMessages(
             null
@@ -3878,8 +3953,11 @@ private fun speakAurixGreeting() {
         } catch (_: Exception) {
         }
 
-        speechRecognizer = null
-        textToSpeech = null
+        speechRecognizer =
+            null
+
+        textToSpeech =
+            null
 
         super.onDestroy()
     }
@@ -3887,6 +3965,7 @@ private fun speakAurixGreeting() {
     override fun onBind(
         intent: Intent?
     ): IBinder? {
+
         return null
     }
 }
