@@ -327,7 +327,7 @@ object AurixAI {
                     "AI ERROR $responseCode: $errorText",
                     callback
                         )
-)
+
                     return@Thread
 
                 } catch (
