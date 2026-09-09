@@ -460,23 +460,7 @@ if (
                         false
                     )
 
-                    putExtra(
-                    RecognizerIntent
-                            .EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,
-    1500
-)
-
-putExtra(
-    RecognizerIntent
-        .EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
-    1800
-)
-
-putExtra(
-    RecognizerIntent
-        .EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
-    2500
-)
+                
                     putExtra(
                         RecognizerIntent
                             .EXTRA_MAX_RESULTS,
@@ -559,9 +543,7 @@ putExtra(
         sendStatus(
             "THINKING"
         )
-        speakOnce(
-           "Command mil gayi boss."
-        )
+
 
         // =====================================================
         // CONTEXT RESOLUTION
