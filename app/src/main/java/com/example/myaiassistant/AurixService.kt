@@ -1604,46 +1604,13 @@ if (
     return
 }
 
-       // =====================================================
-       // GEMINI QUOTA SAVER
-       // =====================================================
-
-val aiCommand = lowerCommand
-
-val localCommand =
-    aiCommand.startsWith("open ") ||
-    aiCommand.startsWith("launch ") ||
-    aiCommand.startsWith("start ") ||
-    aiCommand.startsWith("play ") ||
-    aiCommand.contains("bluetooth") ||
-    aiCommand.contains("wifi") ||
-    aiCommand.contains("wi-fi") ||
-    aiCommand.contains("settings") ||
-    aiCommand.contains("volume") ||
-    aiCommand.contains("brightness") ||
-    aiCommand.contains("flashlight") ||
-    aiCommand.contains("torch") ||
-    aiCommand.contains("screenshot") ||
-    aiCommand.contains("camera") ||
-    aiCommand.contains("phone") ||
-    aiCommand.contains("call ") ||
-    aiCommand.contains("youtube")
-
-if (localCommand) {
-
-    speakOnce(
-        "Boss, ye command local system se handle honi chahiye."
-    )
-
-    return
-}
 
         // =====================================================
         // FINAL AI FALLBACK
         // =====================================================
 
 speakOnce(
-    "Boss, check kar leta hoon ek baar."
+    "Boss, ruko check kar raha hu."
 )
 
 AurixAI.ask(
