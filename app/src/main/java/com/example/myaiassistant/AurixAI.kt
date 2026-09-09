@@ -8,236 +8,371 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object AurixAI {
-        // =========================================================
-        // GEMINI REQUEST COOLDOWN
-        // =========================================================
+
+    // =========================================================
+    // AURIX AI REQUEST CONTROL
+    // =========================================================
 
     @Volatile
     private var lastRequestTime = 0L
+
     @Volatile
     private var requestInProgress = false
 
     private const val REQUEST_COOLDOWN = 3000L
 
-    private val API_KEY =
-        BuildConfig.GEMINI_API_KEY
+    private const val MAX_RETRIES = 2
+
+    private const val API_KEY =
+        MY_API_KEY
+
+    // =========================================================
+    // ASK AI
+    // =========================================================
 
     fun ask(
         question: String,
         callback: (String) -> Unit
     ) {
-               val now = System.currentTimeMillis()
 
-if (requestInProgress) {
+        val now =
+            System.currentTimeMillis()
 
-    postResult(
-        "Boss, pehle wali request complete hone do.",
-        callback
-    )
+        // -----------------------------------------------------
+        // BLOCK DUPLICATE REQUESTS
+        // -----------------------------------------------------
 
-    return
-}
+        if (requestInProgress) {
 
-if (now - lastRequestTime < REQUEST_COOLDOWN) {
+            postResult(
+                "Boss, pehle wali request complete hone do.",
+                callback
+            )
 
-    postResult(
-        "Boss, thoda sa wait karo.",
-        callback
-    )
+            return
+        }
 
-    return
-}
+        // -----------------------------------------------------
+        // COOLDOWN
+        // -----------------------------------------------------
 
-requestInProgress = true
-lastRequestTime = now
+        if (
+            now - lastRequestTime <
+            REQUEST_COOLDOWN
+        ) {
+
+            postResult(
+                "Boss, thoda wait karo.",
+                callback
+            )
+
+            return
+        }
+
+        requestInProgress = true
+        lastRequestTime = now
+
         Thread {
 
-            try {
+            var attempt = 0
 
-                val url =
-                    URL(
-                        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=$API_KEY"
+            while (
+                attempt <= MAX_RETRIES
+            ) {
+
+                try {
+
+                    val url =
+                        URL(
+                            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=$API_KEY"
+                        )
+
+                    val connection =
+                        url.openConnection()
+                            as HttpURLConnection
+
+                    connection.requestMethod =
+                        "POST"
+
+                    connection.connectTimeout =
+                        15000
+
+                    connection.readTimeout =
+                        30000
+
+                    connection.setRequestProperty(
+                        "Content-Type",
+                        "application/json"
                     )
 
-                val connection =
-                    url.openConnection()
-                        as HttpURLConnection
+                    connection.doOutput =
+                        true
 
-                connection.requestMethod =
-                    "POST"
+                    // -------------------------------------------------
+                    // AURIX PERSONALITY PROMPT
+                    // -------------------------------------------------
 
-                connection.connectTimeout =
-                    15000
+                    val prompt =
+                        """
+                        You are AURIX, a helpful personal voice assistant.
 
-                connection.readTimeout =
-                    30000
+                        Answer the user's question accurately and naturally.
 
-                connection.setRequestProperty(
-                    "Content-Type",
-                    "application/json"
-                )
+                        User question:
+                        $question
 
-                connection.doOutput = true
+                        If current or up-to-date information is required,
+                        answer based on available information.
 
-                val prompt =
-                """
-                You are AURIX, a helpful personal voice assistant.
+                        Reply in natural Roman Hindi, Hinglish,
+                        or Haryanvi depending on the user's language
+                        and speaking style.
 
-                 Answer the user's question accurately.
+                        Never use Devanagari Hindi script.
 
-                 User question:
-                 $question
+                        If the user speaks Haryanvi,
+                        reply naturally in Haryanvi.
 
-                 Use Google Search when current or up-to-date information is needed.
+                        If the user speaks Hindi,
+                        reply naturally in Hindi or Hinglish.
 
-                 Reply in natural Roman Hindi, Hinglish, or Haryanvi depending on the user's language and speaking style.
+                        If the user mixes Hindi, English and Haryanvi,
+                        naturally mix them too.
 
-                 Do not use Devanagari Hindi script.
+                        Keep the response conversational,
+                        concise and suitable for voice.
 
-                 If the user speaks Haryanvi, reply naturally in Haryanvi.
-                 If the user speaks Hindi, reply in natural Hindi or Hinglish.
-                 If the user mixes Hindi, English and Haryanvi, naturally mix them too.
+                        Do not mention Gemini.
 
-                 Keep the response conversational, natural and suitable for voice.
-                 Do not mention Gemini.
-                 Do not tell the user to open another app.
-                 """.trimIndent()
+                        Do not tell the user to open another app.
+                        """.trimIndent()
 
-                val requestBody =
-                    JSONObject().apply {
+                    // -------------------------------------------------
+                    // REQUEST BODY
+                    // -------------------------------------------------
 
-                        put(
-                            "contents",
-                            JSONArray().put(
-                                JSONObject().apply {
+                    val requestBody =
+                        JSONObject().apply {
 
-                                    put(
-                                        "parts",
-                                        JSONArray().put(
-                                            JSONObject().apply {
+                            put(
+                                "contents",
+                                JSONArray().put(
 
-                                                put(
-                                                    "text",
-                                                    prompt
-                                                )
-                                            }
+                                    JSONObject().apply {
+
+                                        put(
+                                            "parts",
+                                            JSONArray().put(
+
+                                                JSONObject().apply {
+
+                                                    put(
+                                                        "text",
+                                                        prompt
+                                                    )
+                                                }
+                                            )
                                         )
-                                    )
-                                }
+                                    }
+                                )
                             )
+                        }
+
+                    connection.outputStream.use {
+
+                        it.write(
+                            requestBody
+                                .toString()
+                                .toByteArray(
+                                    Charsets.UTF_8
+                                )
                         )
                     }
 
-                connection.outputStream.use {
+                    val responseCode =
+                        connection.responseCode
 
-                    it.write(
-                        requestBody
-                            .toString()
-                            .toByteArray(
-                                Charsets.UTF_8
+                    // -------------------------------------------------
+                    // SUCCESS
+                    // -------------------------------------------------
+
+                    if (
+                        responseCode in 200..299
+                    ) {
+
+                        val responseText =
+                            connection.inputStream
+                                .bufferedReader()
+                                .use {
+                                    it.readText()
+                                }
+
+                        val response =
+                            JSONObject(
+                                responseText
                             )
-                    )
-                }
 
-                val responseCode =
-                    connection.responseCode
-if (
-    responseCode !in 200..299
-) {
+                        val candidates =
+                            response.optJSONArray(
+                                "candidates"
+                            )
 
-    val errorText =
-        try {
+                        val answer =
+                            candidates
+                                ?.optJSONObject(0)
+                                ?.optJSONObject(
+                                    "content"
+                                )
+                                ?.optJSONArray(
+                                    "parts"
+                                )
+                                ?.optJSONObject(0)
+                                ?.optString(
+                                    "text"
+                                )
+                                ?.trim()
 
-            connection.errorStream
-                ?.bufferedReader()
-                ?.use {
-                    it.readText()
-                }
+                        requestInProgress =
+                            false
 
-        } catch (_: Exception) {
+                        connection.disconnect()
 
-            ""
-        }
+                        if (
+                            answer.isNullOrBlank()
+                        ) {
 
-    if (responseCode == 429) {
+                            postResult(
+                                "Sorry boss, mujhe iska answer nahi mil paaya.",
+                                callback
+                            )
 
-        postResult(
-            "Boss, AI ki request limit abhi full hai. Thoda wait karke dobara try karo.",
-            callback
-        )
+                        } else {
 
-    } else {
-
-        postResult(
-            "AI ERROR $responseCode",
-            callback
-        )
-    }
-
-    requestInProgress = false
-
-    connection.disconnect()
-
-    return@Thread
-}
-                val responseText =
-                    connection.inputStream
-                        .bufferedReader()
-                        .use {
-                            it.readText()
+                            postResult(
+                                answer,
+                                callback
+                            )
                         }
 
-                val response =
-                    JSONObject(
-                        responseText
+                        return@Thread
+                    }
+
+                    // -------------------------------------------------
+                    // RATE LIMIT / 429
+                    // -------------------------------------------------
+
+                    if (
+                        responseCode == 429
+                    ) {
+
+                        connection.disconnect()
+
+                        attempt++
+
+                        if (
+                            attempt <= MAX_RETRIES
+                        ) {
+
+                            // Exponential backoff:
+                            // 2 sec → 4 sec
+
+                            val waitTime =
+                                2000L *
+                                    attempt
+
+                            Thread.sleep(
+                                waitTime
+                            )
+
+                            continue
+
+                        } else {
+
+                            requestInProgress =
+                                false
+
+                            postResult(
+                                "Boss, AI ki request limit abhi full hai. Thoda baad dobara try karte hain.",
+                                callback
+                            )
+
+                            return@Thread
+                        }
+                    }
+
+                    // -------------------------------------------------
+                    // OTHER HTTP ERRORS
+                    // -------------------------------------------------
+
+                    val errorText =
+                        try {
+
+                            connection.errorStream
+                                ?.bufferedReader()
+                                ?.use {
+                                    it.readText()
+                                }
+
+                        } catch (_: Exception) {
+
+                            ""
+                        }
+
+                    requestInProgress =
+                        false
+
+                    connection.disconnect()
+
+                    postResult(
+                        "AI ERROR $responseCode",
+                        callback
                     )
 
-                val candidates =
-                    response.optJSONArray(
-                        "candidates"
-                    )
+                    return@Thread
 
-                val answer =
-                    candidates
-                        ?.optJSONObject(0)
-                        ?.optJSONObject("content")
-                        ?.optJSONArray("parts")
-                        ?.optJSONObject(0)
-                        ?.optString("text")
-                        ?.trim()
-
-                if (
-                    answer.isNullOrBlank()
+                } catch (
+                    e: Exception
                 ) {
 
+                    attempt++
+
+                    if (
+                        attempt <= MAX_RETRIES
+                    ) {
+
+                        Thread.sleep(
+                            1500L
+                        )
+
+                        continue
+                    }
+
+                    requestInProgress =
+                        false
+
                     postResult(
-                        "Sorry boss, mujhe iska answer nahi mil paaya.",
+                        "AI ERROR: ${e.javaClass.simpleName}",
                         callback
                     )
 
-                } else {
-
-                    postResult(
-                        answer,
-                        callback
-                    )
+                    return@Thread
                 }
-                requestInProgress = false
-                connection.disconnect()
-
-            } catch (
-                e: Exception
-            ) {
-
-                postResult(
-                    "AI ERROR: ${e.javaClass.simpleName} ${e.message}",
-                    callback
-                )
-                requestInProgress = false
             }
+
+            requestInProgress =
+                false
+
+            postResult(
+                "Boss, AI abhi available nahi hai.",
+                callback
+            )
 
         }.start()
     }
+
+    // =========================================================
+    // MAIN THREAD RESPONSE
+    // =========================================================
 
     private fun postResult(
         result: String,
@@ -248,7 +383,9 @@ if (
             Looper.getMainLooper()
         ).post {
 
-            callback(result)
+            callback(
+                result
+            )
         }
     }
 }
