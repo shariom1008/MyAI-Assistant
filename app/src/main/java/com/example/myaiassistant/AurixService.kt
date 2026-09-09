@@ -1582,15 +1582,28 @@ class AurixService :
 
             return
         }
+        
+       // =====================================================
+       // FINAL AI FALLBACK
+       // =====================================================
 
-        // =====================================================
-        // FINAL SEARCH FALLBACK
-        // =====================================================
+speakOnce(
+    "Boss, check kar leta hoon ek baar."
+)
 
-        googleSearch(
+CoroutineScope(
+    Dispatchers.Main
+).launch {
+
+    val answer =
+        AurixAI.ask(
             command
         )
-    }
+
+    speakOnce(
+        answer
+    )
+}
 
     // =========================================================
     // AGENT
