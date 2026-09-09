@@ -10,7 +10,7 @@ import java.net.URL
 object AurixAI {
 
     private val API_KEY =
-    BuildConfig.GEMINI_API_KEY
+        BuildConfig.GEMINI_API_KEY
 
     fun ask(
         question: String,
@@ -75,6 +75,7 @@ object AurixAI {
                                         "parts",
                                         JSONArray().put(
                                             JSONObject().apply {
+
                                                 put(
                                                     "text",
                                                     prompt
@@ -90,6 +91,7 @@ object AurixAI {
                             "tools",
                             JSONArray().put(
                                 JSONObject().apply {
+
                                     put(
                                         "google_search",
                                         JSONObject()
@@ -100,6 +102,7 @@ object AurixAI {
                     }
 
                 connection.outputStream.use {
+
                     it.write(
                         requestBody
                             .toString()
@@ -111,24 +114,35 @@ object AurixAI {
 
                 val responseCode =
                     connection.responseCode
-if (responseCode !in 200..299) {
 
-    val errorText =
-        try {
-            connection.errorStream
-                ?.bufferedReader()
-                ?.use { it.readText() }
-        } catch (_: Exception) {
-            ""
-        }
+                if (
+                    responseCode !in 200..299
+                ) {
 
-    postResult(
-        "AI ERROR $responseCode $errorText",
-        callback
-    )
+                    val errorText =
+                        try {
 
-    return@Thread
-}
+                            connection.errorStream
+                                ?.bufferedReader()
+                                ?.use {
+                                    it.readText()
+                                }
+
+                        } catch (_: Exception) {
+
+                            ""
+                        }
+
+                    postResult(
+                        "AI ERROR $responseCode $errorText",
+                        callback
+                    )
+
+                    connection.disconnect()
+
+                    return@Thread
+                }
+
                 val responseText =
                     connection.inputStream
                         .bufferedReader()
@@ -173,10 +187,19 @@ if (responseCode !in 200..299) {
                 }
 
                 connection.disconnect()
-postResult(
-    "AI ERROR: ${e.javaClass.simpleName} ${e.message}",
-    callback
-)
+
+            } catch (
+                e: Exception
+            ) {
+
+                postResult(
+                    "AI ERROR: ${e.javaClass.simpleName} ${e.message}",
+                    callback
+                )
+            }
+
+        }.start()
+    }
 
     private fun postResult(
         result: String,
