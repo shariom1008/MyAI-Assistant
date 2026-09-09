@@ -3927,7 +3927,7 @@ class AurixService :
     // AURIX GREETING
     // =========================================================
 
-    private fun speakAurixGreeting() {
+        private fun speakAurixGreeting() {
 
         val hour =
             Calendar.getInstance()
@@ -3936,30 +3936,30 @@ class AurixService :
         val greeting =
             when {
 
-    hour < 5 -> {
-        "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
+                hour < 5 ->
+                    "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
+
+                hour < 12 ->
+                    "Good morning, Boss. Batao, aaj kya handle karna hai?"
+
+                hour < 17 ->
+                    "Good afternoon, Boss. Batao, main aapke liye kya handle karun?"
+
+                hour < 22 ->
+                    "Good evening, Boss. Batao, aaj kya kaam karna hai?"
+
+                else ->
+                    "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
+            }
+
+        speakOnce(
+            greeting
+        )
     }
 
-    hour < 12 -> {
-        "Good morning, Boss. Batao, aaj kya handle karna hai?"
-    }
-
-    hour < 17 -> {
-        "Good afternoon, Boss. Batao, main aapke liye kya handle karun?"
-    }
-
-    hour < 22 -> {
-        "Good evening, Boss. Batao, aaj kya kaam karna hai?"
-    }
-
-    else -> {
-        "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
-    }
-
-speakOnce(
-    greeting
-)
-    }
+    // =========================================================
+    // EVENTS
+    // =========================================================
     
 
     // =========================================================
