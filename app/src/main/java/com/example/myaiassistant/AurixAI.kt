@@ -8,6 +8,16 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object AurixAI {
+        // =========================================================
+        // GEMINI REQUEST COOLDOWN
+        // =========================================================
+
+    @Volatile
+    private var lastRequestTime = 0L
+    @Volatile
+    private var requestInProgress = false
+
+    private const val REQUEST_COOLDOWN = 3000L
 
     private val API_KEY =
         BuildConfig.GEMINI_API_KEY
@@ -16,7 +26,30 @@ object AurixAI {
         question: String,
         callback: (String) -> Unit
     ) {
+               val now = System.currentTimeMillis()
 
+if (requestInProgress) {
+
+    postResult(
+        "Boss, pehle wali request complete hone do.",
+        callback
+    )
+
+    return
+}
+
+if (now - lastRequestTime < REQUEST_COOLDOWN) {
+
+    postResult(
+        "Boss, thoda sa wait karo.",
+        callback
+    )
+
+    return
+}
+
+requestInProgress = true
+lastRequestTime = now
         Thread {
 
             try {
@@ -126,11 +159,26 @@ object AurixAI {
 
                             ""
                         }
+                        if (responseCode == 429) {
+
+    postResult(
+        "Boss, AI ki request limit abhi full hai. Thoda wait karke dobara try karo.",
+        callback
+    )
+
+} else {
+
+    postResult(
+        "AI ERROR $responseCode",
+        callback
+    )
+                        }
 
                     postResult(
                         "AI ERROR $responseCode $errorText",
                         callback
                     )
+                    requestInProgress = false
 
                     connection.disconnect()
 
@@ -179,7 +227,7 @@ object AurixAI {
                         callback
                     )
                 }
-
+                requestInProgress = false
                 connection.disconnect()
 
             } catch (
@@ -190,6 +238,7 @@ object AurixAI {
                     "AI ERROR: ${e.javaClass.simpleName} ${e.message}",
                     callback
                 )
+                requestInProgress = false
             }
 
         }.start()
