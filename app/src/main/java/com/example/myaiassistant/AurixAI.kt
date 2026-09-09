@@ -141,50 +141,45 @@ lastRequestTime = now
 
                 val responseCode =
                     connection.responseCode
+if (
+    responseCode !in 200..299
+) {
 
-                if (
-                    responseCode !in 200..299
-                ) {
+    val errorText =
+        try {
 
-                    val errorText =
-                        try {
-
-                            connection.errorStream
-                                ?.bufferedReader()
-                                ?.use {
-                                    it.readText()
-                                }
-
-                        } catch (_: Exception) {
-
-                            ""
-                        }
-                        if (responseCode == 429) {
-
-    postResult(
-        "Boss, AI ki request limit abhi full hai. Thoda wait karke dobara try karo.",
-        callback
-    )
-
-} else {
-
-    postResult(
-        "AI ERROR $responseCode",
-        callback
-    )
-                        }
-
-                    postResult(
-                        "AI ERROR $responseCode $errorText",
-                        callback
-                    )
-                    requestInProgress = false
-
-                    connection.disconnect()
-
-                    return@Thread
+            connection.errorStream
+                ?.bufferedReader()
+                ?.use {
+                    it.readText()
                 }
 
+        } catch (_: Exception) {
+
+            ""
+        }
+
+    if (responseCode == 429) {
+
+        postResult(
+            "Boss, AI ki request limit abhi full hai. Thoda wait karke dobara try karo.",
+            callback
+        )
+
+    } else {
+
+        postResult(
+            "AI ERROR $responseCode",
+            callback
+        )
+    }
+
+    requestInProgress = false
+
+    connection.disconnect()
+
+    return@Thread
+}
                 val responseText =
                     connection.inputStream
                         .bufferedReader()
