@@ -3635,9 +3635,11 @@ if (
         }
     }
 
-    // =========================================================
-    // SPEECH
-    // =========================================================
+    
+// =========================================================
+// SPEECH / AURIX VOICE
+// =========================================================
+
 override fun onInit(status: Int) {
 
     if (status != TextToSpeech.SUCCESS) {
@@ -3648,8 +3650,10 @@ override fun onInit(status: Int) {
 
     try {
 
+        // English / US voice
         tts.language = Locale.US
 
+        // Keep the working male voice selection
         val voices =
             tts.voices
                 ?.filter {
@@ -3677,65 +3681,76 @@ override fun onInit(status: Int) {
             tts.voice = maleVoice
         }
 
-        // Deep + calm + controlled AI-style voice
-        tts.setSpeechRate(0.88f)
-        tts.setPitch(0.82f)
+        // =================================================
+        // AURIX DEEP + CALM VOICE
+        // =================================================
 
+        // Slightly slower = calm / controlled
+        tts.setSpeechRate(0.84f)
+
+        // Lower pitch = deeper voice
+        tts.setPitch(0.78f)
+
+        // Start AURIX greeting
         speakAurixGreeting()
 
     } catch (_: Exception) {
     }
 }
 
-    private fun speakOnce(
-        text: String
-    ) {
 
-        if (
-            text.isBlank()
-        ) return
+private fun speakOnce(
+    text: String
+) {
 
-        if (
-            currentResponseSent
-        ) return
-
-        currentResponseSent = true
-
-        sendStatus(
-            "SPEAKING"
-        )
-
-        sendSpeak(text)
-
-        try {
-
-            textToSpeech?.speak(
-                text,
-                TextToSpeech.QUEUE_FLUSH,
-                null,
-                "AURIX"
-            )
-
-        } catch (_: Exception) {
-        }
-
-        try {
-
-            AurixMemoryBridge.saveTurn(
-                this,
-                currentUserCommand,
-                text
-            )
-
-        } catch (_: Exception) {
-        }
-
-        sendStatus(
-            "LISTENING"
-        )
+    if (text.isBlank()) {
+        return
     }
 
-    private fun speakAurixGreeting() {
+    if (currentResponseSent) {
+        return
+    }
+
+    currentResponseSent = true
+
+    sendStatus(
+        "SPEAKING"
+    )
+
+    sendSpeak(
+        text
+    )
+
+    try {
+
+        textToSpeech?.speak(
+            text,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "AURIX"
+        )
+
+    } catch (_: Exception) {
+    }
+
+    // Save conversation to memory
+    try {
+
+        AurixMemoryBridge.saveTurn(
+            this,
+            currentUserCommand,
+            text
+        )
+
+    } catch (_: Exception) {
+    }
+
+    // Don't immediately change SPEAKING to LISTENING.
+    // TTS needs time to finish.
+}
+
+
+private fun speakAurixGreeting() {
 
     val hour =
         Calendar.getInstance()
@@ -3745,28 +3760,34 @@ override fun onInit(status: Int) {
         when {
 
             hour < 5 -> {
+
                 "Hello Boss. You're up late. Is there an important mission?"
             }
 
             hour < 12 -> {
-                "Good morning, Boss. How are you today? Anything special you want me to handle?"
+
+                "Good morning, Boss. How are you today? What can I handle for you?"
             }
 
             hour < 17 -> {
-                "Good afternoon, Boss. How's your day going? Any particular task for me?"
+
+                "Good afternoon, Boss. How's your day going? What would you like me to handle?"
             }
 
             hour < 22 -> {
-                "Good evening, Boss. How did your day go? What are we working on today?"
+
+                "Good evening, Boss. How did your day go? What are we working on?"
             }
 
             else -> {
+
                 "Hello Boss. It's getting late. Is there something important we need to take care of?"
             }
         }
 
-    speakOnce(greeting)
-    }
+    speakOnce( greeting
+    )
+}
 
     private fun sendStatus(
         text: String
