@@ -1,5 +1,7 @@
 package com.example.myaiassistant
 
+import android.os.Handler
+import android.os.Looper
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -7,15 +9,15 @@ import java.net.URL
 
 object AurixAI {
 
-    private const val API_KEY = "AQ.Ab8RN6IdPKvJXJsU0vwFEm6wGMirVFQI4cF-w01al8GPH6_kNA"
+    private const val API_KEY =
+        "AQ.Ab8RN6IdPKvJXJsU0vwFEm6wGMirVFQI4cF-w01al8GPH6_kNA"
 
-    suspend fun ask(
-        question: String
-    ): String {
+    fun ask(
+        question: String,
+        callback: (String) -> Unit
+    ) {
 
-        return withContext(
-            Dispatchers.IO
-        ) {
+        Thread {
 
             try {
 
@@ -31,12 +33,35 @@ object AurixAI {
                 connection.requestMethod =
                     "POST"
 
+                connection.connectTimeout =
+                    15000
+
+                connection.readTimeout =
+                    30000
+
                 connection.setRequestProperty(
                     "Content-Type",
                     "application/json"
                 )
 
                 connection.doOutput = true
+
+                val prompt =
+                    """
+                    You are AURIX, a helpful personal voice assistant.
+
+                    Answer the user's question accurately.
+
+                    User question:
+                    $question
+
+                    Use Google Search when current or up-to-date information is needed.
+
+                    Reply in simple Hindi/Hinglish.
+                    Keep the answer concise and natural for voice.
+                    Do not mention Gemini.
+                    Do not tell the user to open another app.
+                    """.trimIndent()
 
                 val requestBody =
                     JSONObject().apply {
@@ -50,22 +75,9 @@ object AurixAI {
                                         "parts",
                                         JSONArray().put(
                                             JSONObject().apply {
-
                                                 put(
                                                     "text",
-                                                    """
-                                                    You are AURIX, a helpful personal voice assistant.
-
-                                                    Answer the user's question accurately and naturally.
-
-                                                    User question:
-                                                    $question
-
-                                                    Reply in simple Hindi/Hinglish.
-                                                    Keep the answer concise enough for voice.
-                                                    Do not mention that you are Gemini.
-                                                    Do not tell the user to open another app.
-                                                    """.trimIndent()
+                                                    prompt
                                                 )
                                             }
                                         )
@@ -104,9 +116,12 @@ object AurixAI {
                     responseCode !in 200..299
                 ) {
 
-                    return@withContext(
-                        "Sorry boss, abhi mujhe iska answer nahi mil paaya."
+                    postResult(
+                        "Sorry boss, abhi answer nahi mil paaya.",
+                        callback
                     )
+
+                    return@Thread
                 }
 
                 val responseText =
@@ -126,61 +141,57 @@ object AurixAI {
                         "candidates"
                     )
 
-                if (
-                    candidates == null ||
-                    candidates.length() == 0
-                ) {
-
-                    return@withContext(
-                        "Sorry boss, mujhe koi answer nahi mila."
-                    )
-                }
-
-                val candidate =
-                    candidates.getJSONObject(0)
-
-                val content =
-                    candidate.optJSONObject(
-                        "content"
-                    )
-
-                val parts =
-                    content?.optJSONArray(
-                        "parts"
-                    )
-
-                if (
-                    parts == null ||
-                    parts.length() == 0
-                ) {
-
-                    return@withContext(
-                        "Sorry boss, answer read nahi ho paaya."
-                    )
-                }
-
                 val answer =
-                    parts.getJSONObject(0)
-                        .optString("text")
-                        .trim()
+                    candidates
+                        ?.optJSONObject(0)
+                        ?.optJSONObject("content")
+                        ?.optJSONArray("parts")
+                        ?.optJSONObject(0)
+                        ?.optString("text")
+                        ?.trim()
 
                 if (
-                    answer.isBlank()
+                    answer.isNullOrBlank()
                 ) {
 
-                    "Sorry boss, abhi answer nahi mil paaya."
+                    postResult(
+                        "Sorry boss, mujhe iska answer nahi mil paaya.",
+                        callback
+                    )
 
                 } else {
 
-                    answer
+                    postResult(
+                        answer,
+                        callback
+                    )
                 }
+
+                connection.disconnect()
 
             } catch (
                 e: Exception
             ) {
 
-                "Sorry boss, internet ya AI service mein problem aa rahi hai."
+                postResult(
+                    "Sorry boss, AI service se connection nahi ho paaya.",
+                    callback
+                )
             }
+
+        }.start()
+    }
+
+    private fun postResult(
+        result: String,
+        callback: (String) -> Unit
+    ) {
+
+        Handler(
+            Looper.getMainLooper()
+        ).post {
+
+            callback(result)
         }
     }
 }
