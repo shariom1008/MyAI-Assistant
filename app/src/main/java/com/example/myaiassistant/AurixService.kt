@@ -402,21 +402,12 @@ if (
     sendCommand(
         command
     )
-
-    handler.postDelayed({
-
-        if (
-            isRunning &&
-            !serviceDestroyed
-        ) {
-
-            processCommand(
-                command
-            )
-        }
-
-    }, 700)
+    processCommand(
+        command
+    )
 }
+
+    
 
                                 if (
                                     isRunning &&
