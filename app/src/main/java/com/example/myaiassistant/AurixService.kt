@@ -1580,9 +1580,9 @@ class AurixService :
             return
         }
         
-       // =====================================================
-       // FINAL AI FALLBACK
-       // =====================================================
+        // =====================================================
+        // FINAL AI FALLBACK
+        // =====================================================
 
 speakOnce(
     "Boss, check kar leta hoon ek baar."
@@ -1591,21 +1591,21 @@ speakOnce(
 AurixAI.ask(
     command
 ) { answer ->
-    
-textToSpeech?.speak(
-    answer,
-    TextToSpeech.QUEUE_FLUSH,
-    null,
-    "AURIX_AI"
-)
+
+    textToSpeech?.speak(
+        answer,
+        TextToSpeech.QUEUE_FLUSH,
+        null,
+        "AURIX_AI"
+    )
+}
 
 return
-    }
+}
 
-    // =========================================================
-    // AGENT
-    // =========================================================
-
+// =========================================================
+// AGENT
+// =========================================================
     private fun isAgentCommand(
         command: String
     ): Boolean {
