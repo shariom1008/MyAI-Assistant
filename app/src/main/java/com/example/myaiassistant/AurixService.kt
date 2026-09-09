@@ -3815,93 +3815,118 @@ class AurixService :
             )
         }
     }
+// =========================================================
+// TTS INIT
+// =========================================================
 
-    // =========================================================
-    // TTS INIT
-    // =========================================================
+override fun onInit(
+    status: Int
+) {
 
-    override fun onInit(
-        status: Int
+    if (
+        status != TextToSpeech.SUCCESS
     ) {
+        return
+    }
 
-        if (
-            status !=
-            TextToSpeech.SUCCESS
-        ) {
+    val tts =
+        textToSpeech
+            ?: return
 
-            return
-        }
+    try {
 
-        val tts =
-            textToSpeech
-                ?: return
+        // -------------------------------------------------
+        // HINDI INDIA
+        // -------------------------------------------------
 
-        try {
+        val hindiLocale =
+            Locale(
+                "hi",
+                "IN"
+            )
 
-            // -------------------------------------------------
-            // BASE LANGUAGE
-            // -------------------------------------------------
+        val languageResult =
+            tts.setLanguage(
+                hindiLocale
+            )
 
-            tts.language =
-                Locale.US
+        // -------------------------------------------------
+        // MALE HINDI VOICE
+        // -------------------------------------------------
 
-            // -------------------------------------------------
-            // MALE VOICE
-            // -------------------------------------------------
+        val voices =
+            tts.voices
+                ?.filter {
 
-            val voices =
-                tts.voices
-                    ?.filter {
-
-                        it.locale.language == "en" &&
-                            !it.isNetworkConnectionRequired
-                    }
-                    ?: emptyList()
-
-            val maleVoice =
-                voices.firstOrNull {
-
-                    val name =
-                        it.name.lowercase(
-                            Locale.getDefault()
-                        )
-
-                    name.contains("male") ||
-                        name.contains("man") ||
-                        name.contains("david") ||
-                        name.contains("mark") ||
-                        name.contains("daniel")
+                    it.locale.language == "hi" &&
+                        !it.isNetworkConnectionRequired
                 }
+                ?: emptyList()
 
-            if (
-                maleVoice != null
-            ) {
+        val maleVoice =
+            voices.firstOrNull {
 
-                tts.voice =
-                    maleVoice
+                val name =
+                    it.name.lowercase(
+                        Locale.getDefault()
+                    )
+
+                name.contains("male") ||
+                    name.contains("man") ||
+                    name.contains("hemant") ||
+                    name.contains("ravi") ||
+                    name.contains("amit") ||
+                    name.contains("hindi")
             }
 
-            // -------------------------------------------------
-            // AURIX VOICE
-            // -------------------------------------------------
+        if (
+            maleVoice != null
+        ) {
 
-            tts.setSpeechRate(
-                0.84f
-            )
-
-            tts.setPitch(
-                0.78f
-            )
-
-            // -------------------------------------------------
-            // GREETING
-            // -------------------------------------------------
-
-            speakAurixGreeting()
-
-        } catch (_: Exception) {
+            tts.voice =
+                maleVoice
         }
+
+        // -------------------------------------------------
+        // FALLBACK HINDI
+        // -------------------------------------------------
+
+        if (
+            languageResult ==
+            TextToSpeech.LANG_MISSING_DATA ||
+            languageResult ==
+            TextToSpeech.LANG_NOT_SUPPORTED
+        ) {
+
+            // Fallback to default Hindi/India voice
+            tts.language =
+                Locale(
+                    "hi",
+                    "IN"
+                )
+        }
+
+        // -------------------------------------------------
+        // AURIX VOICE STYLE
+        // -------------------------------------------------
+
+        tts.setSpeechRate(
+            0.88f
+        )
+
+        tts.setPitch(
+            0.82f
+        )
+
+        // -------------------------------------------------
+        // GREETING
+        // -------------------------------------------------
+
+        speakAurixGreeting()
+
+    } catch (_: Exception) {
     }
+}
 
     // =========================================================
     // AURIX RESPONSE LOCALIZATION
@@ -4204,69 +4229,419 @@ class AurixService :
             ) &&
                 t.endsWith(".") -> {
 
-                val query =
-                    t.removePrefix(
-                        "Searching YouTube for "
-                    ).removeSuffix(".")
+// =========================================================
+// AURIX RESPONSE LOCALIZATION
+// =========================================================
 
-                "Boss, YouTube par $query search kar raha hoon."
-            }
+private fun aurixResponse(
+    text: String
+): String {
 
-            t.startsWith(
-                "Opening YouTube search for "
-            ) &&
-                t.endsWith(".") -> {
+    val t =
+        text.trim()
 
-                val query =
-                    t.removePrefix(
-                        "Opening YouTube search for "
-                    ).removeSuffix(".")
+    if (
+        t.isBlank()
+    ) {
+        return t
+    }
 
-                "Boss, YouTube par $query search open kar raha hoon."
-            }
+    return when {
 
-            t.startsWith(
-                "Searching Maps for "
-            ) &&
-                t.endsWith(".") -> {
+        // -------------------------------------------------
+        // APP OPENING
+        // -------------------------------------------------
 
-                val query =
-                    t.removePrefix(
-                        "Searching Maps for "
-                    ).removeSuffix(".")
+        t == "Opening YouTube." ->
+            "बॉस, यूट्यूब खोल रहा हूँ।"
 
-                "Boss, Maps par $query search kar raha hoon."
-            }
+        t == "Opening camera." ->
+            "बॉस, कैमरा खोल रहा हूँ।"
 
-            t.startsWith(
-                "Searching for "
-            ) &&
-                t.endsWith(".") -> {
+        t == "Opening gallery." ->
+            "बॉस, गैलरी खोल रहा हूँ।"
 
-                val query =
-                    t.removePrefix(
-                        "Searching for "
-                    ).removeSuffix(".")
+        t == "Opening music." ->
+            "बॉस, म्यूज़िक ऐप खोल रहा हूँ।"
 
-                "Boss, $query search kar raha hoon."
-            }
+        t == "Opening notes." ->
+            "बॉस, नोट्स खोल रहा हूँ।"
 
-            // -------------------------------------------------
-            // GENERIC APP OPENING
-            // -------------------------------------------------
+        t == "Opening calculator." ->
+            "बॉस, कैलकुलेटर खोल रहा हूँ।"
 
-            t.startsWith(
-                "Opening "
-            ) &&
-                t.endsWith(".") -> {
+        t == "Opening Chrome." ->
+            "बॉस, क्रोम खोल रहा हूँ।"
 
-                val app =
-                    t.removePrefix(
-                        "Opening "
-                    ).removeSuffix(".")
+        t == "Opening Maps." ->
+            "बॉस, मैप्स खोल रहा हूँ।"
 
-                "Boss, $app khol raha hoon."
-            }
+        t == "Opening phone." ->
+            "बॉस, फोन खोल रहा हूँ।"
+
+        t == "Opening settings." ->
+            "बॉस, सेटिंग्स खोल रहा हूँ।"
+
+        t == "Opening Wi-Fi settings." ->
+            "बॉस, वाई-फाई सेटिंग्स खोल रहा हूँ।"
+
+        // -------------------------------------------------
+        // VOLUME / MEDIA
+        // -------------------------------------------------
+
+        t == "Volume increased." ->
+            "बॉस, वॉल्यूम बढ़ा दिया।"
+
+        t == "Volume decreased." ->
+            "बॉस, वॉल्यूम कम कर दिया।"
+
+        t == "Media control executed." ->
+            "हो गया बॉस, मीडिया कंट्रोल कर दिया।"
+
+        // -------------------------------------------------
+        // FLASHLIGHT
+        // -------------------------------------------------
+
+        t == "Flashlight turned on." ->
+            "बॉस, फ्लैशलाइट चालू कर दी।"
+
+        t == "Flashlight turned off." ->
+            "बॉस, फ्लैशलाइट बंद कर दी।"
+
+        t == "Flashlight is not available." ->
+            "सॉरी बॉस, फ्लैशलाइट उपलब्ध नहीं है।"
+
+        // -------------------------------------------------
+        // DEVICE ERRORS
+        // -------------------------------------------------
+
+        t == "Camera is not available." ->
+            "सॉरी बॉस, कैमरा उपलब्ध नहीं है।"
+
+        t == "Gallery is not available." ->
+            "सॉरी बॉस, गैलरी उपलब्ध नहीं है।"
+
+        t == "Music app is not available." ->
+            "सॉरी बॉस, म्यूज़िक ऐप नहीं मिली।"
+
+        t == "Notes app is not available." ->
+            "सॉरी बॉस, नोट्स ऐप नहीं मिली।"
+
+        t == "Calculator is not available." ->
+            "सॉरी बॉस, कैलकुलेटर नहीं मिला।"
+
+        t == "YouTube is not available." ->
+            "सॉरी बॉस, यूट्यूब उपलब्ध नहीं है।"
+
+        t == "Browser is not available." ->
+            "सॉरी बॉस, ब्राउज़र उपलब्ध नहीं है।"
+
+        t == "Maps is not available." ->
+            "सॉरी बॉस, मैप्स उपलब्ध नहीं है।"
+
+        t == "Phone app is not available." ->
+            "सॉरी बॉस, फोन ऐप उपलब्ध नहीं है।"
+
+        t == "Settings is not available." ->
+            "सॉरी बॉस, सेटिंग्स नहीं खुल पाईं।"
+
+        t == "Wi-Fi settings are not available." ->
+            "सॉरी बॉस, वाई-फाई सेटिंग्स उपलब्ध नहीं हैं।"
+
+        // -------------------------------------------------
+        // CONTROL ERRORS
+        // -------------------------------------------------
+
+        t == "I could not control the flashlight." ->
+            "सॉरी बॉस, फ्लैशलाइट कंट्रोल नहीं कर पाया।"
+
+        t == "I could not change the volume." ->
+            "सॉरी बॉस, वॉल्यूम नहीं बदल पाया।"
+
+        t == "I could not control media." ->
+            "सॉरी बॉस, मीडिया कंट्रोल नहीं कर पाया।"
+
+        t == "I could not check the battery." ->
+            "सॉरी बॉस, बैटरी चेक नहीं कर पाया।"
+
+        t == "I could not search that." ->
+            "सॉरी बॉस, ये सर्च नहीं कर पाया।"
+
+        t == "I could not open YouTube." ->
+            "सॉरी बॉस, यूट्यूब नहीं खुल पाया।"
+
+        t == "I could not open Maps." ->
+            "सॉरी बॉस, मैप्स नहीं खुल पाया।"
+
+        // -------------------------------------------------
+        // MEMORY
+        // -------------------------------------------------
+
+        t == "Got it. I'll remember that." ->
+            "समझ गया बॉस, मैं इसे याद रखूँगा।"
+
+        t == "I've cleared my personal memory." ->
+            "हो गया बॉस, मेरी पर्सनल मेमोरी क्लियर कर दी।"
+
+        t == "Okay. I'll forget that." ->
+            "ठीक है बॉस, मैं इसे भूल जाऊँगा।"
+
+        t == "Tell me what you want me to forget." ->
+            "बॉस, बताओ क्या भूलना है।"
+
+        t == "I don't have any personal memory about you yet." ->
+            "बॉस, अभी मेरे पास आपकी कोई पर्सनल मेमोरी नहीं है।"
+
+        t == "All personal memory has been cleared." ->
+            "हो गया बॉस, सारी पर्सनल मेमोरी क्लियर कर दी।"
+
+        // -------------------------------------------------
+        // TIMER
+        // -------------------------------------------------
+
+        Regex(
+            "(\\d+) hour timer started"
+        ).matches(t) -> {
+
+            val value =
+                Regex(
+                    "(\\d+) hour timer started"
+                )
+                    .find(t)
+                    ?.groupValues
+                    ?.get(1)
+                    ?: ""
+
+            "बॉस, $value घंटे का टाइमर लगा दिया।"
+        }
+
+        Regex(
+            "(\\d+) minute timer started"
+        ).matches(t) -> {
+
+            val value =
+                Regex(
+                    "(\\d+) minute timer started"
+                )
+                    .find(t)
+                    ?.groupValues
+                    ?.get(1)
+                    ?: ""
+
+            "बॉस, $value मिनट का टाइमर लगा दिया।"
+        }
+
+        Regex(
+            "(\\d+) second timer started"
+        ).matches(t) -> {
+
+            val value =
+                Regex(
+                    "(\\d+) second timer started"
+                )
+                    .find(t)
+                    ?.groupValues
+                    ?.get(1)
+                    ?: ""
+
+            "बॉस, $value सेकंड का टाइमर लगा दिया।"
+        }
+
+        t == "Please tell me the timer duration." ->
+            "बॉस, कितने समय का टाइमर लगाना है?"
+
+        // -------------------------------------------------
+        // ALARM
+        // -------------------------------------------------
+
+        t == "That is not a valid alarm time." ->
+            "बॉस, ये सही अलार्म टाइम नहीं है।"
+
+        t == "Please tell me the alarm time, for example seven PM." ->
+            "बॉस, अलार्म किस समय लगाना है?"
+
+        t.startsWith("Alarm set for ") &&
+            t.endsWith(".") -> {
+
+            val time =
+                t.removePrefix(
+                    "Alarm set for "
+                ).removeSuffix(".")
+
+            "बॉस, अलार्म $time के लिए लगा दिया।"
+        }
+
+        // -------------------------------------------------
+        // DATE / DAY / TIME
+        // -------------------------------------------------
+
+        t.startsWith("Today is ") &&
+            t.endsWith(".") -> {
+
+            val value =
+                t.removePrefix(
+                    "Today is "
+                ).removeSuffix(".")
+
+            "बॉस, आज $value है।"
+        }
+
+        t.startsWith("The time is ") &&
+            t.endsWith(".") -> {
+
+            val value =
+                t.removePrefix(
+                    "The time is "
+                ).removeSuffix(".")
+
+            "बॉस, अभी समय $value है।"
+        }
+
+        // -------------------------------------------------
+        // BATTERY
+        // -------------------------------------------------
+
+        t.startsWith("Battery is at ") &&
+            t.endsWith(" percent.") -> {
+
+            val value =
+                t.removePrefix(
+                    "Battery is at "
+                ).removeSuffix(
+                    " percent."
+                )
+
+            "बॉस, बैटरी अभी $value प्रतिशत है।"
+        }
+
+        // -------------------------------------------------
+        // SEARCH
+        // -------------------------------------------------
+
+        t.startsWith("Searching YouTube for ") &&
+            t.endsWith(".") -> {
+
+            val query =
+                t.removePrefix(
+                    "Searching YouTube for "
+                ).removeSuffix(".")
+
+            "बॉस, यूट्यूब पर $query सर्च कर रहा हूँ।"
+        }
+
+        t.startsWith("Opening YouTube search for ") &&
+            t.endsWith(".") -> {
+
+            val query =
+                t.removePrefix(
+                    "Opening YouTube search for "
+                ).removeSuffix(".")
+
+            "बॉस, यूट्यूब पर $query की सर्च खोल रहा हूँ।"
+        }
+
+        t.startsWith("Searching Maps for ") &&
+            t.endsWith(".") -> {
+
+            val query =
+                t.removePrefix(
+                    "Searching Maps for "
+                ).removeSuffix(".")
+
+            "बॉस, मैप्स पर $query सर्च कर रहा हूँ।"
+        }
+
+        t.startsWith("Searching for ") &&
+            t.endsWith(".") -> {
+
+            val query =
+                t.removePrefix(
+                    "Searching for "
+                ).removeSuffix(".")
+
+            "बॉस, $query सर्च कर रहा हूँ।"
+        }
+
+        // -------------------------------------------------
+        // AGENT
+        // -------------------------------------------------
+
+        t == "Agent completed all planned steps." ->
+            "हो गया बॉस, सारे काम पूरे कर दिए।"
+
+        t == "YouTube opened." ->
+            "बॉस, यूट्यूब खोल दिया।"
+
+        t == "Phone opened." ->
+            "बॉस, फोन खोल दिया।"
+
+        t == "Settings opened." ->
+            "बॉस, सेटिंग्स खोल दी।"
+
+        t == "I couldn't open YouTube." ->
+            "सॉरी बॉस, यूट्यूब नहीं खोल पाया।"
+
+        t == "I couldn't open phone." ->
+            "सॉरी बॉस, फोन नहीं खोल पाया।"
+
+        t == "I couldn't open settings." ->
+            "सॉरी बॉस, सेटिंग्स नहीं खोल पाया।"
+
+        t == "I couldn't execute this step." ->
+            "सॉरी बॉस, ये काम पूरा नहीं कर पाया।"
+
+        // -------------------------------------------------
+        // APP NOT FOUND
+        // -------------------------------------------------
+
+        t.startsWith(
+            "I couldn't find "
+        ) &&
+            t.endsWith(
+                " on your phone."
+            ) -> {
+
+            val app =
+                t.removePrefix(
+                    "I couldn't find "
+                ).removeSuffix(
+                    " on your phone."
+                )
+
+            "सॉरी बॉस, आपके फोन में $app नहीं मिला।"
+        }
+
+        // -------------------------------------------------
+        // GENERIC APP OPENING
+        // -------------------------------------------------
+
+        t.startsWith("Opening ") &&
+            t.endsWith(".") -> {
+
+            val app =
+                t.removePrefix(
+                    "Opening "
+                ).removeSuffix(".")
+
+            "बॉस, $app खोल रहा हूँ।"
+        }
+
+        // -------------------------------------------------
+        // GREETING / IDENTITY
+        // -------------------------------------------------
+
+        t == "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?" ->
+            "नमस्ते बॉस। मैं ऑरिक्स हूँ। बताइए, क्या मदद चाहिए?"
+
+        t == "Main AURIX hoon, aapka personal AI assistant." ->
+            "मैं ऑरिक्स हूँ, आपका पर्सनल एआई असिस्टेंट।"
+
+        // -------------------------------------------------
+        // HOME
+        // -------------------------------------------------
+
+        t == "Unable to go to home screen." ->
+            "सॉरी बॉस, होम स्क्रीन पर नहीं जा पाया।"
 
             // -------------------------------------------------
             // FALLBACK
@@ -4341,41 +4716,41 @@ class AurixService :
         // TTS needs time to finish.
     }
 
-    // =========================================================
-    // AURIX GREETING
-    // =========================================================
+ // =========================================================
+// AURIX GREETING
+// =========================================================
 
-    private fun speakAurixGreeting() {
+private fun speakAurixGreeting() {
 
-        val hour =
-            Calendar.getInstance()
-                .get(
-                    Calendar.HOUR_OF_DAY
-                )
+    val hour =
+        Calendar.getInstance()
+            .get(
+                Calendar.HOUR_OF_DAY
+            )
 
-        val greeting =
-            when {
+    val greeting =
+        when {
 
-                hour < 5 ->
-                    "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
+            hour < 5 ->
+                "नमस्ते बॉस। काफी देर हो गई है। कोई जरूरी काम है?"
 
-                hour < 12 ->
-                    "Good morning, Boss. Batao, aaj kya handle karna hai?"
+            hour < 12 ->
+                "सुप्रभात बॉस। बताइए, आज क्या काम करना है?"
 
-                hour < 17 ->
-                    "Good afternoon, Boss. Batao, main aapke liye kya handle karun?"
+            hour < 17 ->
+                "नमस्कार बॉस। बताइए, मैं आपके लिए क्या करूँ?"
 
-                hour < 22 ->
-                    "Good evening, Boss. Batao, aaj kya kaam karna hai?"
+            hour < 22 ->
+                "शुभ संध्या बॉस। बताइए, आज क्या काम करना है?"
 
-                else ->
-                    "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
-            }
+            else ->
+                "नमस्ते बॉस। काफी देर हो गई है। कोई जरूरी काम है?"
+        }
 
-        speakOnce(
-            greeting
-        )
-    }
+    speakOnce(
+        greeting
+    )
+}
 
     // =========================================================
     // EVENTS
