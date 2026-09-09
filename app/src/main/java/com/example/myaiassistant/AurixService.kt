@@ -4148,7 +4148,13 @@ override fun onInit(
 
             // -------------------------------------------------
             // ALARM
+            // ... purane ALARM cases ...
 
+            else ->
+                text
+        }
+    }
+    }
 
 // =========================================================
 // AURIX RESPONSE LOCALIZATION
