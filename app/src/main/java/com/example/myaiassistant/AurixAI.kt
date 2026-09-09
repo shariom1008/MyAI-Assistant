@@ -9,8 +9,8 @@ import java.net.URL
 
 object AurixAI {
 
-    private const val API_KEY =
-        "AQ.Ab8RN6IdPKvJXJsU0vwFEm6wGMirVFQI4cF-w01al8GPH6_kNA"
+    private val API_KEY =
+    BuildConfig.GEMINI_API_KEY
 
     fun ask(
         question: String,
