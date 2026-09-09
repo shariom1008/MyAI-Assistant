@@ -1579,7 +1579,31 @@ class AurixService :
 
             return
         }
-        
+
+        // =====================================================
+        // OWNER / CREATOR COMMAND
+        // =====================================================
+
+val lowerCommand = command.lowercase().trim()
+
+if (
+    lowerCommand.contains("tumhe kisne banaya") ||
+    lowerCommand.contains("tumhe kisne banaya hai") ||
+    lowerCommand.contains("tumhara owner kaun") ||
+    lowerCommand.contains("tumhara malik kaun") ||
+    lowerCommand.contains("who created you") ||
+    lowerCommand.contains("who made you") ||
+    lowerCommand.contains("who is your owner") ||
+    lowerCommand.contains("who is your creator")
+) {
+
+    speakOnce(
+        "Mujhe mere owner Kushal Haryana ne banaya hai."
+    )
+
+    return
+}
+
         // =====================================================
         // FINAL AI FALLBACK
         // =====================================================
