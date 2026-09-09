@@ -559,6 +559,9 @@ putExtra(
         sendStatus(
             "THINKING"
         )
+        speakOnce(
+           "Command mil gayi boss."
+        )
 
         // =====================================================
         // CONTEXT RESOLUTION
