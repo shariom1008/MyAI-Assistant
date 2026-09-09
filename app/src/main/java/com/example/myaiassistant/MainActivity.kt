@@ -812,52 +812,126 @@ class MainActivity : Activity() {
 
         return drawable
     }
+        // =========================================================
+        // ACTIVATE
+        // =========================================================
 
-    // =========================================================
-    // ACTIVATE
-    // =========================================================
+           private fun activateAurix() {
 
-    private fun activateAurix() {
+    if (
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) != PackageManager.PERMISSION_GRANTED
+    ) {
 
         requestPermissionsIfNeeded()
-
-        val intent =
-            Intent(
-                this,
-                AurixService::class.java
-            )
-
-        intent.action =
-            AurixService.ACTION_START
-
-        try {
-
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.O
-            ) {
-
-                ContextCompat.startForegroundService(
-                    this,
-                    intent
-                )
-
-            } else {
-
-                startService(intent)
-            }
-
-            active = true
-
-            updateInterface()
-
-        } catch (_: Exception) {
-
-            updateStatus(
-                "START FAILED"
-            )
-        }
+        updateStatus("MICROPHONE PERMISSION REQUIRED")
+        return
     }
+
+    startAurixService()
+}
+
+// =========================================================
+// START AURIX SERVICE
+// =========================================================
+
+private fun startAurixService() {
+
+    val intent =
+        Intent(
+            this,
+            AurixService::class.java
+        )
+
+    intent.action =
+        AurixService.ACTION_START
+
+    try {
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
+
+            ContextCompat.startForegroundService(
+                this,
+                intent
+            )
+
+        } else {
+
+            startService(intent)
+        }
+
+        active = true
+
+        updateInterface()
+
+    } catch (_: SecurityException) {
+
+        active = false
+
+        updateStatus(
+            "MICROPHONE PERMISSION DENIED"
+        )
+
+        updateInterface()
+
+    } catch (_: Exception) {
+
+        active = false
+
+        updateStatus(
+            "START FAILED"
+        )
+
+        updateInterface()
+    }
+}
+
+// =========================================================
+// PERMISSION RESULT
+// =========================================================
+
+override fun onRequestPermissionsResult(
+    requestCode: Int,
+    permissions: Array<out String>,
+    grantResults: IntArray
+) {
+
+    super.onRequestPermissionsResult(
+        requestCode,
+        permissions,
+        grantResults
+    )
+
+    if (requestCode != 500) {
+        return
+    }
+
+    val microphoneGranted =
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+    if (microphoneGranted) {
+
+        startAurixService()
+
+    } else {
+
+        active = false
+
+        updateStatus(
+            "MICROPHONE PERMISSION DENIED"
+        )
+
+        updateInterface()
+    }
+}
 
     // =========================================================
     // DEACTIVATE
