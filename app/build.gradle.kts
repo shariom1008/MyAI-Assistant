@@ -7,6 +7,9 @@ android {
     namespace = "com.example.myaiassistant"
 
     compileSdk = 34
+buildFeatures {
+    buildConfig = true
+}
 
 defaultConfig {
     applicationId = "com.example.myaiassistant"
