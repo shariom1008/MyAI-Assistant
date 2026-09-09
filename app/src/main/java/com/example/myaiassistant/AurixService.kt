@@ -29,9 +29,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.regex.Pattern
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.net.HttpURLConnection
 import java.net.URL
 
