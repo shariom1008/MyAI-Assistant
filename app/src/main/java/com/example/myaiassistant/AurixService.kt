@@ -1591,14 +1591,13 @@ speakOnce(
 AurixAI.ask(
     command
 ) { answer ->
-
-    textToSpeech?.speak(
-        "AI ne jawab diya. $answer",
-        TextToSpeech.QUEUE_FLUSH,
-        null,
-        "AURIX_AI"
-    )
-}
+    
+textToSpeech?.speak(
+    answer,
+    TextToSpeech.QUEUE_FLUSH,
+    null,
+    "AURIX_AI"
+)
 
 return
     }
