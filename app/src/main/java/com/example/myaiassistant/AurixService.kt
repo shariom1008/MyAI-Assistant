@@ -394,20 +394,29 @@ private var aiRequestInProgress = false
                                         ?.lowercase(
                                             Locale.getDefault()
                                         )
+if (
+    !command
+        .isNullOrBlank()
+) {
 
-                                if (
-                                    !command
-                                        .isNullOrBlank()
-                                ) {
+    sendCommand(
+        command
+    )
 
-                                    sendCommand(
-                                        command
-                                    )
+    handler.postDelayed({
 
-                                    processCommand(
-                                        command
-                                    )
-                                }
+        if (
+            isRunning &&
+            !serviceDestroyed
+        ) {
+
+            processCommand(
+                command
+            )
+        }
+
+    }, 700)
+}
 
                                 if (
                                     isRunning &&
@@ -460,6 +469,23 @@ private var aiRequestInProgress = false
                         false
                     )
 
+                    putExtra(
+                    RecognizerIntent
+                            .EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,
+    1500
+)
+
+putExtra(
+    RecognizerIntent
+        .EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
+    1800
+)
+
+putExtra(
+    RecognizerIntent
+        .EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
+    2500
+)
                     putExtra(
                         RecognizerIntent
                             .EXTRA_MAX_RESULTS,
