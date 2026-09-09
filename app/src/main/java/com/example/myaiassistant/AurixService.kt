@@ -77,6 +77,13 @@ class AurixService :
     private var currentUserCommand = ""
     private var currentResponseSent = false
 
+        // =========================================================
+        // AI REQUEST PROTECTION
+        // =========================================================
+
+@Volatile
+private var aiRequestInProgress = false
+        
     // =========================================================
     // CREATE
     // =========================================================
@@ -1608,7 +1615,12 @@ if (
         // =====================================================
         // FINAL AI FALLBACK
         // =====================================================
+           
+        if (aiRequestInProgress) {
+    return
+}
 
+aiRequestInProgress = true
 speakOnce(
     "Boss, ruko check kar raha hu."
 )
@@ -1616,7 +1628,7 @@ speakOnce(
 AurixAI.ask(
     command
 ) { answer ->
-
+    aiRequestInProgress = false
     textToSpeech?.speak(
         answer,
         TextToSpeech.QUEUE_FLUSH,
