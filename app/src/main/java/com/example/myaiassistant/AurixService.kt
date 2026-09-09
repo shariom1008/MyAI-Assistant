@@ -3638,25 +3638,54 @@ if (
     // =========================================================
     // SPEECH
     // =========================================================
+override fun onInit(status: Int) {
 
-    override fun onInit(
-        status: Int
-    ) {
-
-        if (
-            status ==
-            TextToSpeech.SUCCESS
-        ) {
-
-            try {
-
-                textToSpeech?.language =
-                    Locale.US
-
-            } catch (_: Exception) {
-            }
-        }
+    if (status != TextToSpeech.SUCCESS) {
+        return
     }
+
+    val tts = textToSpeech ?: return
+
+    try {
+
+        tts.language = Locale.US
+
+        val voices =
+            tts.voices
+                ?.filter {
+                    it.locale.language == "en" &&
+                    !it.isNetworkConnectionRequired
+                }
+                ?: emptyList()
+
+        val maleVoice =
+            voices.firstOrNull {
+
+                val name =
+                    it.name.lowercase(
+                        Locale.getDefault()
+                    )
+
+                name.contains("male") ||
+                name.contains("man") ||
+                name.contains("david") ||
+                name.contains("mark") ||
+                name.contains("daniel")
+            }
+
+        if (maleVoice != null) {
+            tts.voice = maleVoice
+        }
+
+        // Deep + calm + controlled AI-style voice
+        tts.setSpeechRate(0.88f)
+        tts.setPitch(0.82f)
+
+        speakAurixGreeting()
+
+    } catch (_: Exception) {
+    }
+}
 
     private fun speakOnce(
         text: String
@@ -3704,6 +3733,39 @@ if (
         sendStatus(
             "LISTENING"
         )
+    }
+
+    private fun speakAurixGreeting() {
+
+    val hour =
+        Calendar.getInstance()
+            .get(Calendar.HOUR_OF_DAY)
+
+    val greeting =
+        when {
+
+            hour < 5 -> {
+                "Hello Boss. You're up late. Is there an important mission?"
+            }
+
+            hour < 12 -> {
+                "Good morning, Boss. How are you today? Anything special you want me to handle?"
+            }
+
+            hour < 17 -> {
+                "Good afternoon, Boss. How's your day going? Any particular task for me?"
+            }
+
+            hour < 22 -> {
+                "Good evening, Boss. How did your day go? What are we working on today?"
+            }
+
+            else -> {
+                "Hello Boss. It's getting late. Is there something important we need to take care of?"
+            }
+        }
+
+    speakOnce(greeting)
     }
 
     private fun sendStatus(
