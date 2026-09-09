@@ -1591,8 +1591,11 @@ AurixAI.ask(
     command
 ) { answer ->
 
-    speakOnce(
-        answer
+    textToSpeech?.speak(
+        answer,
+        TextToSpeech.QUEUE_FLUSH,
+        null,
+        "AURIX_AI"
     )
 }
 
