@@ -86,19 +86,6 @@ object AurixAI {
                                 }
                             )
                         )
-
-                        put(
-                            "tools",
-                            JSONArray().put(
-                                JSONObject().apply {
-
-                                    put(
-                                        "google_search",
-                                        JSONObject()
-                                    )
-                                }
-                            )
-                        )
                     }
 
                 connection.outputStream.use {
