@@ -3955,11 +3955,11 @@ class AurixService :
     else -> {
         "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
     }
-}
 
 speakOnce(
     greeting
 )
+    }
     
 
     // =========================================================
