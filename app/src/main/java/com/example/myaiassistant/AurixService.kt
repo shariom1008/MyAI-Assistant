@@ -1,5 +1,4 @@
 package com.example.myaiassistant
-
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -509,7 +508,6 @@ class AurixService :
     private fun processCommand(
         rawCommand: String
     ) {
-
         currentResponseSent = false
 
         var command =
@@ -547,7 +545,6 @@ class AurixService :
                     command
                 )
         ) {
-
             is AurixContextResolver.Resolution.MemoryStatement -> {
 
                 AurixMemoryBridge.rememberThat(
@@ -4797,7 +4794,6 @@ private fun speakAurixGreeting() {
     override fun onBind(
         intent: Intent?
     ): IBinder? {
-
-        return null
+return null
     }
 }
