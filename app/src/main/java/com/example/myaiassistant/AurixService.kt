@@ -1583,6 +1583,7 @@ class AurixService :
        // =====================================================
        // FINAL AI FALLBACK
        // =====================================================
+
 speakOnce(
     "Boss, check kar leta hoon ek baar."
 )
@@ -1592,7 +1593,7 @@ AurixAI.ask(
 ) { answer ->
 
     textToSpeech?.speak(
-        answer,
+        "AI ne jawab diya. $answer",
         TextToSpeech.QUEUE_FLUSH,
         null,
         "AURIX_AI"
