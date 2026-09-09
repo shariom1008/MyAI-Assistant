@@ -3936,36 +3936,31 @@ class AurixService :
         val greeting =
             when {
 
-                hour < 5 -> {
-
-                    "Hello Boss. You're up late. Is there an important mission?"
-                }
-
-                hour < 12 -> {
-
-                    "Good morning, Boss. How are you today? What can I handle for you?"
-                }
-
-                hour < 17 -> {
-
-                    "Good afternoon, Boss. How's your day going? What would you like me to handle?"
-                }
-
-                hour < 22 -> {
-
-                    "Good evening, Boss. How did your day go? What are we working on?"
-                }
-
-                else -> {
-
-                    "Hello Boss. It's getting late. Is there something important we need to take care of?"
-                }
-            }
-
-        speakOnce(
-            greeting
-        )
+    hour < 5 -> {
+        "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
     }
+
+    hour < 12 -> {
+        "Good morning, Boss. Batao, aaj kya handle karna hai?"
+    }
+
+    hour < 17 -> {
+        "Good afternoon, Boss. Batao, main aapke liye kya handle karun?"
+    }
+
+    hour < 22 -> {
+        "Good evening, Boss. Batao, aaj kya kaam karna hai?"
+    }
+
+    else -> {
+        "Hello Boss. Kaafi late ho gaya hai. Koi important kaam hai?"
+    }
+}
+
+speakOnce(
+    greeting
+)
+    
 
     // =========================================================
     // EVENTS
