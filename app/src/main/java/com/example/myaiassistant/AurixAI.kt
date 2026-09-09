@@ -324,10 +324,10 @@ object AurixAI {
                     connection.disconnect()
 
                     postResult(
-                        "AI ERROR $responseCode",
-                        callback
-                    )
-
+                    "AI ERROR $responseCode: $errorText",
+                    callback
+                        )
+)
                     return@Thread
 
                 } catch (
