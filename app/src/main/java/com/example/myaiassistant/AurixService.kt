@@ -1583,19 +1583,13 @@ class AurixService :
        // =====================================================
        // FINAL AI FALLBACK
        // =====================================================
-
 speakOnce(
     "Boss, check kar leta hoon ek baar."
 )
 
-CoroutineScope(
-    Dispatchers.Main
-).launch {
-
-    val answer =
-        AurixAI.ask(
-            command
-        )
+AurixAI.ask(
+    command
+) { answer ->
 
     speakOnce(
         answer
