@@ -1736,19 +1736,51 @@ if (
 }
 
 aiRequestInProgress = true
-speakOnce(
-    "Boss, ruko check kar raha hu."
+
+sendStatus(
+    TYPE_STATUS,
+    "THINKING"
 )
 
 AurixAI.ask(
     command
 ) { answer ->
+
     aiRequestInProgress = false
+
+    if (
+        answer.isBlank()
+    ) {
+        sendStatus(
+            TYPE_STATUS,
+            "ERROR"
+        )
+        return@ask
+    }
+
+    val finalAnswer =
+        aurixResponse(answer)
+
+    sendStatus(
+        TYPE_STATUS,
+        "SPEAKING"
+    )
+
+    sendSpeak(
+        finalAnswer
+    )
+
     textToSpeech?.speak(
-        answer,
+        finalAnswer,
         TextToSpeech.QUEUE_FLUSH,
         null,
         "AURIX_AI"
+    )
+
+    AurixMemoryBridge.saveTurn(
+        this,
+        command,
+        finalAnswer
     )
 }
 
@@ -4595,7 +4627,7 @@ private fun speakAurixGreeting() {
         when {
 
             hour < 5 ->
-                "नमस्ते बॉस। काफी देर हो गई है। कोई जरूरी काम है?"
+                "नमस्ते बॉस। काफी देर हो गई है। कोई जरूरी काम है क्या?"
 
             hour < 12 ->
                 "सुप्रभात बॉस। बताइए, आज क्या काम करना है?"
@@ -4607,7 +4639,7 @@ private fun speakAurixGreeting() {
                 "शुभ संध्या बॉस। बताइए, आज क्या काम करना है?"
 
             else ->
-                "नमस्ते बॉस। काफी देर हो गई है। कोई जरूरी काम है?"
+                "नमस्ते बॉस। काफी देर हो गई है। कोई जरूरी काम है क्या?"
         }
 
     speakOnce(
