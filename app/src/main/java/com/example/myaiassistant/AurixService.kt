@@ -1392,7 +1392,7 @@ if (
             command == "youtube" ||
             command == "open youtube" ||
             command == "launch youtube"
-q
+
             command == "dialer" ||
             command == "open dialer"
         ) {
