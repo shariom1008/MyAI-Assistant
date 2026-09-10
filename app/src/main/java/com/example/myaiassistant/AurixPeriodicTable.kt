@@ -1,4 +1,5 @@
 package com.example.myaiassistant
+import java.util.Locale
 
 data class AurixElement(
     val number: Int,
