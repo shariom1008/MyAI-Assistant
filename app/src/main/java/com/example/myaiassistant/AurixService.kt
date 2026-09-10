@@ -1391,7 +1391,7 @@ if (
         if (
             command == "youtube" ||
             command == "open youtube" ||
-            command == "launch youtube"
+            command == "launch youtube" ||
 
             command == "dialer" ||
             command == "open dialer"
@@ -1408,7 +1408,7 @@ if (
         if (
             command == "settings" ||
             command == "open settings" ||
-            command == "phone settings"
+            command == "phone settings" ||
         ) {
 
             openSettings()
