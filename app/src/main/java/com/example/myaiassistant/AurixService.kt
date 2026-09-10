@@ -611,6 +611,55 @@ if (
     )
     return
 }
+
+  // =====================================================
+// BASIC MATH & FACTS - LOCAL
+// =====================================================
+
+if (
+    command == "5 plus 5" ||
+    command == "5 + 5" ||
+    command == "5 and 5"
+) {
+    speakOnce(
+        "5 plus 5 equals 10, Boss."
+    )
+    return
+}
+
+if (
+    command.contains("1 kilometer mein kitne meter") ||
+    command.contains("1 km mein kitne meter") ||
+    command.contains("one kilometer mein kitne meter")
+) {
+    speakOnce(
+        "1 kilometer mein 1000 meter hote hain, Boss."
+    )
+    return
+}
+
+if (
+    command.contains("suraj kis direction se ugta hai") ||
+    command.contains("sun rises from which direction") ||
+    command.contains("sun kis direction se ugta hai")
+) {
+    speakOnce(
+        "Suraj East, yani Purab ki direction se ugta hai, Boss."
+    )
+    return
+}
+
+if (
+    command.contains("human body mein kitni bones") ||
+    command.contains("insaan ke sharir mein kitni haddiyan") ||
+    command.contains("how many bones in human body")
+) {
+    speakOnce(
+        "Ek adult human body mein normally 206 bones hoti hain, Boss."
+    )
+    return
+}
+
 // =========================================================
 // TIME
 // =========================================================
