@@ -17,14 +17,41 @@ object AurixMathEngine {
             return null
         }
 
+        val hindi = isHindi(c)
+
         // ---------------------------------------------------------
-        // PERCENTAGE OF
-        // Examples:
-        // 25 percent of 800
-        // what is 25 percent of 800
-        // 25 percentage of 800
-        // 25% of 800
+        // HINDI / HINGLISH - PERCENTAGE OF
         // ---------------------------------------------------------
+
+        Regex(
+            """(\d+(?:\.\d+)?)\s*(?:का|का\s+|ki|ka)\s*(\d+(?:\.\d+)?)\s*(?:प्रतिशत|प्रतिशत\s+|percent|percentage|%)"""
+        ).find(c)?.let {
+
+            val base = it.groupValues[1].toDouble()
+            val percentage = it.groupValues[2].toDouble()
+            val result = percentage * base / 100.0
+
+            return if (hindi) {
+                "$base का $percentage प्रतिशत ${formatNumber(result)} है।"
+            } else {
+                "$percentage percent of $base is ${formatNumber(result)}."
+            }
+        }
+
+        Regex(
+            """(\d+(?:\.\d+)?)\s*(?:percent|percentage|%)\s*(?:of|ka)\s*(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
+
+            val percentage = it.groupValues[1].toDouble()
+            val base = it.groupValues[2].toDouble()
+            val result = percentage * base / 100.0
+
+            return if (hindi) {
+                "$base का $percentage प्रतिशत ${formatNumber(result)} है।"
+            } else {
+                "$percentage percent of $base is ${formatNumber(result)}."
+            }
+        }
 
         Regex(
             """(?:what is\s+)?(\d+(?:\.\d+)?)\s*(?:percent|percentage|%)\s*(?:of|ka)\s*(\d+(?:\.\d+)?)"""
@@ -32,54 +59,62 @@ object AurixMathEngine {
 
             val percentage = it.groupValues[1].toDouble()
             val base = it.groupValues[2].toDouble()
-
             val result = percentage * base / 100.0
 
-            return "$percentage percent of $base is ${formatNumber(result)}."
+            return if (hindi) {
+                "$base का $percentage प्रतिशत ${formatNumber(result)} है।"
+            } else {
+                "$percentage percent of $base is ${formatNumber(result)}."
+            }
         }
 
-        // Reverse Hindi style:
-        // 800 ka 25 percent
+        // ---------------------------------------------------------
+        // PURE HINDI PERCENTAGE
+        // Example:
+        // 800 का 25 प्रतिशत कितना है
+        // ---------------------------------------------------------
+
         Regex(
-            """(\d+(?:\.\d+)?)\s+ka\s+(\d+(?:\.\d+)?)\s*(?:percent|percentage|%)"""
+            """(\d+(?:\.\d+)?)\s*का\s*(\d+(?:\.\d+)?)\s*प्रतिशत"""
         ).find(c)?.let {
 
             val base = it.groupValues[1].toDouble()
             val percentage = it.groupValues[2].toDouble()
-
             val result = percentage * base / 100.0
 
-            return "$percentage percent of $base is ${formatNumber(result)}."
+            return "$base का $percentage प्रतिशत ${formatNumber(result)} है।"
         }
 
         // ---------------------------------------------------------
         // HCF / GCD
-        // Supports:
-        // HCF of 24 and 36
-        // what is HCF of 24 and 36
-        // H C F of 24 and 36
-        // GCD of 24 and 36
-        // 24 and 36 HCF
         // ---------------------------------------------------------
 
         Regex(
-            """(?:what is\s+)?(?:h\s*c\s*f|g\s*c\s*d)(?:\s+of)?\s+(\d+)\s+(?:and|aur)\s+(\d+)"""
+            """(?:what is\s+)?(?:h\s*c\s*f|g\s*c\s*d)(?:\s+of)?\s+(\d+)\s+(?:and|aur|और)\s+(\d+)"""
         ).find(c)?.let {
 
             val a = it.groupValues[1].toLong()
             val b = it.groupValues[2].toLong()
 
-            return "HCF of $a and $b is ${gcd(a, b)}."
+            return if (hindi) {
+                "$a और $b का HCF ${gcd(a, b)} है।"
+            } else {
+                "HCF of $a and $b is ${gcd(a, b)}."
+            }
         }
 
         Regex(
-            """(\d+)\s+(?:and|aur)\s+(\d+)\s*(?:ka|ki)?\s*(?:h\s*c\s*f|g\s*c\s*d)"""
+            """(\d+)\s+(?:and|aur|और)\s+(\d+)\s*(?:का|का\s+|ka|ki)?\s*(?:h\s*c\s*f|g\s*c\s*d)"""
         ).find(c)?.let {
 
             val a = it.groupValues[1].toLong()
             val b = it.groupValues[2].toLong()
 
-            return "HCF of $a and $b is ${gcd(a, b)}."
+            return if (hindi) {
+                "$a और $b का HCF ${gcd(a, b)} है।"
+            } else {
+                "HCF of $a and $b is ${gcd(a, b)}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -93,22 +128,11 @@ object AurixMathEngine {
             val number = it.groupValues[1].toLong()
 
             return if (number % 2 == 0L) {
-                "$number is even."
+                if (hindi) "$number सम संख्या है।"
+                else "$number is even."
             } else {
-                "$number is odd."
-            }
-        }
-
-        Regex(
-            """(?:is\s+)?(\d+)\s+(?:an\s+)?(?:even|odd)\s+number"""
-        ).find(c)?.let {
-
-            val number = it.groupValues[1].toLong()
-
-            return if (number % 2 == 0L) {
-                "$number is even."
-            } else {
-                "$number is odd."
+                if (hindi) "$number विषम संख्या है।"
+                else "$number is odd."
             }
         }
 
@@ -123,9 +147,11 @@ object AurixMathEngine {
             val number = it.groupValues[1].toLong()
 
             return if (isPrime(number)) {
-                "$number is a prime number."
+                if (hindi) "$number एक अभाज्य संख्या है।"
+                else "$number is a prime number."
             } else {
-                "$number is not a prime number."
+                if (hindi) "$number अभाज्य संख्या नहीं है।"
+                else "$number is not a prime number."
             }
         }
 
@@ -140,10 +166,18 @@ object AurixMathEngine {
             val number = it.groupValues[1].toInt()
 
             if (number > 20) {
-                return "I can calculate factorial only up to 20."
+                return if (hindi) {
+                    "मैं केवल 20 तक का factorial calculate कर सकता हूँ।"
+                } else {
+                    "I can calculate factorial only up to 20."
+                }
             }
 
-            return "$number factorial is ${factorial(number)}."
+            return if (hindi) {
+                "$number का factorial ${factorial(number)} है।"
+            } else {
+                "$number factorial is ${factorial(number)}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -151,13 +185,17 @@ object AurixMathEngine {
         // ---------------------------------------------------------
 
         Regex(
-            """(?:what is\s+)?(?:lcm)(?:\s+of)?\s+(\d+)\s+(?:and|aur)\s+(\d+)"""
+            """(?:what is\s+)?(?:lcm)(?:\s+of)?\s+(\d+)\s+(?:and|aur|और)\s+(\d+)"""
         ).find(c)?.let {
 
             val a = it.groupValues[1].toLong()
             val b = it.groupValues[2].toLong()
 
-            return "LCM of $a and $b is ${lcm(a, b)}."
+            return if (hindi) {
+                "$a और $b का LCM ${lcm(a, b)} है।"
+            } else {
+                "LCM of $a and $b is ${lcm(a, b)}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -165,7 +203,7 @@ object AurixMathEngine {
         // ---------------------------------------------------------
 
         Regex(
-            """average\s+(?:of\s+)?(\d+(?:\.\d+)?)\s+(?:and|aur)\s+(\d+(?:\.\d+)?)"""
+            """average\s+(?:of\s+)?(\d+(?:\.\d+)?)\s+(?:and|aur|और)\s+(\d+(?:\.\d+)?)"""
         ).find(c)?.let {
 
             val a = it.groupValues[1].toDouble()
@@ -173,7 +211,11 @@ object AurixMathEngine {
 
             val result = (a + b) / 2.0
 
-            return "The average is ${formatNumber(result)}."
+            return if (hindi) {
+                "औसत ${formatNumber(result)} है।"
+            } else {
+                "The average is ${formatNumber(result)}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -181,19 +223,27 @@ object AurixMathEngine {
         // ---------------------------------------------------------
 
         Regex(
-            """ratio\s+(?:of\s+)?(\d+(?:\.\d+)?)\s+(?:and|to|aur)\s+(\d+(?:\.\d+)?)"""
+            """ratio\s+(?:of\s+)?(\d+(?:\.\d+)?)\s+(?:and|to|aur|और)\s+(\d+(?:\.\d+)?)"""
         ).find(c)?.let {
 
             val a = it.groupValues[1].toDouble()
             val b = it.groupValues[2].toDouble()
 
             if (b == 0.0) {
-                return "Ratio cannot have zero as the second value."
+                return if (hindi) {
+                    "अनुपात में दूसरी संख्या zero नहीं हो सकती।"
+                } else {
+                    "Ratio cannot have zero as the second value."
+                }
             }
 
             val g = gcd(a.toLong(), b.toLong())
 
-            return "The ratio is ${formatNumber(a / g)}:${formatNumber(b / g)}."
+            return if (hindi) {
+                "अनुपात ${formatNumber(a / g)}:${formatNumber(b / g)} है।"
+            } else {
+                "The ratio is ${formatNumber(a / g)}:${formatNumber(b / g)}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -208,12 +258,20 @@ object AurixMathEngine {
             val newValue = it.groupValues[2].toDouble()
 
             if (oldValue == 0.0) {
-                return "Percentage increase cannot be calculated from zero."
+                return if (hindi) {
+                    "Zero से percentage increase calculate नहीं किया जा सकता।"
+                } else {
+                    "Percentage increase cannot be calculated from zero."
+                }
             }
 
             val result = ((newValue - oldValue) / oldValue) * 100.0
 
-            return "The percentage increase is ${formatNumber(result)} percent."
+            return if (hindi) {
+                "Percentage increase ${formatNumber(result)} प्रतिशत है।"
+            } else {
+                "The percentage increase is ${formatNumber(result)} percent."
+            }
         }
 
         // ---------------------------------------------------------
@@ -228,12 +286,20 @@ object AurixMathEngine {
             val newValue = it.groupValues[2].toDouble()
 
             if (oldValue == 0.0) {
-                return "Percentage decrease cannot be calculated from zero."
+                return if (hindi) {
+                    "Zero से percentage decrease calculate नहीं किया जा सकता।"
+                } else {
+                    "Percentage decrease cannot be calculated from zero."
+                }
             }
 
             val result = ((oldValue - newValue) / oldValue) * 100.0
 
-            return "The percentage decrease is ${formatNumber(result)} percent."
+            return if (hindi) {
+                "Percentage decrease ${formatNumber(result)} प्रतिशत है।"
+            } else {
+                "The percentage decrease is ${formatNumber(result)} percent."
+            }
         }
 
         // ---------------------------------------------------------
@@ -247,10 +313,18 @@ object AurixMathEngine {
             val number = it.groupValues[1].toDouble()
 
             if (number < 0) {
-                return "Square root of a negative number is not a real number."
+                return if (hindi) {
+                    "Negative number का square root real number नहीं है।"
+                } else {
+                    "Square root of a negative number is not a real number."
+                }
             }
 
-            return "The square root is ${formatNumber(sqrt(number))}."
+            return if (hindi) {
+                "Square root ${formatNumber(sqrt(number))} है।"
+            } else {
+                "The square root is ${formatNumber(sqrt(number))}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -263,7 +337,11 @@ object AurixMathEngine {
 
             val number = it.groupValues[1].toDouble()
 
-            return "The square of $number is ${formatNumber(number.pow(2))}."
+            return if (hindi) {
+                "$number का square ${formatNumber(number.pow(2))} है।"
+            } else {
+                "The square of $number is ${formatNumber(number.pow(2))}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -276,7 +354,11 @@ object AurixMathEngine {
 
             val number = it.groupValues[1].toDouble()
 
-            return "The cube of $number is ${formatNumber(number.pow(3))}."
+            return if (hindi) {
+                "$number का cube ${formatNumber(number.pow(3))} है।"
+            } else {
+                "The cube of $number is ${formatNumber(number.pow(3))}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -292,11 +374,15 @@ object AurixMathEngine {
 
             val result = base.pow(exponent)
 
-            return "$base to the power of $exponent is ${formatNumber(result)}."
+            return if (hindi) {
+                "$base की power $exponent ${formatNumber(result)} है।"
+            } else {
+                "$base to the power of $exponent is ${formatNumber(result)}."
+            }
         }
 
         // ---------------------------------------------------------
-        // BASIC ADDITION
+        // ADDITION
         // ---------------------------------------------------------
 
         Regex(
@@ -306,11 +392,15 @@ object AurixMathEngine {
             val a = it.groupValues[1].toDouble()
             val b = it.groupValues[2].toDouble()
 
-            return "${formatNumber(a)} plus ${formatNumber(b)} is ${formatNumber(a + b)}."
+            return if (hindi) {
+                "${formatNumber(a)} और ${formatNumber(b)} का जोड़ ${formatNumber(a + b)} है।"
+            } else {
+                "${formatNumber(a)} plus ${formatNumber(b)} is ${formatNumber(a + b)}."
+            }
         }
 
         // ---------------------------------------------------------
-        // BASIC SUBTRACTION
+        // SUBTRACTION
         // ---------------------------------------------------------
 
         Regex(
@@ -320,11 +410,15 @@ object AurixMathEngine {
             val a = it.groupValues[1].toDouble()
             val b = it.groupValues[2].toDouble()
 
-            return "${formatNumber(a)} minus ${formatNumber(b)} is ${formatNumber(a - b)}."
+            return if (hindi) {
+                "${formatNumber(a)} में से ${formatNumber(b)} घटाने पर ${formatNumber(a - b)} आता है।"
+            } else {
+                "${formatNumber(a)} minus ${formatNumber(b)} is ${formatNumber(a - b)}."
+            }
         }
 
         // ---------------------------------------------------------
-        // BASIC MULTIPLICATION
+        // MULTIPLICATION
         // ---------------------------------------------------------
 
         Regex(
@@ -334,11 +428,15 @@ object AurixMathEngine {
             val a = it.groupValues[1].toDouble()
             val b = it.groupValues[2].toDouble()
 
-            return "${formatNumber(a)} multiplied by ${formatNumber(b)} is ${formatNumber(a * b)}."
+            return if (hindi) {
+                "${formatNumber(a)} और ${formatNumber(b)} का गुणा ${formatNumber(a * b)} है।"
+            } else {
+                "${formatNumber(a)} multiplied by ${formatNumber(b)} is ${formatNumber(a * b)}."
+            }
         }
 
         // ---------------------------------------------------------
-        // BASIC DIVISION
+        // DIVISION
         // ---------------------------------------------------------
 
         Regex(
@@ -349,10 +447,18 @@ object AurixMathEngine {
             val b = it.groupValues[2].toDouble()
 
             if (b == 0.0) {
-                return "Division by zero is not possible."
+                return if (hindi) {
+                    "Zero से division संभव नहीं है।"
+                } else {
+                    "Division by zero is not possible."
+                }
             }
 
-            return "${formatNumber(a)} divided by ${formatNumber(b)} is ${formatNumber(a / b)}."
+            return if (hindi) {
+                "${formatNumber(a)} को ${formatNumber(b)} से divide करने पर ${formatNumber(a / b)} आता है।"
+            } else {
+                "${formatNumber(a)} divided by ${formatNumber(b)} is ${formatNumber(a / b)}."
+            }
         }
 
         // ---------------------------------------------------------
@@ -364,10 +470,13 @@ object AurixMathEngine {
         ).find(c)?.let {
 
             val radius = it.groupValues[1].toDouble()
-
             val area = PI * radius * radius
 
-            return "The area of the circle is ${formatNumber(area)} square units."
+            return if (hindi) {
+                "Circle का area ${formatNumber(area)} square units है।"
+            } else {
+                "The area of the circle is ${formatNumber(area)} square units."
+            }
         }
 
         // ---------------------------------------------------------
@@ -379,10 +488,13 @@ object AurixMathEngine {
         ).find(c)?.let {
 
             val radius = it.groupValues[1].toDouble()
-
             val circumference = 2 * PI * radius
 
-            return "The circumference of the circle is ${formatNumber(circumference)} units."
+            return if (hindi) {
+                "Circle की circumference ${formatNumber(circumference)} units है।"
+            } else {
+                "The circumference of the circle is ${formatNumber(circumference)} units."
+            }
         }
 
         // ---------------------------------------------------------
@@ -390,7 +502,7 @@ object AurixMathEngine {
         // ---------------------------------------------------------
 
         Regex(
-            """(?:area\s+of\s+)?rectangle\s+(?:with\s+)?length\s+(\d+(?:\.\d+)?)\s+(?:and|aur)\s+width\s+(\d+(?:\.\d+)?)"""
+            """(?:area\s+of\s+)?rectangle\s+(?:with\s+)?length\s+(\d+(?:\.\d+)?)\s+(?:and|aur|और)\s+width\s+(\d+(?:\.\d+)?)"""
         ).find(c)?.let {
 
             val length = it.groupValues[1].toDouble()
@@ -398,7 +510,11 @@ object AurixMathEngine {
 
             val area = length * width
 
-            return "The area of the rectangle is ${formatNumber(area)} square units."
+            return if (hindi) {
+                "Rectangle का area ${formatNumber(area)} square units है।"
+            } else {
+                "The area of the rectangle is ${formatNumber(area)} square units."
+            }
         }
 
         // ---------------------------------------------------------
@@ -406,7 +522,7 @@ object AurixMathEngine {
         // ---------------------------------------------------------
 
         Regex(
-            """(?:perimeter\s+of\s+)?rectangle\s+(?:with\s+)?length\s+(\d+(?:\.\d+)?)\s+(?:and|aur)\s+width\s+(\d+(?:\.\d+)?)"""
+            """(?:perimeter\s+of\s+)?rectangle\s+(?:with\s+)?length\s+(\d+(?:\.\d+)?)\s+(?:and|aur|और)\s+width\s+(\d+(?:\.\d+)?)"""
         ).find(c)?.let {
 
             val length = it.groupValues[1].toDouble()
@@ -414,10 +530,22 @@ object AurixMathEngine {
 
             val perimeter = 2 * (length + width)
 
-            return "The perimeter of the rectangle is ${formatNumber(perimeter)} units."
+            return if (hindi) {
+                "Rectangle का perimeter ${formatNumber(perimeter)} units है।"
+            } else {
+                "The perimeter of the rectangle is ${formatNumber(perimeter)} units."
+            }
         }
 
         return null
+    }
+
+    // -------------------------------------------------------------
+    // LANGUAGE DETECTION
+    // -------------------------------------------------------------
+
+    private fun isHindi(command: String): Boolean {
+        return command.any { it in '\u0900'..'\u097F' }
     }
 
     // -------------------------------------------------------------
