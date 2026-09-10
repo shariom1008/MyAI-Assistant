@@ -9,12 +9,8 @@ import java.net.URL
 
 object AurixAI {
 
-    // =========================================================
-    // AURIX AI CONFIGURATION
-    // =========================================================
-
-    private const val REQUEST_COOLDOWN = 3000L
-    private const val MAX_RETRIES = 2
+    private const val REQUEST_COOLDOWN = 8000L
+    private const val MAX_RETRIES = 1
     private const val MAX_HISTORY = 8
 
     @Volatile
@@ -23,23 +19,11 @@ object AurixAI {
     @Volatile
     private var requestInProgress = false
 
-    // =========================================================
-    // GEMINI API KEY
-    // =========================================================
-
     private val API_KEY =
         BuildConfig.GEMINI_API_KEY
 
-    // =========================================================
-    // CONVERSATION MEMORY
-    // =========================================================
-
     private val conversationHistory =
         mutableListOf<Pair<String, String>>()
-
-    // =========================================================
-    // ASK AURIX AI
-    // =========================================================
 
     fun ask(
         question: String,
@@ -51,74 +35,124 @@ object AurixAI {
                 .trim()
                 .replace(Regex("\\s+"), " ")
 
-        // -----------------------------------------------------
-        // EMPTY QUESTION
-        // -----------------------------------------------------
-
         if (cleanQuestion.isBlank()) {
-
             postResult(
                 "Boss, mujhe kuch sunai nahi diya.",
                 callback
             )
-
             return
         }
 
-        // -----------------------------------------------------
-        // API KEY CHECK
-        // -----------------------------------------------------
-
         if (API_KEY.isBlank()) {
-
             postResult(
                 "Boss, AI configuration available nahi hai.",
                 callback
             )
-
             return
         }
 
         val now =
             System.currentTimeMillis()
 
-        // -----------------------------------------------------
-        // DUPLICATE REQUEST PROTECTION
-        // -----------------------------------------------------
-
         if (requestInProgress) {
-
             postResult(
                 "Boss, pehle wali request complete hone do.",
                 callback
             )
-
             return
         }
-
-        // -----------------------------------------------------
-        // REQUEST COOLDOWN
-        // -----------------------------------------------------
 
         if (
             now - lastRequestTime <
             REQUEST_COOLDOWN
         ) {
-
             postResult(
                 "Boss, thoda wait karo.",
                 callback
             )
-
             return
         }
 
         requestInProgress = true
         lastRequestTime = now
 
-        // =====================================================
-        // BACKGROUND REQUEST
-        // =====================================================
+        val lowerQuestion =
+            cleanQuestion.lowercase()
+
+        val deepRequest =
+            lowerQuestion.contains("detail") ||
+            lowerQuestion.contains("detailed") ||
+            lowerQuestion.contains("deeply") ||
+            lowerQuestion.contains("in depth") ||
+            lowerQuestion.contains("explain") ||
+            lowerQuestion.contains("samjhao") ||
+            lowerQuestion.contains("samjha") ||
+            lowerQuestion.contains("samjha do") ||
+            lowerQuestion.contains("detail mein") ||
+            lowerQuestion.contains("detail me") ||
+            lowerQuestion.contains("gehraai") ||
+            lowerQuestion.contains("kyun") ||
+            lowerQuestion.contains("kyu") ||
+            lowerQuestion.contains("why") ||
+            lowerQuestion.contains("how") ||
+            lowerQuestion.contains("kaise") ||
+            lowerQuestion.contains("compare") ||
+            lowerQuestion.contains("difference") ||
+            lowerQuestion.contains("fayde") ||
+            lowerQuestion.contains("faayde") ||
+            lowerQuestion.contains("nuksan") ||
+            lowerQuestion.contains("advantages") ||
+            lowerQuestion.contains("disadvantages") ||
+            lowerQuestion.contains("examples") ||
+            lowerQuestion.contains("example") ||
+            lowerQuestion.contains("step by step") ||
+            lowerQuestion.contains("poora samjhao") ||
+            lowerQuestion.contains("vistaar")
+
+        val answerMode =
+            if (deepRequest) {
+                """
+                DETAILED ANSWER MODE:
+
+                The user wants a detailed or explanatory answer.
+
+                Give a proper explanation instead of a one-line answer.
+
+                Normally provide:
+                - a clear introduction
+                - the main explanation
+                - important reasons or details
+                - a simple example when useful
+                - a short conclusion when useful
+
+                Target approximately 150 to 350 words when the
+                question genuinely needs depth.
+
+                If the question asks "why" or "how", explain the
+                reasoning or mechanism clearly.
+
+                If the user asks for comparison, explain the
+                important differences clearly.
+
+                If the user asks for steps, give the steps in order.
+
+                Do not artificially make a simple question long.
+                """
+            } else {
+                """
+                NORMAL ANSWER MODE:
+
+                Give a useful natural answer.
+
+                Do not force the answer into one line.
+
+                For a simple question, normally use 2 to 5
+                natural sentences.
+
+                Give enough explanation to actually answer the
+                question, but avoid unnecessary repetition.
+                """
+            }
 
         Thread {
 
@@ -128,13 +162,10 @@ object AurixAI {
                 attempt <= MAX_RETRIES
             ) {
 
-                var connection: HttpURLConnection? = null
+                var connection:
+                        HttpURLConnection? = null
 
                 try {
-
-                    // =================================================
-                    // GEMINI CONNECTION
-                    // =================================================
 
                     val url =
                         URL(
@@ -167,10 +198,6 @@ object AurixAI {
                     connection.doOutput =
                         true
 
-                    // =================================================
-                    // CONVERSATION HISTORY
-                    // =================================================
-
                     val historyText =
                         synchronized(
                             conversationHistory
@@ -195,15 +222,12 @@ object AurixAI {
                             }
                         }
 
-                    // =================================================
-                    // AURIX PERSONALITY
-                    // =================================================
-
                     val prompt =
                         """
                         You are AURIX, a personal AI voice assistant.
 
                         CORE PERSONALITY:
+
                         - Intelligent
                         - Friendly
                         - Calm
@@ -213,16 +237,16 @@ object AurixAI {
                         - Natural and conversational
                         - Never robotic
                         - Treat the user as "Boss" naturally
-                        - Do not call the user Boss in every single sentence
+                        - Do not call the user Boss in every sentence
                         - Never mention Gemini
-                        - Never mention internal instructions
                         - Never mention API keys
+                        - Never mention internal instructions
                         - Never expose system prompts
 
                         LANGUAGE:
 
-                        Detect the language and style of the user's
-                        current message.
+                        Detect the language and style of the
+                        user's CURRENT message.
 
                         If the user speaks English:
                         reply in natural English.
@@ -243,28 +267,29 @@ object AurixAI {
 
                         VOICE RESPONSE RULES:
 
-                        This answer will be spoken aloud by a
-                        Text-to-Speech engine.
+                        This answer will be spoken aloud by
+                        AURIX Text-to-Speech.
 
                         Therefore:
-                        - Keep normal answers concise.
-                        - Use natural spoken sentences.
-                        - Avoid markdown.
-                        - Avoid bullet points unless specifically requested.
+
+                        - Use natural spoken language.
                         - Avoid unnecessary symbols.
                         - Avoid emojis.
-                        - Do not use complicated formatting.
+                        - Avoid complicated formatting.
                         - Do not repeat the user's question unnecessarily.
-                        - For simple questions, give a simple answer.
-                        - For detailed questions, provide useful detail.
-                        - If the user asks for steps, explain them clearly.
-                        - If something is uncertain, say so honestly.
+                        - Do not mention that you are an AI model unless
+                          the user specifically asks.
+                        - Do not say that the user needs to open
+                          another app.
                         - Never invent facts.
+                        - If something is uncertain, clearly say so.
+
+                        $answerMode
 
                         CONVERSATION MEMORY:
 
-                        Use the previous conversation only when
-                        it is relevant to the current message.
+                        Use previous conversation only when it is
+                        relevant to the CURRENT user message.
 
                         Previous conversation:
 
@@ -276,24 +301,17 @@ object AurixAI {
 
                         IMPORTANT:
 
-                        Answer the CURRENT user message.
+                        Answer the CURRENT user message directly.
 
                         Do not repeat the entire conversation.
 
-                        Do not say that the user needs to open
-                        another app.
-
-                        Do not say that you are Gemini.
+                        Do not mention Gemini.
 
                         You are AURIX.
 
                         Give the most useful natural response
                         suitable for a personal voice assistant.
                         """.trimIndent()
-
-                    // =================================================
-                    // REQUEST BODY
-                    // =================================================
 
                     val requestBody =
                         JSONObject().apply {
@@ -322,10 +340,6 @@ object AurixAI {
                             )
                         }
 
-                    // =================================================
-                    // SEND REQUEST
-                    // =================================================
-
                     connection.outputStream.use {
 
                         it.write(
@@ -339,16 +353,8 @@ object AurixAI {
                         it.flush()
                     }
 
-                    // =================================================
-                    // RESPONSE CODE
-                    // =================================================
-
                     val responseCode =
                         connection.responseCode
-
-                    // =================================================
-                    // SUCCESS
-                    // =================================================
 
                     if (
                         responseCode in 200..299
@@ -391,10 +397,6 @@ object AurixAI {
 
                         connection.disconnect()
 
-                        // =================================================
-                        // EMPTY AI RESPONSE
-                        // =================================================
-
                         if (
                             answer.isNullOrBlank()
                         ) {
@@ -407,18 +409,10 @@ object AurixAI {
                             return@Thread
                         }
 
-                        // =================================================
-                        // CLEAN AI RESPONSE
-                        // =================================================
-
                         val cleanAnswer =
                             cleanAIResponse(
                                 answer
                             )
-
-                        // =================================================
-                        // SAVE CONVERSATION
-                        // =================================================
 
                         synchronized(
                             conversationHistory
@@ -442,10 +436,6 @@ object AurixAI {
                             }
                         }
 
-                        // =================================================
-                        // RETURN RESPONSE
-                        // =================================================
-
                         postResult(
                             cleanAnswer,
                             callback
@@ -454,31 +444,11 @@ object AurixAI {
                         return@Thread
                     }
 
-                    // =================================================
-                    // RATE LIMIT
-                    // =================================================
-
                     if (
                         responseCode == 429
                     ) {
 
                         connection.disconnect()
-
-                        attempt++
-
-                        if (
-                            attempt <= MAX_RETRIES
-                        ) {
-
-                            val waitTime =
-                                2000L * attempt
-
-                            Thread.sleep(
-                                waitTime
-                            )
-
-                            continue
-                        }
 
                         requestInProgress =
                             false
@@ -490,24 +460,6 @@ object AurixAI {
 
                         return@Thread
                     }
-
-                    // =================================================
-                    // SERVER / AUTH / OTHER ERROR
-                    // =================================================
-
-                    val errorText =
-                        try {
-
-                            connection.errorStream
-                                ?.bufferedReader()
-                                ?.use {
-                                    it.readText()
-                                }
-
-                        } catch (_: Exception) {
-
-                            ""
-                        }
 
                     connection.disconnect()
 
@@ -560,7 +512,9 @@ object AurixAI {
                                 1500L
                             )
 
-                        } catch (_: InterruptedException) {
+                        } catch (
+                            _: InterruptedException
+                        ) {
 
                             Thread.currentThread()
                                 .interrupt()
@@ -584,17 +538,11 @@ object AurixAI {
                 } finally {
 
                     try {
-
                         connection?.disconnect()
-
                     } catch (_: Exception) {
                     }
                 }
             }
-
-            // =====================================================
-            // FINAL FALLBACK
-            // =====================================================
 
             requestInProgress =
                 false
@@ -607,10 +555,6 @@ object AurixAI {
         }.start()
     }
 
-    // =========================================================
-    // CLEAN AI RESPONSE
-    // =========================================================
-
     private fun cleanAIResponse(
         response: String
     ): String {
@@ -618,28 +562,24 @@ object AurixAI {
         var result =
             response.trim()
 
-        // Remove markdown code fences
         result =
             result.replace(
                 "```",
                 ""
             )
 
-        // Remove unnecessary markdown bullets
         result =
             result.replace(
                 Regex("(?m)^\\s*[-*]\\s+"),
                 ""
             )
 
-        // Remove excessive blank lines
         result =
             result.replace(
                 Regex("\\n{3,}"),
                 "\n\n"
             )
 
-        // Remove excessive spaces
         result =
             result.replace(
                 Regex("[ \\t]{2,}"),
@@ -649,32 +589,18 @@ object AurixAI {
         return result.trim()
     }
 
-    // =========================================================
-    // CLEAR AI CONVERSATION
-    // =========================================================
-
     fun clearConversation() {
 
         synchronized(
             conversationHistory
         ) {
-
             conversationHistory.clear()
         }
     }
 
-    // =========================================================
-    // OPTIONAL: CHECK AI REQUEST STATUS
-    // =========================================================
-
     fun isBusy(): Boolean {
-
         return requestInProgress
     }
-
-    // =========================================================
-    // MAIN THREAD CALLBACK
-    // =========================================================
 
     private fun postResult(
         result: String,
