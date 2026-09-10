@@ -1,7 +1,6 @@
 package com.example.myaiassistant
 
-import java.util.Locale
-import kotlin.math.abs
+import kotlin.math.PI
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -10,7 +9,7 @@ object AurixMathEngine {
     fun answer(command: String): String? {
 
         val c = command
-            .lowercase(Locale.getDefault())
+            .lowercase()
             .trim()
             .replace(Regex("\\s+"), " ")
 
@@ -18,503 +17,416 @@ object AurixMathEngine {
             return null
         }
 
-        // =========================================================
-        // EVEN / ODD
-        // =========================================================
+        // ---------------------------------------------------------
+        // PERCENTAGE OF
+        // Examples:
+        // 25 percent of 800
+        // what is 25 percent of 800
+        // 25 percentage of 800
+        // 25% of 800
+        // ---------------------------------------------------------
 
-        var match = Regex(
-            """(?:is|check|tell me|batao)?\s*(?:number\s*)?(\d+)\s*(?:even|odd)\b"""
-        ).find(c)
+        Regex(
+            """(?:what is\s+)?(\d+(?:\.\d+)?)\s*(?:percent|percentage|%)\s*(?:of|ka)\s*(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
-            val number = match.groupValues[1].toLongOrNull()
+            val percentage = it.groupValues[1].toDouble()
+            val base = it.groupValues[2].toDouble()
 
-            if (number != null) {
-                return if (number % 2L == 0L) {
-                    "$number even number hai, Boss."
-                } else {
-                    "$number odd number hai, Boss."
-                }
-            }
+            val result = percentage * base / 100.0
+
+            return "$percentage percent of $base is ${formatNumber(result)}."
         }
 
-        match = Regex(
-            """(\d+)\s*(?:even hai|odd hai|even number|odd number)"""
-        ).find(c)
+        // Reverse Hindi style:
+        // 800 ka 25 percent
+        Regex(
+            """(\d+(?:\.\d+)?)\s+ka\s+(\d+(?:\.\d+)?)\s*(?:percent|percentage|%)"""
+        ).find(c)?.let {
 
-        if (match != null) {
-            val number = match.groupValues[1].toLongOrNull()
+            val base = it.groupValues[1].toDouble()
+            val percentage = it.groupValues[2].toDouble()
 
-            if (number != null) {
-                return if (number % 2L == 0L) {
-                    "$number even number hai, Boss."
-                } else {
-                    "$number odd number hai, Boss."
-                }
-            }
+            val result = percentage * base / 100.0
+
+            return "$percentage percent of $base is ${formatNumber(result)}."
         }
 
-        // =========================================================
-        // PRIME NUMBER
-        // =========================================================
-
-        match = Regex(
-            """(?:is|check|tell me|batao)?\s*(?:number\s*)?(\d+)\s*(?:prime|prime number)"""
-        ).find(c)
-
-        if (match != null) {
-            val number = match.groupValues[1].toLongOrNull()
-
-            if (number != null) {
-                return if (isPrime(number)) {
-                    "$number prime number hai, Boss."
-                } else {
-                    "$number prime number nahi hai, Boss."
-                }
-            }
-        }
-
-        match = Regex(
-            """(?:prime|prime number)\s*(?:hai kya|check karo|check|batao)?\s*(\d+)"""
-        ).find(c)
-
-        if (match != null) {
-            val number = match.groupValues[1].toLongOrNull()
-
-            if (number != null) {
-                return if (isPrime(number)) {
-                    "$number prime number hai, Boss."
-                } else {
-                    "$number prime number nahi hai, Boss."
-                }
-            }
-        }
-
-        // =========================================================
-        // FACTORIAL
-        // =========================================================
-
-        match = Regex(
-            """(\d+)\s*(?:ka|ki)?\s*factorial\b"""
-        ).find(c)
-
-        if (match != null) {
-
-            val number = match.groupValues[1].toIntOrNull()
-
-            if (number != null) {
-
-                if (number < 0) {
-                    return "Negative number ka factorial defined nahi hai, Boss."
-                }
-
-                if (number > 20) {
-                    return "Boss, factorial calculation ke liye number 20 ya usse kam rakho."
-                }
-
-                val result = factorial(number)
-
-                return "$number ka factorial ${result} hai, Boss."
-            }
-        }
-
-        // =========================================================
+        // ---------------------------------------------------------
         // HCF / GCD
-        // =========================================================
+        // Supports:
+        // HCF of 24 and 36
+        // what is HCF of 24 and 36
+        // H C F of 24 and 36
+        // GCD of 24 and 36
+        // 24 and 36 HCF
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:hcf|gcd)(?:\s+of)?\s+(\d+)\s+(?:and|aur)\s+(\d+)"""
-        ).find(c)
+        Regex(
+            """(?:what is\s+)?(?:h\s*c\s*f|g\s*c\s*d)(?:\s+of)?\s+(\d+)\s+(?:and|aur)\s+(\d+)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val a = it.groupValues[1].toLong()
+            val b = it.groupValues[2].toLong()
 
-            val a = match.groupValues[1].toLongOrNull()
-            val b = match.groupValues[2].toLongOrNull()
+            return "HCF of $a and $b is ${gcd(a, b)}."
+        }
 
-            if (a != null && b != null) {
+        Regex(
+            """(\d+)\s+(?:and|aur)\s+(\d+)\s*(?:ka|ki)?\s*(?:h\s*c\s*f|g\s*c\s*d)"""
+        ).find(c)?.let {
 
-                val result = gcd(a, b)
+            val a = it.groupValues[1].toLong()
+            val b = it.groupValues[2].toLong()
 
-                return "${a} aur ${b} ka HCF ${result} hai, Boss."
+            return "HCF of $a and $b is ${gcd(a, b)}."
+        }
+
+        // ---------------------------------------------------------
+        // EVEN / ODD
+        // ---------------------------------------------------------
+
+        Regex(
+            """(?:is\s+)?(\d+)\s+(?:even|odd)"""
+        ).find(c)?.let {
+
+            val number = it.groupValues[1].toLong()
+
+            return if (number % 2 == 0L) {
+                "$number is even."
+            } else {
+                "$number is odd."
             }
         }
 
-        match = Regex(
-            """(\d+)\s+(?:aur|and)\s+(\d+)\s*(?:ka|ki)?\s*(?:hcf|gcd)"""
-        ).find(c)
+        Regex(
+            """(?:is\s+)?(\d+)\s+(?:an\s+)?(?:even|odd)\s+number"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val number = it.groupValues[1].toLong()
 
-            val a = match.groupValues[1].toLongOrNull()
-            val b = match.groupValues[2].toLongOrNull()
-
-            if (a != null && b != null) {
-
-                val result = gcd(a, b)
-
-                return "${a} aur ${b} ka HCF ${result} hai, Boss."
+            return if (number % 2 == 0L) {
+                "$number is even."
+            } else {
+                "$number is odd."
             }
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
+        // PRIME NUMBER
+        // ---------------------------------------------------------
+
+        Regex(
+            """(?:is\s+)?(\d+)\s+(?:a\s+)?prime(?:\s+number)?"""
+        ).find(c)?.let {
+
+            val number = it.groupValues[1].toLong()
+
+            return if (isPrime(number)) {
+                "$number is a prime number."
+            } else {
+                "$number is not a prime number."
+            }
+        }
+
+        // ---------------------------------------------------------
+        // FACTORIAL
+        // ---------------------------------------------------------
+
+        Regex(
+            """(?:what is\s+)?(\d+)\s*(?:factorial|!)"""
+        ).find(c)?.let {
+
+            val number = it.groupValues[1].toInt()
+
+            if (number > 20) {
+                return "I can calculate factorial only up to 20."
+            }
+
+            return "$number factorial is ${factorial(number)}."
+        }
+
+        // ---------------------------------------------------------
         // LCM
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:lcm)(?:\s+of)?\s+(\d+)\s+(?:and|aur)\s+(\d+)"""
-        ).find(c)
+        Regex(
+            """(?:what is\s+)?(?:lcm)(?:\s+of)?\s+(\d+)\s+(?:and|aur)\s+(\d+)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val a = it.groupValues[1].toLong()
+            val b = it.groupValues[2].toLong()
 
-            val a = match.groupValues[1].toLongOrNull()
-            val b = match.groupValues[2].toLongOrNull()
-
-            if (a != null && b != null) {
-
-                val result = lcm(a, b)
-
-                return "${a} aur ${b} ka LCM ${result} hai, Boss."
-            }
+            return "LCM of $a and $b is ${lcm(a, b)}."
         }
 
-        match = Regex(
-            """(\d+)\s+(?:aur|and)\s+(\d+)\s*(?:ka|ki)?\s*lcm"""
-        ).find(c)
-
-        if (match != null) {
-
-            val a = match.groupValues[1].toLongOrNull()
-            val b = match.groupValues[2].toLongOrNull()
-
-            if (a != null && b != null) {
-
-                val result = lcm(a, b)
-
-                return "${a} aur ${b} ka LCM ${result} hai, Boss."
-            }
-        }
-
-        // =========================================================
+        // ---------------------------------------------------------
         // AVERAGE
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """average\s+(?:of)?\s*(.+)"""
-        ).find(c)
+        Regex(
+            """average\s+(?:of\s+)?(\d+(?:\.\d+)?)\s+(?:and|aur)\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val a = it.groupValues[1].toDouble()
+            val b = it.groupValues[2].toDouble()
 
-            val values = extractNumbers(
-                match.groupValues[1]
-            )
+            val result = (a + b) / 2.0
 
-            if (values.isNotEmpty()) {
-
-                val result =
-                    values.sum() / values.size
-
-                return "Average ${formatNumber(result)} hai, Boss."
-            }
+            return "The average is ${formatNumber(result)}."
         }
 
-        match = Regex(
-            """(?:average|avg)\s+(\d+(?:\.\d+)?)\s+(?:and|aur)\s+(\d+(?:\.\d+)?)"""
-        ).find(c)
-
-        if (match != null) {
-
-            val a = match.groupValues[1].toDoubleOrNull()
-            val b = match.groupValues[2].toDoubleOrNull()
-
-            if (a != null && b != null) {
-
-                val result = (a + b) / 2.0
-
-                return "Average ${formatNumber(result)} hai, Boss."
-            }
-        }
-
-        // =========================================================
+        // ---------------------------------------------------------
         // RATIO
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """ratio\s+(?:of)?\s*(\d+(?:\.\d+)?)\s*(?:to|and|aur)\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """ratio\s+(?:of\s+)?(\d+(?:\.\d+)?)\s+(?:and|to|aur)\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val a = it.groupValues[1].toDouble()
+            val b = it.groupValues[2].toDouble()
 
-            val a = match.groupValues[1].toDoubleOrNull()
-            val b = match.groupValues[2].toDoubleOrNull()
-
-            if (a != null && b != null && b != 0.0) {
-
-                val divisor = gcd(
-                    a.toLong(),
-                    b.toLong()
-                )
-
-                val first =
-                    if (divisor != 0L) {
-                        a / divisor
-                    } else {
-                        a
-                    }
-
-                val second =
-                    if (divisor != 0L) {
-                        b / divisor
-                    } else {
-                        b
-                    }
-
-                return "Ratio ${formatNumber(first)} to ${formatNumber(second)} hai, Boss."
+            if (b == 0.0) {
+                return "Ratio cannot have zero as the second value."
             }
+
+            val g = gcd(a.toLong(), b.toLong())
+
+            return "The ratio is ${formatNumber(a / g)}:${formatNumber(b / g)}."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // PERCENTAGE INCREASE
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:percentage|percent)\s*(?:increase|increase hua|increase hai)\s*(?:from|of)?\s*(\d+(?:\.\d+)?)\s*(?:to|se)\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """(?:percentage\s+)?increase\s+(?:from\s+)?(\d+(?:\.\d+)?)\s+(?:to|by)\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val oldValue = it.groupValues[1].toDouble()
+            val newValue = it.groupValues[2].toDouble()
 
-            val oldValue =
-                match.groupValues[1].toDoubleOrNull()
-
-            val newValue =
-                match.groupValues[2].toDoubleOrNull()
-
-            if (
-                oldValue != null &&
-                newValue != null &&
-                oldValue != 0.0
-            ) {
-
-                val result =
-                    ((newValue - oldValue) / oldValue) * 100.0
-
-                return "Percentage change ${formatNumber(result)}% hai, Boss."
+            if (oldValue == 0.0) {
+                return "Percentage increase cannot be calculated from zero."
             }
+
+            val result = ((newValue - oldValue) / oldValue) * 100.0
+
+            return "The percentage increase is ${formatNumber(result)} percent."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // PERCENTAGE DECREASE
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:percentage|percent)\s*(?:decrease|decrease hua|decrease hai)\s*(?:from|of)?\s*(\d+(?:\.\d+)?)\s*(?:to|se)\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """(?:percentage\s+)?decrease\s+(?:from\s+)?(\d+(?:\.\d+)?)\s+(?:to|by)\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val oldValue = it.groupValues[1].toDouble()
+            val newValue = it.groupValues[2].toDouble()
 
-            val oldValue =
-                match.groupValues[1].toDoubleOrNull()
-
-            val newValue =
-                match.groupValues[2].toDoubleOrNull()
-
-            if (
-                oldValue != null &&
-                newValue != null &&
-                oldValue != 0.0
-            ) {
-
-                val result =
-                    ((oldValue - newValue) / oldValue) * 100.0
-
-                return "Percentage decrease ${formatNumber(result)}% hai, Boss."
+            if (oldValue == 0.0) {
+                return "Percentage decrease cannot be calculated from zero."
             }
+
+            val result = ((oldValue - newValue) / oldValue) * 100.0
+
+            return "The percentage decrease is ${formatNumber(result)} percent."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // SQUARE ROOT
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:square root|sqrt)\s*(?:of)?\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """(?:square\s+root\s+of|sqrt)\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val number = it.groupValues[1].toDouble()
 
-            val number =
-                match.groupValues[1].toDoubleOrNull()
-
-            if (number != null && number >= 0.0) {
-
-                return "Square root ${formatNumber(sqrt(number))} hai, Boss."
+            if (number < 0) {
+                return "Square root of a negative number is not a real number."
             }
+
+            return "The square root is ${formatNumber(sqrt(number))}."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // SQUARE
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:ka|ki)?\s*square\b"""
-        ).find(c)
+        Regex(
+            """(?:what is\s+)?(?:square\s+of)\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val number = it.groupValues[1].toDouble()
 
-            val number =
-                match.groupValues[1].toDoubleOrNull()
-
-            if (number != null) {
-
-                return "Square ${formatNumber(number.pow(2))} hai, Boss."
-            }
+            return "The square of $number is ${formatNumber(number.pow(2))}."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // CUBE
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:ka|ki)?\s*cube\b"""
-        ).find(c)
+        Regex(
+            """(?:what is\s+)?(?:cube\s+of)\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val number = it.groupValues[1].toDouble()
 
-            val number =
-                match.groupValues[1].toDoubleOrNull()
-
-            if (number != null) {
-
-                return "Cube ${formatNumber(number.pow(3))} hai, Boss."
-            }
+            return "The cube of $number is ${formatNumber(number.pow(3))}."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // POWER
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:power|ki power|raised to)\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """(?:what is\s+)?(\d+(?:\.\d+)?)\s*(?:power|raised\s+to)\s*(?:of|the)?\s*(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val base = it.groupValues[1].toDouble()
+            val exponent = it.groupValues[2].toDouble()
 
-            val base =
-                match.groupValues[1].toDoubleOrNull()
+            val result = base.pow(exponent)
 
-            val exponent =
-                match.groupValues[2].toDoubleOrNull()
-
-            if (base != null && exponent != null) {
-
-                return "Result ${formatNumber(base.pow(exponent))} hai, Boss."
-            }
+            return "$base to the power of $exponent is ${formatNumber(result)}."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
+        // BASIC ADDITION
+        // ---------------------------------------------------------
+
+        Regex(
+            """(?:what is\s+)?(\d+(?:\.\d+)?)\s*(?:\+|plus)\s*(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
+
+            val a = it.groupValues[1].toDouble()
+            val b = it.groupValues[2].toDouble()
+
+            return "${formatNumber(a)} plus ${formatNumber(b)} is ${formatNumber(a + b)}."
+        }
+
+        // ---------------------------------------------------------
+        // BASIC SUBTRACTION
+        // ---------------------------------------------------------
+
+        Regex(
+            """(?:what is\s+)?(\d+(?:\.\d+)?)\s*(?:-|minus)\s*(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
+
+            val a = it.groupValues[1].toDouble()
+            val b = it.groupValues[2].toDouble()
+
+            return "${formatNumber(a)} minus ${formatNumber(b)} is ${formatNumber(a - b)}."
+        }
+
+        // ---------------------------------------------------------
+        // BASIC MULTIPLICATION
+        // ---------------------------------------------------------
+
+        Regex(
+            """(?:what is\s+)?(\d+(?:\.\d+)?)\s*(?:\*|x|×|times|multiply(?:\s+by)?)\s*(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
+
+            val a = it.groupValues[1].toDouble()
+            val b = it.groupValues[2].toDouble()
+
+            return "${formatNumber(a)} multiplied by ${formatNumber(b)} is ${formatNumber(a * b)}."
+        }
+
+        // ---------------------------------------------------------
+        // BASIC DIVISION
+        // ---------------------------------------------------------
+
+        Regex(
+            """(?:what is\s+)?(\d+(?:\.\d+)?)\s*(?:/|÷|divided\s+by)\s*(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
+
+            val a = it.groupValues[1].toDouble()
+            val b = it.groupValues[2].toDouble()
+
+            if (b == 0.0) {
+                return "Division by zero is not possible."
+            }
+
+            return "${formatNumber(a)} divided by ${formatNumber(b)} is ${formatNumber(a / b)}."
+        }
+
+        // ---------------------------------------------------------
         // CIRCLE AREA
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:circle|circle ka)\s*(?:area)\s*(?:radius|r)?\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """(?:area\s+of\s+)?(?:a\s+)?circle\s+(?:with\s+)?radius\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val radius = it.groupValues[1].toDouble()
 
-            val radius =
-                match.groupValues[1].toDoubleOrNull()
+            val area = PI * radius * radius
 
-            if (radius != null) {
-
-                val area =
-                    Math.PI * radius * radius
-
-                return "Circle ka area ${formatNumber(area)} square units hai, Boss."
-            }
+            return "The area of the circle is ${formatNumber(area)} square units."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // CIRCLE CIRCUMFERENCE
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:circle|circle ka)\s*(?:circumference|perimeter)\s*(?:radius|r)?\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """(?:circumference\s+of\s+)?(?:a\s+)?circle\s+(?:with\s+)?radius\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val radius = it.groupValues[1].toDouble()
 
-            val radius =
-                match.groupValues[1].toDoubleOrNull()
+            val circumference = 2 * PI * radius
 
-            if (radius != null) {
-
-                val circumference =
-                    2.0 * Math.PI * radius
-
-                return "Circle ka circumference ${formatNumber(circumference)} units hai, Boss."
-            }
+            return "The circumference of the circle is ${formatNumber(circumference)} units."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // RECTANGLE AREA
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:rectangle|rectangle ka)\s*(?:area)\s*(?:length)?\s*(\d+(?:\.\d+)?)\s*(?:and|aur|by|x|×)\s*(?:width)?\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """(?:area\s+of\s+)?rectangle\s+(?:with\s+)?length\s+(\d+(?:\.\d+)?)\s+(?:and|aur)\s+width\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val length = it.groupValues[1].toDouble()
+            val width = it.groupValues[2].toDouble()
 
-            val length =
-                match.groupValues[1].toDoubleOrNull()
+            val area = length * width
 
-            val width =
-                match.groupValues[2].toDoubleOrNull()
-
-            if (length != null && width != null) {
-
-                val area =
-                    length * width
-
-                return "Rectangle ka area ${formatNumber(area)} square units hai, Boss."
-            }
+            return "The area of the rectangle is ${formatNumber(area)} square units."
         }
 
-        // =========================================================
+        // ---------------------------------------------------------
         // RECTANGLE PERIMETER
-        // =========================================================
+        // ---------------------------------------------------------
 
-        match = Regex(
-            """(?:rectangle|rectangle ka)\s*(?:perimeter)\s*(?:length)?\s*(\d+(?:\.\d+)?)\s*(?:and|aur|by|x|×)\s*(?:width)?\s*(\d+(?:\.\d+)?)"""
-        ).find(c)
+        Regex(
+            """(?:perimeter\s+of\s+)?rectangle\s+(?:with\s+)?length\s+(\d+(?:\.\d+)?)\s+(?:and|aur)\s+width\s+(\d+(?:\.\d+)?)"""
+        ).find(c)?.let {
 
-        if (match != null) {
+            val length = it.groupValues[1].toDouble()
+            val width = it.groupValues[2].toDouble()
 
-            val length =
-                match.groupValues[1].toDoubleOrNull()
+            val perimeter = 2 * (length + width)
 
-            val width =
-                match.groupValues[2].toDoubleOrNull()
-
-            if (length != null && width != null) {
-
-                val perimeter =
-                    2.0 * (length + width)
-
-                return "Rectangle ka perimeter ${formatNumber(perimeter)} units hai, Boss."
-            }
+            return "The perimeter of the rectangle is ${formatNumber(perimeter)} units."
         }
 
         return null
     }
 
-    // =========================================================
+    // -------------------------------------------------------------
     // PRIME CHECK
-    // =========================================================
+    // -------------------------------------------------------------
 
-    private fun isPrime(
-        number: Long
-    ): Boolean {
+    private fun isPrime(number: Long): Boolean {
 
-        if (number < 2L) {
+        if (number < 2) {
             return false
         }
 
@@ -526,29 +438,25 @@ object AurixMathEngine {
             return false
         }
 
-        var divisor = 3L
+        var i = 3L
 
-        while (
-            divisor <= number / divisor
-        ) {
+        while (i * i <= number) {
 
-            if (number % divisor == 0L) {
+            if (number % i == 0L) {
                 return false
             }
 
-            divisor += 2L
+            i += 2
         }
 
         return true
     }
 
-    // =========================================================
+    // -------------------------------------------------------------
     // FACTORIAL
-    // =========================================================
+    // -------------------------------------------------------------
 
-    private fun factorial(
-        number: Int
-    ): Long {
+    private fun factorial(number: Int): Long {
 
         var result = 1L
 
@@ -559,96 +467,54 @@ object AurixMathEngine {
         return result
     }
 
-    // =========================================================
+    // -------------------------------------------------------------
     // GCD / HCF
-    // =========================================================
+    // -------------------------------------------------------------
 
-    private fun gcd(
-        first: Long,
-        second: Long
-    ): Long {
+    private fun gcd(a: Long, b: Long): Long {
 
-        var a = abs(first)
-        var b = abs(second)
+        var x = kotlin.math.abs(a)
+        var y = kotlin.math.abs(b)
 
-        while (b != 0L) {
+        while (y != 0L) {
 
-            val remainder =
-                a % b
-
-            a = b
-            b = remainder
+            val temp = x % y
+            x = y
+            y = temp
         }
 
-        return a
+        return x
     }
 
-    // =========================================================
+    // -------------------------------------------------------------
     // LCM
-    // =========================================================
+    // -------------------------------------------------------------
 
-    private fun lcm(
-        first: Long,
-        second: Long
-    ): Long {
+    private fun lcm(a: Long, b: Long): Long {
 
-        if (
-            first == 0L ||
-            second == 0L
-        ) {
+        if (a == 0L || b == 0L) {
             return 0L
         }
 
-        return abs(
-            (first / gcd(first, second)) * second
-        )
+        return kotlin.math.abs((a / gcd(a, b)) * b)
     }
 
-    // =========================================================
-    // EXTRACT NUMBERS
-    // =========================================================
+    // -------------------------------------------------------------
+    // NUMBER FORMAT
+    // -------------------------------------------------------------
 
-    private fun extractNumbers(
-        text: String
-    ): List<Double> {
+    private fun formatNumber(value: Double): String {
 
-        return Regex(
-            """-?\d+(?:\.\d+)?"""
-        )
-            .findAll(text)
-            .mapNotNull {
-                it.value.toDoubleOrNull()
-            }
-            .toList()
-    }
-
-    // =========================================================
-    // NUMBER FORMATTER
-    // =========================================================
-
-    private fun formatNumber(
-        value: Double
-    ): String {
-
-        if (
-            value.isNaN() ||
-            value.isInfinite()
-        ) {
+        if (value.isNaN() || value.isInfinite()) {
             return value.toString()
         }
 
-        if (
-            value == value.toLong().toDouble()
-        ) {
-            return value.toLong().toString()
+        return if (value == value.toLong().toDouble()) {
+            value.toLong().toString()
+        } else {
+            String.format("%.4f", value)
+                .trimEnd('0')
+                .trimEnd('.')
         }
-
-        return String.format(
-            Locale.US,
-            "%.6f",
-            value
-        )
-            .trimEnd('0')
-            .trimEnd('.')
     }
 }
