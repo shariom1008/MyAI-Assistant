@@ -17,6 +17,22 @@ object AurixKnowledgeEngine {
         }
 
         // =====================================================
+        // PERIODIC TABLE — 118 ELEMENTS
+        // =====================================================
+
+        AurixPeriodicTable.answer(c)?.let {
+            return it
+        }
+
+        // =====================================================
+        // PHARMACEUTICAL INDUSTRY
+        // =====================================================
+
+        AurixPharmaEngine.answer(c)?.let {
+            return it
+        }
+
+        // =====================================================
         // GENERAL KNOWLEDGE — CAPITALS
         // =====================================================
 
@@ -268,7 +284,14 @@ object AurixKnowledgeEngine {
         if (
             c.contains("chemical formula of water") ||
             c.contains("water ka formula") ||
-            c.contains("paani ka formula")
+            c.contains("water ka chemical formula") ||
+            c.contains("water chemical formula") ||
+            c.contains("paani ka formula") ||
+            c.contains("paani ka chemical formula") ||
+            c.contains("pani ka formula") ||
+            c.contains("pani ka chemical formula") ||
+            c.contains("formula of water") ||
+            c == "h2o"
         ) {
             return "Water ka chemical formula H2O hai, Boss."
         }
@@ -385,7 +408,7 @@ object AurixKnowledgeEngine {
         }
 
         // =====================================================
-        // SIMPLE UNIT CONVERSIONS
+        // UNIT CONVERSIONS
         // =====================================================
 
         if (
@@ -541,7 +564,7 @@ object AurixKnowledgeEngine {
         }
 
         // =====================================================
-        // TIME / SPEED / BASIC FACTS
+        // BASIC FACTS
         // =====================================================
 
         if (
