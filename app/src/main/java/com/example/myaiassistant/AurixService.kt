@@ -1730,17 +1730,13 @@ if (
         // =====================================================
         // FINAL AI FALLBACK
         // =====================================================
-           
-        if (aiRequestInProgress) {
+           if (aiRequestInProgress) {
     return
 }
 
 aiRequestInProgress = true
 
-sendStatus(
-    TYPE_STATUS,
-    "THINKING"
-)
+sendStatus("THINKING")
 
 AurixAI.ask(
     command
@@ -1748,27 +1744,17 @@ AurixAI.ask(
 
     aiRequestInProgress = false
 
-    if (
-        answer.isBlank()
-    ) {
-        sendStatus(
-            TYPE_STATUS,
-            "ERROR"
-        )
+    if (answer.isBlank()) {
+        sendStatus("ERROR")
         return@ask
     }
 
     val finalAnswer =
         aurixResponse(answer)
 
-    sendStatus(
-        TYPE_STATUS,
-        "SPEAKING"
-    )
+    sendStatus("SPEAKING")
 
-    sendSpeak(
-        finalAnswer
-    )
+    sendSpeak(finalAnswer)
 
     textToSpeech?.speak(
         finalAnswer,
