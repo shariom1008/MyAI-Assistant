@@ -1702,6 +1702,24 @@ if (
         }
 
         // =====================================================
+        // LOCAL KNOWLEDGE ENGINE
+        // =====================================================
+
+val knowledgeResponse =
+    AurixKnowledgeEngine.answer(
+        command
+    )
+
+if (
+    !knowledgeResponse.isNullOrBlank()
+) {
+    speakOnce(
+        knowledgeResponse
+    )
+    return
+}
+
+        // =====================================================
         // NORMAL AURIX ROUTER
         // =====================================================
 
