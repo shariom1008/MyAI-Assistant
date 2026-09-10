@@ -24,7 +24,7 @@ object AurixAI {
     private const val MAX_RETRIES = 2
 
     private val API_KEY =
-        BuildConfig.MY_API_KEY
+    BuildConfig.GEMINI_API_KEY
 
 
     // =========================================================
