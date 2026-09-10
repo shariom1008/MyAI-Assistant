@@ -1701,6 +1701,31 @@ if (
             return
         }
 
+        val localIntentResponse =
+         AurixLocalIntentEngine.answer(command)
+
+        if (
+             !localIntentResponse.isNullOrBlank()
+) {
+    if (localIntentResponse == "TIME_LOCAL") {
+        val now = java.time.LocalTime.now()
+        val timeText =
+            now.format(
+                java.time.format.DateTimeFormatter.ofPattern("hh:mm a")
+            )
+
+        speakOnce(
+            "Abhi time $timeText hai, Boss."
+        )
+    } else {
+        speakOnce(
+            localIntentResponse
+        )
+    }
+
+    return
+}
+
         // =====================================================
         // LOCAL KNOWLEDGE ENGINE
         // =====================================================
