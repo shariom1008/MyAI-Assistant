@@ -2,7 +2,7 @@ package com.example.myaiassistant
 
 import java.util.Locale
 
-object AurixUnitEngine {
+object AurixDictionaryEngine {
 
     fun answer(command: String): String? {
 
