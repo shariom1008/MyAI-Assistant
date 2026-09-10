@@ -24,7 +24,18 @@ object AurixAI {
     private const val MAX_RETRIES = 2
 
     private val API_KEY =
-    BuildConfig.GEMINI_API_KEY
+        BuildConfig.MY_API_KEY
+
+
+    // =========================================================
+    // AURIX CONVERSATION MEMORY
+    // =========================================================
+
+    private val conversationHistory =
+        mutableListOf<Pair<String, String>>()
+
+    private const val MAX_HISTORY = 8
+
 
     // =========================================================
     // ASK AI
@@ -35,8 +46,23 @@ object AurixAI {
         callback: (String) -> Unit
     ) {
 
+        val cleanQuestion =
+            question.trim()
+
+        if (cleanQuestion.isBlank()) {
+
+            postResult(
+                "Boss, mujhe kuch sunai nahi diya.",
+                callback
+            )
+
+            return
+        }
+
+
         val now =
             System.currentTimeMillis()
+
 
         // -----------------------------------------------------
         // BLOCK DUPLICATE REQUESTS
@@ -51,6 +77,7 @@ object AurixAI {
 
             return
         }
+
 
         // -----------------------------------------------------
         // COOLDOWN
@@ -69,12 +96,15 @@ object AurixAI {
             return
         }
 
+
         requestInProgress = true
         lastRequestTime = now
+
 
         Thread {
 
             var attempt = 0
+
 
             while (
                 attempt <= MAX_RETRIES
@@ -82,74 +112,138 @@ object AurixAI {
 
                 try {
 
+                    // =================================================
+                    // GEMINI CONNECTION
+                    // =================================================
+
                     val url =
                         URL(
                             "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$API_KEY"
                         )
 
+
                     val connection =
                         url.openConnection()
                             as HttpURLConnection
 
+
                     connection.requestMethod =
                         "POST"
+
 
                     connection.connectTimeout =
                         15000
 
+
                     connection.readTimeout =
                         30000
+
 
                     connection.setRequestProperty(
                         "Content-Type",
                         "application/json"
                     )
 
+
                     connection.doOutput =
                         true
 
-                    // -------------------------------------------------
-                    // AURIX PERSONALITY PROMPT
-                    // -------------------------------------------------
+
+                    // =================================================
+                    // BUILD CONVERSATION CONTEXT
+                    // =================================================
+
+                    val historyText =
+                        synchronized(
+                            conversationHistory
+                        ) {
+
+                            conversationHistory
+                                .joinToString(
+                                    "\n"
+                                ) { item ->
+
+                                    """
+                                    User: ${item.first}
+                                    AURIX: ${item.second}
+                                    """.trimIndent()
+                                }
+                        }
+
+
+                    // =================================================
+                    // AURIX PERSONALITY + CONTEXT
+                    // =================================================
 
                     val prompt =
                         """
-                        You are AURIX, a helpful personal voice assistant.
+                        You are AURIX, a personal AI voice assistant.
 
-                        Answer the user's question accurately and naturally.
+                        Your personality:
+                        - Friendly
+                        - Intelligent
+                        - Calm
+                        - Helpful
+                        - Respectful
+                        - Slightly futuristic
+                        - Treat the user as "Boss" naturally
+                        - Never sound robotic
+                        - Never mention Gemini
 
-                        User question:
-                        $question
+                        IMPORTANT LANGUAGE RULES:
 
-                        If current or up-to-date information is required,
-                        answer based on available information.
+                        Reply in the same language style
+                        the user is using.
 
-                        Reply in natural Roman Hindi, Hinglish,
-                        or Haryanvi depending on the user's language
-                        and speaking style.
+                        If the user speaks English,
+                        reply in natural English.
 
-                        Never use Devanagari Hindi script.
+                        If the user speaks Hindi,
+                        reply in natural Roman Hindi.
+
+                        If the user speaks Hinglish,
+                        reply in natural Hinglish.
 
                         If the user speaks Haryanvi,
                         reply naturally in Haryanvi.
 
-                        If the user speaks Hindi,
-                        reply naturally in Hindi or Hinglish.
+                        NEVER use Devanagari Hindi script.
 
-                        If the user mixes Hindi, English and Haryanvi,
-                        naturally mix them too.
+                        IMPORTANT VOICE RULES:
 
-                        Keep the response conversational,
-                        concise and suitable for voice.
+                        Keep answers conversational
+                        and suitable for text-to-speech.
 
-                        Do not mention Gemini.
+                        Avoid unnecessary lists,
+                        symbols, markdown,
+                        and very long explanations
+                        unless the user specifically asks
+                        for detailed information.
+
+                        CONVERSATION CONTEXT:
+
+                        $historyText
+
+                        CURRENT USER MESSAGE:
+
+                        $cleanQuestion
+
+                        Answer the current user message
+                        using the conversation context when useful.
+
+                        Do not repeat the entire previous conversation.
 
                         Do not tell the user to open another app.
+
+                        Do not say that you are Gemini.
+
+                        You are AURIX.
                         """.trimIndent()
 
-                    // -------------------------------------------------
+
+                    // =================================================
                     // REQUEST BODY
-                    // -------------------------------------------------
+                    // =================================================
 
                     val requestBody =
                         JSONObject().apply {
@@ -178,6 +272,11 @@ object AurixAI {
                             )
                         }
 
+
+                    // =================================================
+                    // SEND REQUEST
+                    // =================================================
+
                     connection.outputStream.use {
 
                         it.write(
@@ -189,12 +288,14 @@ object AurixAI {
                         )
                     }
 
+
                     val responseCode =
                         connection.responseCode
 
-                    // -------------------------------------------------
+
+                    // =================================================
                     // SUCCESS
-                    // -------------------------------------------------
+                    // =================================================
 
                     if (
                         responseCode in 200..299
@@ -207,15 +308,18 @@ object AurixAI {
                                     it.readText()
                                 }
 
+
                         val response =
                             JSONObject(
                                 responseText
                             )
 
+
                         val candidates =
                             response.optJSONArray(
                                 "candidates"
                             )
+
 
                         val answer =
                             candidates
@@ -232,10 +336,13 @@ object AurixAI {
                                 )
                                 ?.trim()
 
+
                         requestInProgress =
                             false
 
+
                         connection.disconnect()
+
 
                         if (
                             answer.isNullOrBlank()
@@ -248,18 +355,49 @@ object AurixAI {
 
                         } else {
 
+                            // =========================================
+                            // SAVE CONVERSATION
+                            // =========================================
+
+                            synchronized(
+                                conversationHistory
+                            ) {
+
+                                conversationHistory.add(
+                                    Pair(
+                                        cleanQuestion,
+                                        answer
+                                    )
+                                )
+
+
+                                // Keep only latest conversations
+                                while (
+                                    conversationHistory.size >
+                                    MAX_HISTORY
+                                ) {
+
+                                    conversationHistory.removeAt(
+                                        0
+                                    )
+                                }
+                            }
+
+
                             postResult(
                                 answer,
                                 callback
                             )
                         }
 
+
                         return@Thread
                     }
 
-                    // -------------------------------------------------
+
+                    // =================================================
                     // RATE LIMIT / 429
-                    // -------------------------------------------------
+                    // =================================================
 
                     if (
                         responseCode == 429
@@ -267,22 +405,23 @@ object AurixAI {
 
                         connection.disconnect()
 
+
                         attempt++
+
 
                         if (
                             attempt <= MAX_RETRIES
                         ) {
 
-                            // Exponential backoff:
-                            // 2 sec → 4 sec
-
                             val waitTime =
                                 2000L *
                                     attempt
 
+
                             Thread.sleep(
                                 waitTime
                             )
+
 
                             continue
 
@@ -291,18 +430,21 @@ object AurixAI {
                             requestInProgress =
                                 false
 
+
                             postResult(
                                 "Boss, AI ki request limit abhi full hai. Thoda baad dobara try karte hain.",
                                 callback
                             )
 
+
                             return@Thread
                         }
                     }
 
-                    // -------------------------------------------------
+
+                    // =================================================
                     // OTHER HTTP ERRORS
-                    // -------------------------------------------------
+                    // =================================================
 
                     val errorText =
                         try {
@@ -318,23 +460,29 @@ object AurixAI {
                             ""
                         }
 
+
                     requestInProgress =
                         false
 
+
                     connection.disconnect()
 
+
                     postResult(
-                    "AI ERROR $responseCode: $errorText",
-                    callback
-                        )
+                        "AI ERROR $responseCode: $errorText",
+                        callback
+                    )
+
 
                     return@Thread
+
 
                 } catch (
                     e: Exception
                 ) {
 
                     attempt++
+
 
                     if (
                         attempt <= MAX_RETRIES
@@ -347,28 +495,50 @@ object AurixAI {
                         continue
                     }
 
+
                     requestInProgress =
                         false
+
 
                     postResult(
                         "AI ERROR: ${e.javaClass.simpleName}",
                         callback
                     )
 
+
                     return@Thread
                 }
             }
 
+
             requestInProgress =
                 false
+
 
             postResult(
                 "Boss, AI abhi available nahi hai.",
                 callback
             )
 
+
         }.start()
     }
+
+
+    // =========================================================
+    // CLEAR CONVERSATION
+    // =========================================================
+
+    fun clearConversation() {
+
+        synchronized(
+            conversationHistory
+        ) {
+
+            conversationHistory.clear()
+        }
+    }
+
 
     // =========================================================
     // MAIN THREAD RESPONSE
