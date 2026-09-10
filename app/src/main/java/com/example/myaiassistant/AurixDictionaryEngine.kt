@@ -42,7 +42,7 @@ object AurixDictionaryEngine {
         "sad" to WordMeaning(
             "feeling unhappy or sorrowful",
             "दुखी",
-            "unhappy, sorrowful, unhappy",
+            "unhappy, sorrowful",
             "happy, joyful"
         ),
 
@@ -61,10 +61,10 @@ object AurixDictionaryEngine {
         ),
 
         "beautiful" to WordMeaning(
-            "pleasing to the senses or mind",
+            "pleasing and attractive in appearance",
             "सुंदर",
             "pretty, attractive, lovely",
-            "ugly, unattractive"
+            "ugly"
         ),
 
         "difficult" to WordMeaning(
@@ -179,13 +179,6 @@ object AurixDictionaryEngine {
             "possible"
         ),
 
-        "beautiful" to WordMeaning(
-            "pleasing and attractive in appearance",
-            "सुंदर",
-            "pretty, lovely, attractive",
-            "ugly"
-        ),
-
         "ugly" to WordMeaning(
             "unpleasant or unattractive in appearance",
             "बदसूरत",
@@ -268,13 +261,6 @@ object AurixDictionaryEngine {
             "शक्ति, ताकत",
             "strength, force, authority",
             "weakness"
-        ),
-
-        "beautiful" to WordMeaning(
-            "very attractive or pleasing",
-            "सुंदर",
-            "lovely, pretty, attractive",
-            "ugly"
         ),
 
         "dangerous" to WordMeaning(
@@ -487,27 +473,6 @@ object AurixDictionaryEngine {
             "illness, disease"
         ),
 
-        "happy" to WordMeaning(
-            "feeling pleasure or satisfaction",
-            "खुश",
-            "joyful, cheerful, glad",
-            "sad, unhappy"
-        ),
-
-        "beautiful" to WordMeaning(
-            "pleasing or attractive to look at",
-            "सुंदर",
-            "lovely, attractive, pretty",
-            "ugly"
-        ),
-
-        "strong" to WordMeaning(
-            "having great strength or power",
-            "मजबूत",
-            "powerful, tough, sturdy",
-            "weak"
-        ),
-
         "famous" to WordMeaning(
             "known by many people",
             "प्रसिद्ध",
@@ -541,8 +506,129 @@ object AurixDictionaryEngine {
             return null
         }
 
+        val hindi = isHindi(c)
+
         // ---------------------------------------------------------
-        // MEANING / MATLAB / ARTH
+        // PURE HINDI WORDS
+        // ---------------------------------------------------------
+
+        val hindiWords = mapOf(
+            "इंटेलिजेंट" to "intelligent",
+            "स्मार्ट" to "smart",
+            "क्लेवर" to "clever",
+            "हैप्पी" to "happy",
+            "सैड" to "sad",
+            "बहादुर" to "brave",
+            "ईमानदार" to "honest",
+            "सुंदर" to "beautiful",
+            "कठिन" to "difficult",
+            "आसान" to "easy",
+            "प्यार" to "love",
+            "प्रेम" to "love",
+            "दोस्त" to "friend",
+            "दुश्मन" to "enemy",
+            "सफलता" to "success",
+            "असफलता" to "failure",
+            "मजबूत" to "strong",
+            "कमजोर" to "weak",
+            "तेज" to "fast",
+            "धीमा" to "slow",
+            "गुस्सा" to "angry",
+            "शांत" to "calm",
+            "महत्वपूर्ण" to "important",
+            "संभव" to "possible",
+            "असंभव" to "impossible",
+            "बदसूरत" to "ugly",
+            "अमीर" to "rich",
+            "गरीब" to "poor",
+            "बड़ा" to "large",
+            "छोटा" to "small",
+            "शुरू" to "begin",
+            "समाप्त" to "end",
+            "मदद" to "help",
+            "समस्या" to "problem",
+            "समाधान" to "solution",
+            "ज्ञान" to "knowledge",
+            "ताकत" to "power",
+            "शक्ति" to "power",
+            "खतरनाक" to "dangerous",
+            "सुरक्षित" to "safe",
+            "सावधान" to "careful",
+            "लापरवाह" to "careless",
+            "शीघ्र" to "quick",
+            "साफ" to "clean",
+            "गंदा" to "dirty",
+            "नया" to "new",
+            "पुराना" to "old",
+            "युवा" to "young",
+            "जवान" to "young",
+            "दयालु" to "kind",
+            "क्रूर" to "cruel",
+            "सरल" to "simple",
+            "जटिल" to "complex",
+            "सही" to "correct",
+            "गलत" to "wrong",
+            "सच्चा" to "true",
+            "सत्य" to "true",
+            "झूठा" to "false",
+            "भविष्य" to "future",
+            "अतीत" to "past",
+            "वर्तमान" to "present",
+            "स्वतंत्रता" to "freedom",
+            "सम्मान" to "respect",
+            "विश्वास" to "trust",
+            "सपना" to "dream",
+            "जीवन" to "life",
+            "मृत्यु" to "death",
+            "स्वास्थ्य" to "health",
+            "प्रसिद्ध" to "famous",
+            "लोकप्रिय" to "popular"
+        )
+
+        // ---------------------------------------------------------
+        // HINDI MEANING
+        // Examples:
+        // इंटेलिजेंट का मतलब क्या है
+        // इंटेलिजेंट का अर्थ क्या है
+        // इंटेलिजेंट का meaning क्या है
+        // ---------------------------------------------------------
+
+        Regex(
+            """([^\s]+)\s+(?:का|की|के)\s+(?:मतलब|अर्थ|meaning)"""
+        ).find(c)?.let {
+
+            val hindiWord = it.groupValues[1]
+            val englishWord = hindiWords[hindiWord]
+
+            if (englishWord != null) {
+                dictionary[englishWord]?.let { entry ->
+                    return "$hindiWord का मतलब: ${entry.hindi}।"
+                }
+            }
+        }
+
+        // ---------------------------------------------------------
+        // HINDI "WORD MEANING"
+        // ---------------------------------------------------------
+
+        Regex(
+            """(?:meaning|मतलब|अर्थ)\s+(?:of|का|का\s+)?([^\s]+)"""
+        ).find(c)?.let {
+
+            val word = it.groupValues[1]
+            val englishWord = hindiWords[word] ?: word
+
+            dictionary[englishWord]?.let { entry ->
+                return if (hindi) {
+                    "$word का मतलब: ${entry.hindi}।"
+                } else {
+                    "The meaning of $englishWord is: ${entry.meaning}. Hindi meaning: ${entry.hindi}."
+                }
+            }
+        }
+
+        // ---------------------------------------------------------
+        // ENGLISH MEANING / MATLAB / ARTH
         // ---------------------------------------------------------
 
         val meaningPatterns = listOf(
@@ -565,7 +651,11 @@ object AurixDictionaryEngine {
 
                 dictionary[word]?.let { entry ->
 
-                    return "The meaning of $word is: ${entry.meaning}. Hindi meaning: ${entry.hindi}."
+                    return if (hindi) {
+                        "$word का मतलब: ${entry.hindi}।"
+                    } else {
+                        "The meaning of $word is: ${entry.meaning}. Hindi meaning: ${entry.hindi}."
+                    }
                 }
             }
         }
@@ -581,7 +671,11 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
-                return "Synonyms of $word are ${entry.synonyms}."
+                return if (hindi) {
+                    "$word के synonyms हैं: ${entry.synonyms}।"
+                } else {
+                    "Synonyms of $word are ${entry.synonyms}."
+                }
             }
         }
 
@@ -592,7 +686,11 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
-                return "Synonyms of $word are ${entry.synonyms}."
+                return if (hindi) {
+                    "$word के synonyms हैं: ${entry.synonyms}।"
+                } else {
+                    "Synonyms of $word are ${entry.synonyms}."
+                }
             }
         }
 
@@ -607,7 +705,11 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
-                return "Antonyms of $word are ${entry.antonyms}."
+                return if (hindi) {
+                    "$word के antonyms हैं: ${entry.antonyms}।"
+                } else {
+                    "Antonyms of $word are ${entry.antonyms}."
+                }
             }
         }
 
@@ -618,7 +720,11 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
-                return "Antonyms of $word are ${entry.antonyms}."
+                return if (hindi) {
+                    "$word के antonyms हैं: ${entry.antonyms}।"
+                } else {
+                    "Antonyms of $word are ${entry.antonyms}."
+                }
             }
         }
 
@@ -633,10 +739,22 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
-                return "The meaning of $word is: ${entry.meaning}. Hindi meaning: ${entry.hindi}."
+                return if (hindi) {
+                    "$word का मतलब: ${entry.hindi}।"
+                } else {
+                    "The meaning of $word is: ${entry.meaning}. Hindi meaning: ${entry.hindi}."
+                }
             }
         }
 
         return null
+    }
+
+    // -------------------------------------------------------------
+    // HINDI LANGUAGE DETECTION
+    // -------------------------------------------------------------
+
+    private fun isHindi(command: String): Boolean {
+        return command.any { it in '\u0900'..'\u097F' }
     }
 }
