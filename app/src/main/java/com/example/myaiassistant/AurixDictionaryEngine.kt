@@ -1,364 +1,642 @@
 package com.example.myaiassistant
 
-import java.util.Locale
-
 object AurixDictionaryEngine {
+
+    private data class WordMeaning(
+        val meaning: String,
+        val hindi: String,
+        val synonyms: String,
+        val antonyms: String
+    )
+
+    private val dictionary = mapOf(
+
+        "intelligent" to WordMeaning(
+            "having a good ability to learn, understand and think",
+            "बुद्धिमान",
+            "smart, clever, bright",
+            "stupid, foolish"
+        ),
+
+        "smart" to WordMeaning(
+            "clever and quick to understand things",
+            "होशियार",
+            "intelligent, clever, bright",
+            "stupid, foolish"
+        ),
+
+        "clever" to WordMeaning(
+            "quick to learn, understand or solve problems",
+            "चतुर, होशियार",
+            "smart, intelligent, bright",
+            "stupid, foolish"
+        ),
+
+        "happy" to WordMeaning(
+            "feeling pleasure, joy or satisfaction",
+            "खुश",
+            "joyful, cheerful, glad",
+            "sad, unhappy"
+        ),
+
+        "sad" to WordMeaning(
+            "feeling unhappy or sorrowful",
+            "दुखी",
+            "unhappy, sorrowful, unhappy",
+            "happy, joyful"
+        ),
+
+        "brave" to WordMeaning(
+            "having courage and not being afraid of danger",
+            "बहादुर",
+            "courageous, fearless, bold",
+            "cowardly, timid"
+        ),
+
+        "honest" to WordMeaning(
+            "truthful and sincere",
+            "ईमानदार",
+            "truthful, sincere, trustworthy",
+            "dishonest, deceitful"
+        ),
+
+        "beautiful" to WordMeaning(
+            "pleasing to the senses or mind",
+            "सुंदर",
+            "pretty, attractive, lovely",
+            "ugly, unattractive"
+        ),
+
+        "difficult" to WordMeaning(
+            "not easy to do, understand or solve",
+            "कठिन",
+            "hard, challenging, tough",
+            "easy, simple"
+        ),
+
+        "easy" to WordMeaning(
+            "not difficult; requiring little effort",
+            "आसान",
+            "simple, effortless",
+            "difficult, hard"
+        ),
+
+        "love" to WordMeaning(
+            "a strong feeling of affection or deep care",
+            "प्यार, प्रेम",
+            "affection, care, fondness",
+            "hate, dislike"
+        ),
+
+        "friend" to WordMeaning(
+            "a person whom you know and like",
+            "दोस्त, मित्र",
+            "companion, buddy, pal",
+            "enemy"
+        ),
+
+        "enemy" to WordMeaning(
+            "a person who is hostile or opposed to someone",
+            "दुश्मन, शत्रु",
+            "opponent, rival, adversary",
+            "friend, ally"
+        ),
+
+        "success" to WordMeaning(
+            "the achievement of a desired goal",
+            "सफलता",
+            "achievement, victory, accomplishment",
+            "failure, defeat"
+        ),
+
+        "failure" to WordMeaning(
+            "lack of success in achieving something",
+            "असफलता",
+            "defeat, unsuccessful result",
+            "success, achievement"
+        ),
+
+        "strong" to WordMeaning(
+            "having great physical or mental power",
+            "मजबूत",
+            "powerful, tough, sturdy",
+            "weak, fragile"
+        ),
+
+        "weak" to WordMeaning(
+            "lacking physical or mental strength",
+            "कमजोर",
+            "feeble, fragile, powerless",
+            "strong, powerful"
+        ),
+
+        "fast" to WordMeaning(
+            "moving or happening quickly",
+            "तेज",
+            "quick, rapid, speedy",
+            "slow"
+        ),
+
+        "slow" to WordMeaning(
+            "moving or happening at a low speed",
+            "धीमा",
+            "unhurried, sluggish",
+            "fast, quick"
+        ),
+
+        "angry" to WordMeaning(
+            "feeling strong annoyance or displeasure",
+            "गुस्सा, क्रोधित",
+            "furious, annoyed, irritated",
+            "calm, pleased"
+        ),
+
+        "calm" to WordMeaning(
+            "peaceful and without strong emotions",
+            "शांत",
+            "peaceful, relaxed, quiet",
+            "angry, agitated"
+        ),
+
+        "important" to WordMeaning(
+            "having great value, meaning or influence",
+            "महत्वपूर्ण",
+            "significant, valuable, essential",
+            "unimportant, insignificant"
+        ),
+
+        "possible" to WordMeaning(
+            "able to happen or be done",
+            "संभव",
+            "achievable, feasible",
+            "impossible"
+        ),
+
+        "impossible" to WordMeaning(
+            "not able to happen or be done",
+            "असंभव",
+            "unachievable, infeasible",
+            "possible"
+        ),
+
+        "beautiful" to WordMeaning(
+            "pleasing and attractive in appearance",
+            "सुंदर",
+            "pretty, lovely, attractive",
+            "ugly"
+        ),
+
+        "ugly" to WordMeaning(
+            "unpleasant or unattractive in appearance",
+            "बदसूरत",
+            "unattractive, unpleasant",
+            "beautiful, attractive"
+        ),
+
+        "rich" to WordMeaning(
+            "having a lot of money or valuable possessions",
+            "अमीर",
+            "wealthy, prosperous",
+            "poor"
+        ),
+
+        "poor" to WordMeaning(
+            "having little money or resources",
+            "गरीब",
+            "needy, impoverished",
+            "rich, wealthy"
+        ),
+
+        "large" to WordMeaning(
+            "big in size or amount",
+            "बड़ा",
+            "big, huge, enormous",
+            "small, tiny"
+        ),
+
+        "small" to WordMeaning(
+            "little in size or amount",
+            "छोटा",
+            "little, tiny, compact",
+            "large, huge"
+        ),
+
+        "begin" to WordMeaning(
+            "to start doing something",
+            "शुरू करना",
+            "start, commence",
+            "end, finish"
+        ),
+
+        "end" to WordMeaning(
+            "to finish or stop something",
+            "समाप्त करना",
+            "finish, conclude, stop",
+            "begin, start"
+        ),
+
+        "help" to WordMeaning(
+            "to make something easier for someone",
+            "मदद करना",
+            "assist, support, aid",
+            "hinder, obstruct"
+        ),
+
+        "problem" to WordMeaning(
+            "a difficult situation or question that needs a solution",
+            "समस्या",
+            "difficulty, issue, trouble",
+            "solution"
+        ),
+
+        "solution" to WordMeaning(
+            "an answer to a problem",
+            "समाधान",
+            "answer, resolution, remedy",
+            "problem"
+        ),
+
+        "knowledge" to WordMeaning(
+            "information and understanding gained through learning",
+            "ज्ञान",
+            "understanding, awareness, information",
+            "ignorance"
+        ),
+
+        "power" to WordMeaning(
+            "the ability or capacity to do something",
+            "शक्ति, ताकत",
+            "strength, force, authority",
+            "weakness"
+        ),
+
+        "beautiful" to WordMeaning(
+            "very attractive or pleasing",
+            "सुंदर",
+            "lovely, pretty, attractive",
+            "ugly"
+        ),
+
+        "dangerous" to WordMeaning(
+            "likely to cause harm or injury",
+            "खतरनाक",
+            "risky, hazardous, unsafe",
+            "safe, harmless"
+        ),
+
+        "safe" to WordMeaning(
+            "protected from danger or harm",
+            "सुरक्षित",
+            "secure, protected, harmless",
+            "dangerous, unsafe"
+        ),
+
+        "careful" to WordMeaning(
+            "giving attention to avoid mistakes or danger",
+            "सावधान",
+            "cautious, attentive, alert",
+            "careless, reckless"
+        ),
+
+        "careless" to WordMeaning(
+            "not giving enough attention",
+            "लापरवाह",
+            "negligent, inattentive",
+            "careful, cautious"
+        ),
+
+        "quick" to WordMeaning(
+            "moving or doing something with speed",
+            "तेज, शीघ्र",
+            "fast, rapid, speedy",
+            "slow"
+        ),
+
+        "quiet" to WordMeaning(
+            "making little or no noise",
+            "शांत",
+            "silent, peaceful, calm",
+            "loud, noisy"
+        ),
+
+        "loud" to WordMeaning(
+            "making a lot of noise",
+            "तेज आवाज वाला",
+            "noisy, booming",
+            "quiet, silent"
+        ),
+
+        "clean" to WordMeaning(
+            "free from dirt or unwanted matter",
+            "साफ",
+            "pure, spotless, tidy",
+            "dirty, unclean"
+        ),
+
+        "dirty" to WordMeaning(
+            "covered with dirt or not clean",
+            "गंदा",
+            "unclean, filthy",
+            "clean"
+        ),
+
+        "new" to WordMeaning(
+            "recently made, created or acquired",
+            "नया",
+            "recent, fresh, modern",
+            "old"
+        ),
+
+        "old" to WordMeaning(
+            "having existed for a long time",
+            "पुराना",
+            "aged, ancient",
+            "new, young"
+        ),
+
+        "young" to WordMeaning(
+            "having lived for a relatively short time",
+            "युवा, जवान",
+            "youthful, juvenile",
+            "old, aged"
+        ),
+
+        "kind" to WordMeaning(
+            "having a friendly and caring nature",
+            "दयालु",
+            "caring, gentle, helpful",
+            "cruel, unkind"
+        ),
+
+        "cruel" to WordMeaning(
+            "causing pain or suffering without concern",
+            "क्रूर",
+            "harsh, brutal, heartless",
+            "kind, compassionate"
+        ),
+
+        "simple" to WordMeaning(
+            "easy to understand or do",
+            "सरल",
+            "easy, basic, straightforward",
+            "complex, difficult"
+        ),
+
+        "complex" to WordMeaning(
+            "complicated and not easy to understand",
+            "जटिल",
+            "complicated, difficult",
+            "simple, easy"
+        ),
+
+        "correct" to WordMeaning(
+            "free from mistakes or errors",
+            "सही",
+            "right, accurate, proper",
+            "wrong, incorrect"
+        ),
+
+        "wrong" to WordMeaning(
+            "not correct or accurate",
+            "गलत",
+            "incorrect, mistaken",
+            "correct, right"
+        ),
+
+        "true" to WordMeaning(
+            "in accordance with fact or reality",
+            "सच्चा, सत्य",
+            "correct, factual, genuine",
+            "false, untrue"
+        ),
+
+        "false" to WordMeaning(
+            "not true or correct",
+            "झूठा, असत्य",
+            "untrue, incorrect, fake",
+            "true, genuine"
+        ),
+
+        "future" to WordMeaning(
+            "the time that is yet to come",
+            "भविष्य",
+            "tomorrow, coming time",
+            "past"
+        ),
+
+        "past" to WordMeaning(
+            "the time that has already happened",
+            "अतीत, बीता हुआ समय",
+            "history, previous time",
+            "future"
+        ),
+
+        "present" to WordMeaning(
+            "the time happening now",
+            "वर्तमान",
+            "now, current time",
+            "past, future"
+        ),
+
+        "freedom" to WordMeaning(
+            "the state of being free",
+            "स्वतंत्रता",
+            "liberty, independence",
+            "slavery, restriction"
+        ),
+
+        "respect" to WordMeaning(
+            "a feeling of admiration or regard",
+            "सम्मान",
+            "admiration, regard, honor",
+            "disrespect, contempt"
+        ),
+
+        "trust" to WordMeaning(
+            "firm belief in someone's reliability or truth",
+            "विश्वास",
+            "confidence, faith, belief",
+            "doubt, distrust"
+        ),
+
+        "dream" to WordMeaning(
+            "a strongly desired goal or aspiration",
+            "सपना",
+            "ambition, aspiration, vision",
+            "reality"
+        ),
+
+        "life" to WordMeaning(
+            "the condition of being alive",
+            "जीवन",
+            "existence, living",
+            "death"
+        ),
+
+        "death" to WordMeaning(
+            "the end of life",
+            "मृत्यु",
+            "passing, demise",
+            "life"
+        ),
+
+        "health" to WordMeaning(
+            "the condition of physical and mental well-being",
+            "स्वास्थ्य",
+            "well-being, fitness",
+            "illness, disease"
+        ),
+
+        "happy" to WordMeaning(
+            "feeling pleasure or satisfaction",
+            "खुश",
+            "joyful, cheerful, glad",
+            "sad, unhappy"
+        ),
+
+        "beautiful" to WordMeaning(
+            "pleasing or attractive to look at",
+            "सुंदर",
+            "lovely, attractive, pretty",
+            "ugly"
+        ),
+
+        "strong" to WordMeaning(
+            "having great strength or power",
+            "मजबूत",
+            "powerful, tough, sturdy",
+            "weak"
+        ),
+
+        "famous" to WordMeaning(
+            "known by many people",
+            "प्रसिद्ध",
+            "well-known, renowned, popular",
+            "unknown, obscure"
+        ),
+
+        "popular" to WordMeaning(
+            "liked or admired by many people",
+            "लोकप्रिय",
+            "famous, liked, well-liked",
+            "unpopular"
+        ),
+
+        "honor" to WordMeaning(
+            "high respect or great esteem",
+            "सम्मान",
+            "respect, dignity, esteem",
+            "disgrace, dishonor"
+        )
+    )
 
     fun answer(command: String): String? {
 
         val c = command
-            .lowercase(Locale.getDefault())
+            .lowercase()
             .trim()
             .replace(Regex("\\s+"), " ")
 
-        if (c.isBlank()) return null
-
-        // =========================================================
-        // LENGTH
-        // =========================================================
-
-        var match = Regex(
-            """(\d+(?:\.\d+)?)\s*(km|kilometer|kilometers)\s*(?:to|mein|me)?\s*(m|meter|meters)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} kilometer = ${format(value * 1000)} meter, Boss."
+        if (c.isBlank()) {
+            return null
         }
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(m|meter|meters)\s*(?:to|mein|me)?\s*(cm|centimeter|centimeters)"""
-        ).find(c)
+        // ---------------------------------------------------------
+        // MEANING / MATLAB / ARTH
+        // ---------------------------------------------------------
 
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} meter = ${format(value * 100)} centimeter, Boss."
+        val meaningPatterns = listOf(
+            Regex("""meaning\s+of\s+([a-z]+)"""),
+            Regex("""meaning\s+of\s+the\s+word\s+([a-z]+)"""),
+            Regex("""matlab\s+(?:of\s+)?([a-z]+)"""),
+            Regex("""([a-z]+)\s+ka\s+meaning"""),
+            Regex("""([a-z]+)\s+ka\s+matlab"""),
+            Regex("""([a-z]+)\s+ka\s+arth"""),
+            Regex("""what\s+does\s+([a-z]+)\s+mean"""),
+            Regex("""define\s+([a-z]+)"""),
+            Regex("""definition\s+of\s+([a-z]+)""")
+        )
+
+        for (pattern in meaningPatterns) {
+
+            pattern.find(c)?.let {
+
+                val word = it.groupValues[1]
+
+                dictionary[word]?.let { entry ->
+
+                    return "The meaning of $word is: ${entry.meaning}. Hindi meaning: ${entry.hindi}."
+                }
+            }
         }
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(cm|centimeter|centimeters)\s*(?:to|mein|me)?\s*(mm|millimeter|millimeters)"""
-        ).find(c)
+        // ---------------------------------------------------------
+        // SYNONYMS
+        // ---------------------------------------------------------
 
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} centimeter = ${format(value * 10)} millimeter, Boss."
+        Regex(
+            """(?:synonym|synonyms)\s+(?:of\s+)?([a-z]+)"""
+        ).find(c)?.let {
+
+            val word = it.groupValues[1]
+
+            dictionary[word]?.let { entry ->
+                return "Synonyms of $word are ${entry.synonyms}."
+            }
         }
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(m|meter|meters)\s*(?:to|mein|me)?\s*(ft|feet|foot)"""
-        ).find(c)
+        Regex(
+            """([a-z]+)\s+(?:ke\s+)?synonyms"""
+        ).find(c)?.let {
 
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} meter = ${format(value * 3.28084)} feet, Boss."
+            val word = it.groupValues[1]
+
+            dictionary[word]?.let { entry ->
+                return "Synonyms of $word are ${entry.synonyms}."
+            }
         }
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(ft|feet|foot)\s*(?:to|mein|me)?\s*(m|meter|meters)"""
-        ).find(c)
+        // ---------------------------------------------------------
+        // ANTONYMS
+        // ---------------------------------------------------------
 
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} feet = ${format(value * 0.3048)} meter, Boss."
+        Regex(
+            """(?:antonym|antonyms)\s+(?:of\s+)?([a-z]+)"""
+        ).find(c)?.let {
+
+            val word = it.groupValues[1]
+
+            dictionary[word]?.let { entry ->
+                return "Antonyms of $word are ${entry.antonyms}."
+            }
         }
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(inch|inches|in)\s*(?:to|mein|me)?\s*(cm|centimeter|centimeters)"""
-        ).find(c)
+        Regex(
+            """([a-z]+)\s+(?:ke\s+)?antonyms"""
+        ).find(c)?.let {
 
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} inch = ${format(value * 2.54)} centimeter, Boss."
+            val word = it.groupValues[1]
+
+            dictionary[word]?.let { entry ->
+                return "Antonyms of $word are ${entry.antonyms}."
+            }
         }
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(mile|miles)\s*(?:to|mein|me)?\s*(km|kilometer|kilometers)"""
-        ).find(c)
+        // ---------------------------------------------------------
+        // SIMPLE "WORD MEANING"
+        // ---------------------------------------------------------
 
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} mile = ${format(value * 1.609344)} kilometer, Boss."
-        }
+        Regex(
+            """([a-z]+)\s+meaning"""
+        ).find(c)?.let {
 
-        // =========================================================
-        // WEIGHT
-        // =========================================================
+            val word = it.groupValues[1]
 
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(kg|kilogram|kilograms)\s*(?:to|mein|me)?\s*(g|gram|grams)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} kilogram = ${format(value * 1000)} gram, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(g|gram|grams)\s*(?:to|mein|me)?\s*(mg|milligram|milligrams)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} gram = ${format(value * 1000)} milligram, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(ton|tons|tonne|tonnes)\s*(?:to|mein|me)?\s*(kg|kilogram|kilograms)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} ton = ${format(value * 1000)} kilogram, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(lb|lbs|pound|pounds)\s*(?:to|mein|me)?\s*(kg|kilogram|kilograms)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} pound = ${format(value * 0.45359237)} kilogram, Boss."
-        }
-
-        // =========================================================
-        // VOLUME
-        // =========================================================
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(l|liter|liters|litre|litres)\s*(?:to|mein|me)?\s*(ml|milliliter|milliliters|millilitre|millilitres)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} liter = ${format(value * 1000)} milliliter, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(ml|milliliter|milliliters)\s*(?:to|mein|me)?\s*(l|liter|liters)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} milliliter = ${format(value / 1000)} liter, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(gallon|gallons)\s*(?:to|mein|me)?\s*(l|liter|liters)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} gallon = ${format(value * 3.785411784)} liter, Boss."
-        }
-
-        // =========================================================
-        // TEMPERATURE
-        // =========================================================
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:degree\s*)?(?:c|celsius)\s*(?:to|mein|me)?\s*(?:f|fahrenheit)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            val result = (value * 9.0 / 5.0) + 32.0
-            return "${format(value)} degree Celsius = ${format(result)} degree Fahrenheit, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:degree\s*)?(?:f|fahrenheit)\s*(?:to|mein|me)?\s*(?:c|celsius)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            val result = (value - 32.0) * 5.0 / 9.0
-            return "${format(value)} degree Fahrenheit = ${format(result)} degree Celsius, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:degree\s*)?(?:c|celsius)\s*(?:to|mein|me)?\s*(?:k|kelvin)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} degree Celsius = ${format(value + 273.15)} Kelvin, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:k|kelvin)\s*(?:to|mein|me)?\s*(?:c|celsius)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} Kelvin = ${format(value - 273.15)} degree Celsius, Boss."
-        }
-
-        // =========================================================
-        // SPEED
-        // =========================================================
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:km/h|kmph|kph)\s*(?:to|mein|me)?\s*(?:m/s|mps)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} km/h = ${format(value / 3.6)} m/s, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:m/s|mps)\s*(?:to|mein|me)?\s*(?:km/h|kmph|kph)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} m/s = ${format(value * 3.6)} km/h, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:mph|mile per hour|miles per hour)\s*(?:to|mein|me)?\s*(?:km/h|kmph|kph)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} mph = ${format(value * 1.609344)} km/h, Boss."
-        }
-
-        // =========================================================
-        // AREA
-        // =========================================================
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:sq\s*ft|square feet|square foot)\s*(?:to|mein|me)?\s*(?:sq\s*m|square meter|square meters)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} square feet = ${format(value * 0.09290304)} square meter, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:sq\s*m|square meter|square meters)\s*(?:to|mein|me)?\s*(?:sq\s*ft|square feet|square foot)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} square meter = ${format(value * 10.7639104167)} square feet, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:acre|acres)\s*(?:to|mein|me)?\s*(?:sq\s*ft|square feet|square foot)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} acre = ${format(value * 43560.0)} square feet, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:hectare|hectares|ha)\s*(?:to|mein|me)?\s*(?:acre|acres)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} hectare = ${format(value * 2.47105381)} acres, Boss."
-        }
-
-        // =========================================================
-        // PRESSURE
-        // =========================================================
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:bar|bars)\s*(?:to|mein|me)?\s*(?:psi)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} bar = ${format(value * 14.5037738)} PSI, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:psi)\s*(?:to|mein|me)?\s*(?:bar|bars)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} PSI = ${format(value * 0.0689475729)} bar, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:bar|bars)\s*(?:to|mein|me)?\s*(?:pa|pascal|pascals)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} bar = ${format(value * 100000.0)} Pascal, Boss."
-        }
-
-        // =========================================================
-        // TIME
-        // =========================================================
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:hour|hours|hr|hrs)\s*(?:to|mein|me)?\s*(?:minute|minutes|min)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} hour = ${format(value * 60)} minutes, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:minute|minutes|min)\s*(?:to|mein|me)?\s*(?:second|seconds|sec|secs)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} minute = ${format(value * 60)} seconds, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:day|days)\s*(?:to|mein|me)?\s*(?:hour|hours|hr|hrs)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} day = ${format(value * 24)} hours, Boss."
-        }
-
-        match = Regex(
-            """(\d+(?:\.\d+)?)\s*(?:week|weeks)\s*(?:to|mein|me)?\s*(?:day|days)"""
-        ).find(c)
-
-        if (match != null) {
-            val value = match.groupValues[1].toDouble()
-            return "${format(value)} week = ${format(value * 7)} days, Boss."
+            dictionary[word]?.let { entry ->
+                return "The meaning of $word is: ${entry.meaning}. Hindi meaning: ${entry.hindi}."
+            }
         }
 
         return null
-    }
-
-    private fun format(value: Double): String {
-
-        if (
-            value.isNaN() ||
-            value.isInfinite()
-        ) {
-            return value.toString()
-        }
-
-        if (
-            value == value.toLong().toDouble()
-        ) {
-            return value.toLong().toString()
-        }
-
-        return String.format(
-            Locale.US,
-            "%.6f",
-            value
-        )
-            .trimEnd('0')
-            .trimEnd('.')
     }
 }
