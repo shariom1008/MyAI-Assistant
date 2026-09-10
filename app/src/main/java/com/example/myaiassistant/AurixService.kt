@@ -543,44 +543,19 @@ override fun
         if (command.isBlank()) {
             return
         }
-
-        currentUserCommand =
-    rawCommand.trim()
-
+        // =========================================================
+// AURIX OWNER / CREATOR COMMAND
 // =========================================================
-// AURIX OWNER / CREATOR
-// =========================================================
-
-val lowerCommand =
-    command.lowercase(
-        Locale.getDefault()
-    ).trim()
 
 if (
-    lowerCommand.contains(
-        "tumhe kisne banaya"
-    ) ||
-    lowerCommand.contains(
-        "tumhe kisne banaya hai"
-    ) ||
-    lowerCommand.contains(
-        "tumhara owner kaun"
-    ) ||
-    lowerCommand.contains(
-        "tumhara malik kaun"
-    ) ||
-    lowerCommand.contains(
-        "who created you"
-    ) ||
-    lowerCommand.contains(
-        "who made you"
-    ) ||
-    lowerCommand.contains(
-        "who is your owner"
-    ) ||
-    lowerCommand.contains(
-        "who is your creator"
-    )
+    command.contains("tumhe kisne banaya") ||
+    command.contains("tumhe kisne banaya hai") ||
+    command.contains("tumhara owner kaun") ||
+    command.contains("tumhara malik kaun") ||
+    command.contains("who created you") ||
+    command.contains("who made you") ||
+    command.contains("who is your owner") ||
+    command.contains("who is your creator")
 ) {
 
     speakOnce(
@@ -589,15 +564,16 @@ if (
 
     return
 }
+currentUserCommand =
+        rawCommand.trim()
 
-AurixMemoryBridge.initialize(
-    this
-)
+    AurixMemoryBridge.initialize(
+        this
+    )
 
-sendStatus(
-    "THINKING"
-)
-
+    sendStatus(
+        "THINKING"
+    )
 
         // =====================================================
         // CONTEXT RESOLUTION
