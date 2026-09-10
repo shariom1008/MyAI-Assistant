@@ -586,11 +586,7 @@ object AurixDictionaryEngine {
         )
 
         // ---------------------------------------------------------
-        // HINDI MEANING
-        // Examples:
-        // इंटेलिजेंट का मतलब क्या है
-        // इंटेलिजेंट का अर्थ क्या है
-        // इंटेलिजेंट का meaning क्या है
+        // HINDI SCRIPT WORD + MEANING
         // ---------------------------------------------------------
 
         Regex(
@@ -601,24 +597,27 @@ object AurixDictionaryEngine {
             val englishWord = hindiWords[hindiWord]
 
             if (englishWord != null) {
+
                 dictionary[englishWord]?.let { entry ->
+
                     return "$hindiWord का मतलब: ${entry.hindi}।"
                 }
             }
         }
 
         // ---------------------------------------------------------
-        // HINDI "WORD MEANING"
+        // HINDI / HINGLISH WORD MEANING
         // ---------------------------------------------------------
 
         Regex(
-            """(?:meaning|मतलब|अर्थ)\s+(?:of|का|का\s+)?([^\s]+)"""
+            """(?:meaning|मतलब|अर्थ)\s+(?:of|का|की|के)?\s*([a-z]+)"""
         ).find(c)?.let {
 
             val word = it.groupValues[1]
             val englishWord = hindiWords[word] ?: word
 
             dictionary[englishWord]?.let { entry ->
+
                 return if (hindi) {
                     "$word का मतलब: ${entry.hindi}।"
                 } else {
@@ -628,19 +627,56 @@ object AurixDictionaryEngine {
         }
 
         // ---------------------------------------------------------
-        // ENGLISH MEANING / MATLAB / ARTH
+        // ENGLISH / HINGLISH MEANING
         // ---------------------------------------------------------
 
         val meaningPatterns = listOf(
+
             Regex("""meaning\s+of\s+([a-z]+)"""),
-            Regex("""meaning\s+of\s+the\s+word\s+([a-z]+)"""),
-            Regex("""matlab\s+(?:of\s+)?([a-z]+)"""),
-            Regex("""([a-z]+)\s+ka\s+meaning"""),
-            Regex("""([a-z]+)\s+ka\s+matlab"""),
-            Regex("""([a-z]+)\s+ka\s+arth"""),
-            Regex("""what\s+does\s+([a-z]+)\s+mean"""),
-            Regex("""define\s+([a-z]+)"""),
-            Regex("""definition\s+of\s+([a-z]+)""")
+
+            Regex(
+                """meaning\s+of\s+the\s+word\s+([a-z]+)"""
+            ),
+
+            Regex(
+                """matlab\s+(?:of\s+)?([a-z]+)"""
+            ),
+
+            Regex(
+                """([a-z]+)\s+ka\s+meaning"""
+            ),
+
+            Regex(
+                """([a-z]+)\s+ka\s+matlab"""
+            ),
+
+            Regex(
+                """([a-z]+)\s+ka\s+arth"""
+            ),
+
+            Regex(
+                """([a-z]+)\s+ka\s+meaning\s+(?:kya\s+hai)?"""
+            ),
+
+            Regex(
+                """([a-z]+)\s+ka\s+matlab\s+(?:kya\s+hai)?"""
+            ),
+
+            Regex(
+                """([a-z]+)\s+ka\s+arth\s+(?:kya\s+hai)?"""
+            ),
+
+            Regex(
+                """what\s+does\s+([a-z]+)\s+mean"""
+            ),
+
+            Regex(
+                """define\s+([a-z]+)"""
+            ),
+
+            Regex(
+                """definition\s+of\s+([a-z]+)"""
+            )
         )
 
         for (pattern in meaningPatterns) {
@@ -671,6 +707,7 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
+
                 return if (hindi) {
                     "$word के synonyms हैं: ${entry.synonyms}।"
                 } else {
@@ -686,6 +723,7 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
+
                 return if (hindi) {
                     "$word के synonyms हैं: ${entry.synonyms}।"
                 } else {
@@ -705,6 +743,7 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
+
                 return if (hindi) {
                     "$word के antonyms हैं: ${entry.antonyms}।"
                 } else {
@@ -720,6 +759,7 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
+
                 return if (hindi) {
                     "$word के antonyms हैं: ${entry.antonyms}।"
                 } else {
@@ -729,7 +769,7 @@ object AurixDictionaryEngine {
         }
 
         // ---------------------------------------------------------
-        // SIMPLE "WORD MEANING"
+        // SIMPLE WORD MEANING
         // ---------------------------------------------------------
 
         Regex(
@@ -739,6 +779,7 @@ object AurixDictionaryEngine {
             val word = it.groupValues[1]
 
             dictionary[word]?.let { entry ->
+
                 return if (hindi) {
                     "$word का मतलब: ${entry.hindi}।"
                 } else {
@@ -751,10 +792,70 @@ object AurixDictionaryEngine {
     }
 
     // -------------------------------------------------------------
-    // HINDI LANGUAGE DETECTION
+    // HINDI + HINGLISH LANGUAGE DETECTION
     // -------------------------------------------------------------
 
     private fun isHindi(command: String): Boolean {
-        return command.any { it in '\u0900'..'\u097F' }
+
+        // Hindi Devanagari script
+        if (command.any { it in '\u0900'..'\u097F' }) {
+            return true
+        }
+
+        val c = command.lowercase()
+
+        // Strong Hindi/Hinglish markers
+        val hindiMarkers = listOf(
+            "ka",
+            "ki",
+            "ke",
+            "kya",
+            "kitna",
+            "kitne",
+            "kitni",
+            "hai",
+            "hain",
+            "matlab",
+            "arth",
+            "aur",
+            "mein",
+            "me",
+            "se",
+            "ko",
+            "par",
+            "batao",
+            "bata",
+            "chahiye"
+        )
+
+        var markerCount = 0
+
+        for (marker in hindiMarkers) {
+
+            if (
+                Regex(
+                    """\b${Regex.escape(marker)}\b"""
+                ).containsMatchIn(c)
+            ) {
+                markerCount++
+            }
+        }
+
+        // Two or more Hindi markers = Hinglish
+        if (markerCount >= 2) {
+            return true
+        }
+
+        // Special case:
+        // 800 ka 25 percent
+        if (
+            Regex(
+                """\b\d+(?:\.\d+)?\s+ka\s+\d+(?:\.\d+)?\s*(?:percent|percentage|%)\b"""
+            ).containsMatchIn(c)
+        ) {
+            return true
+        }
+
+        return false
     }
 }
