@@ -543,19 +543,36 @@ override fun
         if (command.isBlank()) {
             return
         }
+
+        
         // =========================================================
-// AURIX OWNER / CREATOR COMMAND
+// AURIX LOCAL PRIORITY COMMANDS
+// OWNER + DATE + DAY + TIME
+// =========================================================
+
+// =========================================================
+// OWNER / CREATOR
 // =========================================================
 
 if (
-    command.contains("tumhe kisne banaya") ||
-    command.contains("tumhe kisne banaya hai") ||
+    command.contains("kisne banaya") ||
+    command.contains("kisne create kiya") ||
+    command.contains("kisne create kara") ||
+    command.contains("who made you") ||
+    command.contains("who created you") ||
+    command.contains("who is your creator") ||
+    command.contains("who is your owner") ||
     command.contains("tumhara owner kaun") ||
     command.contains("tumhara malik kaun") ||
-    command.contains("who created you") ||
-    command.contains("who made you") ||
-    command.contains("who is your owner") ||
-    command.contains("who is your creator")
+    command.contains("tumhara creator kaun") ||
+    (
+        command.contains("aurix") &&
+        (
+            command.contains("banaya") ||
+            command.contains("create") ||
+            command.contains("owner")
+        )
+    )
 ) {
 
     speakOnce(
@@ -564,17 +581,104 @@ if (
 
     return
 }
-currentUserCommand =
-        rawCommand.trim()
 
-    AurixMemoryBridge.initialize(
-        this
+
+// =========================================================
+// TIME
+// =========================================================
+
+if (
+    command == "time" ||
+    command.contains("what is the time") ||
+    command.contains("what's the time") ||
+    command.contains("tell me the time") ||
+    command.contains("current time") ||
+    command.contains("what time is it") ||
+    command.contains("time kya hai") ||
+    command.contains("abhi time") ||
+    command.contains("abhi kitne baje") ||
+    command.contains("kitne baje") ||
+    command.contains("kitne baj rahe") ||
+    command.contains("samay kya hai")
+) {
+
+    val time =
+        SimpleDateFormat(
+            "hh:mm a",
+            Locale.getDefault()
+        ).format(
+            Date()
+        )
+
+    speakOnce(
+        "The time is $time."
     )
 
-    sendStatus(
-        "THINKING"
+    return
+}
+
+
+// =========================================================
+// DATE
+// =========================================================
+
+if (
+    command.contains("date") ||
+    command.contains("today's date") ||
+    command.contains("today date") ||
+    command.contains("aaj ki date") ||
+    command.contains("aaj ka date") ||
+    command.contains("aaj ki tarikh") ||
+    command.contains("aaj ki tareekh") ||
+    command.contains("tarikh kya hai") ||
+    command.contains("tareekh kya hai")
+) {
+
+    val date =
+        SimpleDateFormat(
+            "EEEE, dd MMMM yyyy",
+            Locale.getDefault()
+        ).format(
+            Date()
+        )
+
+    speakOnce(
+        "Today is $date."
     )
 
+    return
+}
+
+
+// =========================================================
+// DAY
+// =========================================================
+
+if (
+    command == "day" ||
+    command.contains("what day") ||
+    command.contains("which day") ||
+    command.contains("aaj kaun sa din") ||
+    command.contains("aaj konsa din") ||
+    command.contains("aaj ka din") ||
+    command.contains("kaunsa din hai") ||
+    command.contains("konsa din hai")
+) {
+
+    val day =
+        SimpleDateFormat(
+            "EEEE",
+            Locale.getDefault()
+        ).format(
+            Date()
+        )
+
+    speakOnce(
+        "Today is $day."
+    )
+
+    return
+}
         // =====================================================
         // CONTEXT RESOLUTION
         // =====================================================
@@ -1061,46 +1165,46 @@ currentUserCommand =
             return
         }
 
-        // =====================================================
-        // TIME
-        // =====================================================
+      // =====================================================
+      // TIME
+      // =====================================================
 
-        if (
-            command == "time" ||
-            command.contains(
-                "what is the time"
-            ) ||
-            command.contains(
-                "what's the time"
-            ) ||
-            command.contains(
-                "tell me the time"
-            ) ||
-            command.contains(
-                "current time"
-            ) ||
-            command.contains(
-                "what time is it"
-            ) ||
-            command.contains(
-                "time kya hai"
-            )
-        ) {
+if (
+    command == "time" ||
 
-            val time =
-                SimpleDateFormat(
-                    "hh:mm a",
-                    Locale.getDefault()
-                ).format(
-                    Date()
-                )
+    command.contains("what is the time") ||
+    command.contains("what's the time") ||
+    command.contains("tell me the time") ||
+    command.contains("current time") ||
+    command.contains("what time is it") ||
 
-            speakOnce(
-                "The time is $time."
-            )
+    command.contains("time kya hai") ||
+    command.contains("abhi time kya hai") ||
+    command.contains("abhi kya time hai") ||
+    command.contains("abhi kitne baje hain") ||
+    command.contains("abhi kitne baje hai") ||
+    command.contains("kitne baje hain") ||
+    command.contains("kitne baje hai") ||
+    command.contains("kitne baj rahe hain") ||
+    command.contains("kitne baj rahe hai") ||
+    command.contains("abhi kitne baj rahe") ||
+    command.contains("samay kya hai")
+) {
 
-            return
-        }
+    val time =
+        SimpleDateFormat(
+            "hh:mm a",
+            Locale.getDefault()
+        ).format(
+            Date()
+        )
+
+    speakOnce(
+        "The time is $time."
+    )
+
+    return
+}
 
         // =====================================================
         // CAMERA
@@ -1288,92 +1392,7 @@ currentUserCommand =
             command == "youtube" ||
             command == "open youtube" ||
             command == "launch youtube"
-        ) {
-
-            openYouTube()
-            return
-        }
-
-        // =====================================================
-        // MAPS
-        // =====================================================
-
-        if (
-            command.startsWith(
-                "search maps"
-            ) ||
-            command.startsWith(
-                "maps search"
-            ) ||
-            command.startsWith(
-                "navigate to"
-            )
-        ) {
-
-            val query =
-                command
-                    .replaceFirst(
-                        "search maps",
-                        ""
-                    )
-                    .replaceFirst(
-                        "maps search",
-                        ""
-                    )
-                    .replaceFirst(
-                        "navigate to",
-                        ""
-                    )
-                    .trim()
-
-            if (
-                query.isNotBlank()
-            ) {
-
-                searchMaps(
-                    query
-                )
-
-            } else {
-
-                openMaps()
-            }
-
-            return
-        }
-
-        if (
-            command == "maps" ||
-            command == "open maps" ||
-            command == "google maps"
-        ) {
-
-            openMaps()
-            return
-        }
-
-        // =====================================================
-        // CHROME
-        // =====================================================
-
-        if (
-            command == "chrome" ||
-            command == "open chrome" ||
-            command == "browser" ||
-            command == "open browser"
-        ) {
-
-            openChrome()
-            return
-        }
-
-        // =====================================================
-        // PHONE
-        // =====================================================
-
-        if (
-            command == "phone" ||
-            command == "open phone" ||
+q
             command == "dialer" ||
             command == "open dialer"
         ) {
