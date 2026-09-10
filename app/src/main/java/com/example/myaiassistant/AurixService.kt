@@ -582,7 +582,35 @@ if (
     return
 }
 
+// =====================================================
+// PERSONAL & GENERAL KNOWLEDGE
+// =====================================================
 
+if (
+    command == "mera naam kya hai" ||
+    command == "mera name kya hai" ||
+    command == "what is my name" ||
+    command == "do you know my name"
+) {
+    speakOnce(
+        "Aapka naam Kushal Haryana hai, Boss."
+    )
+    return
+}
+
+if (
+    command.contains("india ki capital") ||
+    command.contains("india ki rajdhani") ||
+    command.contains("bharat ki rajdhani") ||
+    command.contains("bharat ki capital") ||
+    command.contains("capital of india") ||
+    command.contains("capital india")
+) {
+    speakOnce(
+        "India ki capital New Delhi hai, Boss."
+    )
+    return
+}
 // =========================================================
 // TIME
 // =========================================================
