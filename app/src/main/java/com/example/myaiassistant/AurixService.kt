@@ -1385,21 +1385,31 @@ if (
         }
 
         // =====================================================
-        // OPEN YOUTUBE
-        // =====================================================
+// OPEN YOUTUBE
+// =====================================================
 
-        if (
-            command == "youtube" ||
-            command == "open youtube" ||
-            command == "launch youtube" ||
+if (
+    command == "youtube" ||
+    command == "open youtube" ||
+    command == "launch youtube"
+) {
 
-            command == "dialer" ||
-            command == "open dialer"
-        ) {
+    openYouTube()
+    return
+}
 
-            openPhone()
-            return
-        }
+// =====================================================
+// DIALER
+// =====================================================
+
+if (
+    command == "dialer" ||
+    command == "open dialer"
+) {
+
+    openPhone()
+    return
+}
 
         // =====================================================
         // SETTINGS
