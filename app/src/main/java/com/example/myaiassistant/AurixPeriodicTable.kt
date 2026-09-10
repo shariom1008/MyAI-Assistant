@@ -1,4 +1,5 @@
 package com.example.myaiassistant
+
 import java.util.Locale
 
 data class AurixElement(
@@ -146,8 +147,12 @@ object AurixPeriodicTable {
             .lowercase(Locale.getDefault())
             .trim()
 
+        // ---------------------------------------------------------
+        // NUMBER BASED SEARCH
+        // ---------------------------------------------------------
+
         val numberMatch =
-            Regex("""\b(?:element|atomic number)\s*(\d{1,3})\b""")
+            Regex("""\b(?:element|atomic number|atomic no)\s*(\d{1,3})\b""")
                 .find(c)
 
         if (numberMatch != null) {
@@ -156,7 +161,7 @@ object AurixPeriodicTable {
         }
 
         val byNumber =
-            Regex("""\b(\d{1,3})\s*(?:element|atomic number)\b""")
+            Regex("""\b(\d{1,3})\s*(?:element|atomic number|atomic no)\b""")
                 .find(c)
 
         if (byNumber != null) {
@@ -164,14 +169,45 @@ object AurixPeriodicTable {
             return elements.firstOrNull { it.number == number }
         }
 
+        // ---------------------------------------------------------
+        // ELEMENT NAME / SYMBOL SEARCH
+        // ---------------------------------------------------------
+
         for (element in elements) {
 
+            val name = element.name.lowercase(Locale.getDefault())
+            val symbol = element.symbol.lowercase(Locale.getDefault())
+
             if (
-                c == element.name.lowercase() ||
-                c == element.symbol.lowercase() ||
-                c.contains("${element.name.lowercase()} element") ||
-                c.contains("element ${element.name.lowercase()}") ||
-                c.contains("${element.symbol.lowercase()} ka")
+                // Exact name / symbol
+                c == name ||
+                c == symbol ||
+
+                // English patterns
+                c.contains("$name element") ||
+                c.contains("element $name") ||
+                c.contains("atomic number of $name") ||
+                c.contains("atomic no of $name") ||
+                c.contains("atomic mass of $name") ||
+                c.contains("symbol of $name") ||
+
+                // Hinglish patterns
+                c.contains("$name ka") ||
+                c.contains("$name ki") ||
+                c.contains("$name ke") ||
+
+                // More specific Hinglish patterns
+                c.contains("$name ka atomic") ||
+                c.contains("$name ki atomic") ||
+                c.contains("$name ke atomic") ||
+                c.contains("$name ka chemical") ||
+                c.contains("$name ki chemical") ||
+                c.contains("$name ke chemical") ||
+
+                // Symbol based Hinglish
+                c.contains("$symbol ka") ||
+                c.contains("$symbol ki") ||
+                c.contains("$symbol ke")
             ) {
                 return element
             }
@@ -184,23 +220,59 @@ object AurixPeriodicTable {
 
         val element = find(command) ?: return null
 
-        val c = command.lowercase(Locale.getDefault())
+        val c = command
+            .lowercase(Locale.getDefault())
+            .trim()
 
         return when {
 
+            // -----------------------------------------------------
+            // SYMBOL
+            // -----------------------------------------------------
+
             c.contains("symbol") ||
-            c.contains("symbol kya") ->
+            c.contains("chemical symbol") ->
+
                 "${element.name} ka chemical symbol ${element.symbol} hai, Boss."
+
+            // -----------------------------------------------------
+            // ATOMIC NUMBER
+            // -----------------------------------------------------
 
             c.contains("atomic number") ||
             c.contains("atomic no") ||
+            c.contains("atomic no.") ||
+            c.contains("atomic number kya") ||
             c.contains("number kya") ->
+
                 "${element.name} ka atomic number ${element.number} hai, Boss."
+
+            // -----------------------------------------------------
+            // ATOMIC MASS
+            // -----------------------------------------------------
 
             c.contains("atomic mass") ||
             c.contains("mass kya") ||
-            c.contains("mass kitna") ->
+            c.contains("mass kitna") ||
+            c.contains("atomic weight") ||
+            c.contains("weight kya") ->
+
                 "${element.name} ka atomic mass ${element.mass} hai, Boss."
+
+            // -----------------------------------------------------
+            // CATEGORY
+            // -----------------------------------------------------
+
+            c.contains("category") ||
+            c.contains("kis category") ||
+            c.contains("kaun sa metal") ||
+            c.contains("metal hai") ->
+
+                "${element.name} ki category ${element.category} hai, Boss."
+
+            // -----------------------------------------------------
+            // GENERAL ELEMENT INFORMATION
+            // -----------------------------------------------------
 
             else ->
                 "${element.name}, symbol ${element.symbol}, atomic number ${element.number}, atomic mass ${element.mass}, category ${element.category} hai, Boss."
