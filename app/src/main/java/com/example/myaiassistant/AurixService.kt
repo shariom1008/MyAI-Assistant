@@ -545,15 +545,58 @@ override fun
         }
 
         currentUserCommand =
-            rawCommand.trim()
+    rawCommand.trim()
 
-        AurixMemoryBridge.initialize(
-            this
-        )
+// =========================================================
+// AURIX OWNER / CREATOR
+// =========================================================
 
-        sendStatus(
-            "THINKING"
-        )
+val lowerCommand =
+    command.lowercase(
+        Locale.getDefault()
+    ).trim()
+
+if (
+    lowerCommand.contains(
+        "tumhe kisne banaya"
+    ) ||
+    lowerCommand.contains(
+        "tumhe kisne banaya hai"
+    ) ||
+    lowerCommand.contains(
+        "tumhara owner kaun"
+    ) ||
+    lowerCommand.contains(
+        "tumhara malik kaun"
+    ) ||
+    lowerCommand.contains(
+        "who created you"
+    ) ||
+    lowerCommand.contains(
+        "who made you"
+    ) ||
+    lowerCommand.contains(
+        "who is your owner"
+    ) ||
+    lowerCommand.contains(
+        "who is your creator"
+    )
+) {
+
+    speakOnce(
+        "Mujhe mere owner Kushal Haryana ne banaya hai."
+    )
+
+    return
+}
+
+AurixMemoryBridge.initialize(
+    this
+)
+
+sendStatus(
+    "THINKING"
+)
 
 
         // =====================================================
