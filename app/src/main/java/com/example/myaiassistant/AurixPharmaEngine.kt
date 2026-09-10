@@ -611,7 +611,11 @@ object AurixPharmaEngine {
 
         if (has(c, "vacuum pump", "vacuum pump kya")) {
             return "Vacuum Pump system se gas ya air remove karke reduced pressure generate karta hai aur vacuum drying, filtration ya process applications mein use ho sakta hai."
+            }
 
+        return null
+    }
+}
 
         // =========================================================
         // EQUIPMENT STATUS / CALIBRATION STATUS
