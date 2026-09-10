@@ -447,6 +447,7 @@ object AurixPharmaEngine {
 
         if (has(c, "checkweigher", "check weigher")) {
             return "Checkweigher packed product ka weight automatically check karta hai aur configured acceptance criteria ke according reject ya accept action perform kar sakta hai."
+        }
 
 
         // =========================================================
@@ -563,11 +564,16 @@ object AurixPharmaEngine {
 
         if (has(c, "particle counter", "particle counter kya")) {
             return "Particle Counter air mein specified particle sizes aur counts ko monitor karne ke liye use hota hai."
+        }
 
 
         // =========================================================
         // UTILITY / ENGINEERING
         // =========================================================
+
+        if (has(c, "hvac", "hvac system")) {
+            return "HVAC yani Heating, Ventilation and Air Conditioning system temperature, humidity, air movement, filtration aur pressure conditions ko control karne mein help karta hai."
+        }
 
         if (has(c, "chiller", "chiller kya")) {
             return "Chiller process ya HVAC applications ke liye chilled water ya cooling medium provide karta hai."
@@ -611,11 +617,8 @@ object AurixPharmaEngine {
 
         if (has(c, "vacuum pump", "vacuum pump kya")) {
             return "Vacuum Pump system se gas ya air remove karke reduced pressure generate karta hai aur vacuum drying, filtration ya process applications mein use ho sakta hai."
-            }
+        }
 
-        return null
-    }
-}
 
         // =========================================================
         // EQUIPMENT STATUS / CALIBRATION STATUS
@@ -724,6 +727,7 @@ object AurixPharmaEngine {
 
         if (has(c, "fmea", "failure mode and effects analysis")) {
             return "FMEA yani Failure Mode and Effects Analysis potential failure modes ko identify aur risk-prioritize karne ka structured method hai."
+        }
 
 
         // =========================================================
@@ -744,6 +748,7 @@ object AurixPharmaEngine {
 
         if (has(c, "mix up", "mix-up", "mixup")) {
             return "Mix-up mein wrong material, component, product, label ya information ka unintended use ya association ho jaata hai."
+        }
 
 
         // =========================================================
@@ -752,6 +757,7 @@ object AurixPharmaEngine {
 
         if (has(c, "hold time", "hold time study")) {
             return "Hold Time Study defined storage conditions mein intermediate ya material ko specified duration tak hold karne ke effect ko evaluate karti hai."
+        }
 
 
         // =========================================================
@@ -768,6 +774,7 @@ object AurixPharmaEngine {
 
         if (has(c, "cqa kya", "critical quality attribute")) {
             return "CQA yani Critical Quality Attribute ek physical, chemical, biological ya microbiological characteristic hai jo product quality ke liye critical hoti hai."
+        }
 
 
         // =========================================================
@@ -813,6 +820,7 @@ object AurixPharmaEngine {
 
         if (has(c, "recall kya", "product recall")) {
             return "Product Recall market se affected product ko defined controlled process ke through withdraw karne ki action hai."
+        }
 
 
         // =========================================================
