@@ -1418,7 +1418,7 @@ if (
         if (
             command == "settings" ||
             command == "open settings" ||
-            command == "phone settings" ||
+            command == "phone settings"
         ) {
 
             openSettings()
