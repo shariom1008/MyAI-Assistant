@@ -12,6 +12,10 @@ data class AurixElement(
 
 object AurixPeriodicTable {
 
+    // =========================================================
+    // ALL 118 ELEMENTS
+    // =========================================================
+
     private val elements = listOf(
 
         AurixElement(1, "H", "Hydrogen", "1.008", "Nonmetal"),
@@ -141,73 +145,80 @@ object AurixPeriodicTable {
         AurixElement(118, "Og", "Oganesson", "[294]", "Noble Gas")
     )
 
+    // =========================================================
+    // FIND ELEMENT
+    // =========================================================
+
     fun find(command: String): AurixElement? {
 
         val c = command
             .lowercase(Locale.getDefault())
             .trim()
+            .replace(Regex("\\s+"), " ")
 
-        // ---------------------------------------------------------
-        // NUMBER BASED SEARCH
-        // ---------------------------------------------------------
+        // -----------------------------------------------------
+        // 1. DIRECT ATOMIC NUMBER
+        // -----------------------------------------------------
 
-        val numberMatch =
-            Regex("""\b(?:element|atomic number|atomic no)\s*(\d{1,3})\b""")
-                .find(c)
+        val numberPatterns = listOf(
+            Regex("""\belement\s*(?:number|no\.?)?\s*(\d{1,3})\b"""),
+            Regex("""\batomic\s*(?:number|no\.?)\s*(\d{1,3})\b"""),
+            Regex("""\b(\d{1,3})\s*(?:number|no\.?)?\s*element\b"""),
+            Regex("""\b(\d{1,3})\s*(?:atomic\s*)?(?:number|no\.?)\b""")
+        )
 
-        if (numberMatch != null) {
-            val number = numberMatch.groupValues[1].toIntOrNull()
-            return elements.firstOrNull { it.number == number }
+        for (pattern in numberPatterns) {
+
+            val match = pattern.find(c)
+
+            if (match != null) {
+
+                val number = match.groupValues[1].toIntOrNull()
+
+                if (number != null && number in 1..118) {
+                    return elements.firstOrNull {
+                        it.number == number
+                    }
+                }
+            }
         }
 
-        val byNumber =
-            Regex("""\b(\d{1,3})\s*(?:element|atomic number|atomic no)\b""")
-                .find(c)
+        // -----------------------------------------------------
+        // 2. ELEMENT NAME
+        // -----------------------------------------------------
 
-        if (byNumber != null) {
-            val number = byNumber.groupValues[1].toIntOrNull()
-            return elements.firstOrNull { it.number == number }
+        // Longest names first.
+        // This prevents short names/symbols from interfering.
+
+        val sortedElements =
+            elements.sortedByDescending {
+                it.name.length
+            }
+
+        for (element in sortedElements) {
+
+            val name =
+                element.name.lowercase(Locale.getDefault())
+
+            if (containsWholeWord(c, name)) {
+                return element
+            }
         }
 
-        // ---------------------------------------------------------
-        // ELEMENT NAME / SYMBOL SEARCH
-        // ---------------------------------------------------------
+        // -----------------------------------------------------
+        // 3. SYMBOL
+        // -----------------------------------------------------
 
         for (element in elements) {
 
-            val name = element.name.lowercase(Locale.getDefault())
-            val symbol = element.symbol.lowercase(Locale.getDefault())
+            val symbol =
+                element.symbol.lowercase(Locale.getDefault())
 
+            // Only accept symbol as a word when the command
+            // clearly looks like an element question.
             if (
-                // Exact name / symbol
-                c == name ||
-                c == symbol ||
-
-                // English patterns
-                c.contains("$name element") ||
-                c.contains("element $name") ||
-                c.contains("atomic number of $name") ||
-                c.contains("atomic no of $name") ||
-                c.contains("atomic mass of $name") ||
-                c.contains("symbol of $name") ||
-
-                // Hinglish patterns
-                c.contains("$name ka") ||
-                c.contains("$name ki") ||
-                c.contains("$name ke") ||
-
-                // More specific Hinglish patterns
-                c.contains("$name ka atomic") ||
-                c.contains("$name ki atomic") ||
-                c.contains("$name ke atomic") ||
-                c.contains("$name ka chemical") ||
-                c.contains("$name ki chemical") ||
-                c.contains("$name ke chemical") ||
-
-                // Symbol based Hinglish
-                c.contains("$symbol ka") ||
-                c.contains("$symbol ki") ||
-                c.contains("$symbol ke")
+                containsWholeWord(c, symbol) &&
+                isElementQuestion(c)
             ) {
                 return element
             }
@@ -216,66 +227,135 @@ object AurixPeriodicTable {
         return null
     }
 
+    // =========================================================
+    // WHOLE WORD CHECK
+    // =========================================================
+
+    private fun containsWholeWord(
+        text: String,
+        word: String
+    ): Boolean {
+
+        if (word.isBlank()) {
+            return false
+        }
+
+        return Regex(
+            """(?<![a-z])${Regex.escape(word)}(?![a-z])"""
+        ).containsMatchIn(text)
+    }
+
+    // =========================================================
+    // ELEMENT QUESTION DETECTOR
+    // =========================================================
+
+    private fun isElementQuestion(command: String): Boolean {
+
+        return command.contains("element") ||
+                command.contains("atomic") ||
+                command.contains("symbol") ||
+                command.contains("mass") ||
+                command.contains("weight") ||
+                command.contains("metal") ||
+                command.contains("periodic table")
+    }
+
+    // =========================================================
+    // ANSWER
+    // =========================================================
+
     fun answer(command: String): String? {
 
-        val element = find(command) ?: return null
+        val element = find(command)
+            ?: return null
 
         val c = command
             .lowercase(Locale.getDefault())
             .trim()
 
-        return when {
+        // -----------------------------------------------------
+        // SYMBOL
+        // -----------------------------------------------------
 
-            // -----------------------------------------------------
-            // SYMBOL
-            // -----------------------------------------------------
-
+        if (
             c.contains("symbol") ||
-            c.contains("chemical symbol") ->
+            c.contains("chemical symbol") ||
+            c.contains("symbol kya") ||
+            c.contains("symbol bata") ||
+            c.contains("symbol batao")
+        ) {
+            return "${element.name} ka chemical symbol ${element.symbol} hai, Boss."
+        }
 
-                "${element.name} ka chemical symbol ${element.symbol} hai, Boss."
+        // -----------------------------------------------------
+        // ATOMIC NUMBER
+        // -----------------------------------------------------
 
-            // -----------------------------------------------------
-            // ATOMIC NUMBER
-            // -----------------------------------------------------
-
+        if (
             c.contains("atomic number") ||
             c.contains("atomic no") ||
             c.contains("atomic no.") ||
             c.contains("atomic number kya") ||
-            c.contains("number kya") ->
+            c.contains("atomic number bata") ||
+            c.contains("atomic number batao") ||
+            c.contains("number kya") ||
+            c.contains("number bata") ||
+            c.contains("number batao")
+        ) {
+            return "${element.name} ka atomic number ${element.number} hai, Boss."
+        }
 
-                "${element.name} ka atomic number ${element.number} hai, Boss."
+        // -----------------------------------------------------
+        // ATOMIC MASS
+        // -----------------------------------------------------
 
-            // -----------------------------------------------------
-            // ATOMIC MASS
-            // -----------------------------------------------------
-
+        if (
             c.contains("atomic mass") ||
+            c.contains("atomic weight") ||
             c.contains("mass kya") ||
             c.contains("mass kitna") ||
-            c.contains("atomic weight") ||
-            c.contains("weight kya") ->
+            c.contains("mass bata") ||
+            c.contains("mass batao") ||
+            c.contains("weight kya") ||
+            c.contains("weight kitna")
+        ) {
+            return "${element.name} ka atomic mass ${element.mass} hai, Boss."
+        }
 
-                "${element.name} ka atomic mass ${element.mass} hai, Boss."
+        // -----------------------------------------------------
+        // CATEGORY
+        // -----------------------------------------------------
 
-            // -----------------------------------------------------
-            // CATEGORY
-            // -----------------------------------------------------
-
+        if (
             c.contains("category") ||
             c.contains("kis category") ||
             c.contains("kaun sa metal") ||
-            c.contains("metal hai") ->
-
-                "${element.name} ki category ${element.category} hai, Boss."
-
-            // -----------------------------------------------------
-            // GENERAL ELEMENT INFORMATION
-            // -----------------------------------------------------
-
-            else ->
-                "${element.name}, symbol ${element.symbol}, atomic number ${element.number}, atomic mass ${element.mass}, category ${element.category} hai, Boss."
+            c.contains("metal hai") ||
+            c.contains("metal hai kya")
+        ) {
+            return "${element.name} ki category ${element.category} hai, Boss."
         }
+
+        // -----------------------------------------------------
+        // GENERAL ELEMENT INFORMATION
+        // -----------------------------------------------------
+
+        if (
+            c.contains("element kya hai") ||
+            c.contains("element ke baare") ||
+            c.contains("element ke bare") ||
+            c.contains("element ke baare mein") ||
+            c.contains("element ke bare mein") ||
+            c.contains("about") ||
+            c.contains("tell me about")
+        ) {
+            return "${element.name}: atomic number ${element.number}, symbol ${element.symbol}, atomic mass ${element.mass}, aur category ${element.category} hai, Boss."
+        }
+
+        // -----------------------------------------------------
+        // DEFAULT ELEMENT ANSWER
+        // -----------------------------------------------------
+
+        return "${element.name}, symbol ${element.symbol}, atomic number ${element.number}, atomic mass ${element.mass}, category ${element.category} hai, Boss."
     }
 }
