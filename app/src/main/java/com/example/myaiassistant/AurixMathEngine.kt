@@ -70,8 +70,6 @@ object AurixMathEngine {
 
         // ---------------------------------------------------------
         // PURE HINDI PERCENTAGE
-        // Example:
-        // 800 का 25 प्रतिशत कितना है
         // ---------------------------------------------------------
 
         Regex(
@@ -545,7 +543,80 @@ object AurixMathEngine {
     // -------------------------------------------------------------
 
     private fun isHindi(command: String): Boolean {
-        return command.any { it in '\u0900'..'\u097F' }
+
+        // Hindi Devanagari script
+        if (command.any { it in '\u0900'..'\u097F' }) {
+            return true
+        }
+
+        val c = command.lowercase()
+
+        // Common Hindi / Hinglish markers
+        val hindiMarkers = listOf(
+            "ka",
+            "ki",
+            "ke",
+            "kya",
+            "kitna",
+            "kitne",
+            "kitni",
+            "hai",
+            "hain",
+            "mein",
+            "me",
+            "se",
+            "ko",
+            "par",
+            "batao",
+            "bata",
+            "chahiye",
+            "karo",
+            "karna",
+            "kare",
+            "nikalo",
+            "nikal",
+            "kitna hai",
+            "kitne hai",
+            "kitni hai"
+        )
+
+        var markerCount = 0
+
+        for (marker in hindiMarkers) {
+
+            if (
+                Regex(
+                    """\b${Regex.escape(marker)}\b"""
+                ).containsMatchIn(c)
+            ) {
+                markerCount++
+            }
+        }
+
+        // Two or more Hindi markers = Hinglish
+        if (markerCount >= 2) {
+            return true
+        }
+
+        // Special numeric Hinglish patterns
+        if (
+            Regex(
+                """\b\d+(?:\.\d+)?\s+ka\s+\d+(?:\.\d+)?\s*(?:percent|percentage|%)\b"""
+            ).containsMatchIn(c)
+        ) {
+            return true
+        }
+
+        // Hindi-style mathematical questions
+        if (
+            Regex(
+                """\b(?:hcf|gcd|lcm|average|ratio)\s+(?:of\s+)?\d+\s+(?:aur|ka|ki|ke)\s+\d+\b"""
+            ).containsMatchIn(c)
+        ) {
+            return true
+        }
+
+        return false
     }
 
     // -------------------------------------------------------------
