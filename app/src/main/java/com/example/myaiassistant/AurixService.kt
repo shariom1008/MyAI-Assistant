@@ -1701,6 +1701,25 @@ if (
             return
         }
 
+        // =====================================================
+        // DEVICE INFORMATION ENGINE
+        // =====================================================
+
+val deviceResponse =
+    AurixDeviceEngine.answer(
+        this,
+        command
+    )
+
+if (
+    !deviceResponse.isNullOrBlank()
+) {
+    speakOnce(
+        deviceResponse
+    )
+    return
+}
+
         val localIntentResponse =
          AurixLocalIntentEngine.answer(command)
 
