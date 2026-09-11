@@ -31,16 +31,8 @@ import java.util.Locale
 import java.util.regex.Pattern
 import java.net.HttpURLConnection
 import java.net.URL
-
 class AurixService :
     Service(),
-// =====================================================
-// YOUTUBE COMMAND DUPLICATE PROTECTION
-// =====================================================
-
-private var lastYouTubeCommand: String = ""
-
-private var lastYouTubeCommandTime: Long = 0L
     TextToSpeech.OnInitListener {
 
     companion object {
@@ -71,19 +63,23 @@ private var lastYouTubeCommandTime: Long = 0L
             5001
     }
 
+    // =====================================================
+    // YOUTUBE COMMAND DUPLICATE PROTECTION
+    // =====================================================
+
+    private var lastYouTubeCommand: String = ""
+
+    private var lastYouTubeCommandTime: Long = 0L
+
     private var speechRecognizer: SpeechRecognizer? = null
+
     private var textToSpeech: TextToSpeech? = null
 
     private var listening = false
+
     private var restarting = false
+
     private var serviceDestroyed = false
-
-    private val handler =
-        Handler(Looper.getMainLooper())
-
-    private var currentUserCommand = ""
-    private var currentResponseSent = false
-
         // =========================================================
         // AI REQUEST PROTECTION
         // =========================================================
