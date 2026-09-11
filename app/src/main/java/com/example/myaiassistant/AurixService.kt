@@ -34,6 +34,13 @@ import java.net.URL
 
 class AurixService :
     Service(),
+// =====================================================
+// YOUTUBE COMMAND DUPLICATE PROTECTION
+// =====================================================
+
+private var lastYouTubeCommand: String = ""
+
+private var lastYouTubeCommandTime: Long = 0L
     TextToSpeech.OnInitListener {
 
     companion object {
@@ -1488,6 +1495,17 @@ command.contains("gaana chalao") -> {
                 ""
             )
             .trim()
+            val now = System.currentTimeMillis()
+
+if (
+    youtubeQuery == lastYouTubeCommand &&
+    now - lastYouTubeCommandTime < 5000L
+) {
+    return
+}
+
+lastYouTubeCommand = youtubeQuery ?: ""
+lastYouTubeCommandTime = now
 
 }
 
