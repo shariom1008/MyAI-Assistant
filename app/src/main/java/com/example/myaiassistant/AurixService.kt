@@ -1840,7 +1840,6 @@ if (
         }
 
 
-
 // =========================================================
 // FINAL AI FALLBACK - PERMISSION FIRST
 // =========================================================
@@ -1857,7 +1856,76 @@ speakOnce(
 )
 
 return
-        
+}
+
+
+// =========================================================
+// FINAL AI REQUEST
+// =========================================================
+
+private fun askFinalAI(
+    command: String
+) {
+
+    if (
+        command.isBlank() ||
+        aiRequestInProgress
+    ) {
+        return
+    }
+
+    aiRequestInProgress = true
+
+    sendStatus(
+        "THINKING"
+    )
+
+    AurixAI.ask(
+        command
+    ) { answer ->
+
+        aiRequestInProgress = false
+
+        if (
+            answer.isBlank()
+        ) {
+
+            sendStatus(
+                "ERROR"
+            )
+
+            return@ask
+        }
+
+        val finalAnswer =
+            aurixResponse(
+                answer
+            )
+
+        sendStatus(
+            "SPEAKING"
+        )
+
+        sendSpeak(
+            finalAnswer
+        )
+
+        textToSpeech?.speak(
+            finalAnswer,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "AURIX_AI"
+        )
+
+        AurixMemoryBridge.saveTurn(
+            this,
+            command,
+            finalAnswer
+        )
+    }
+}
+
+
 // =========================================================
 // AGENT
 // =========================================================
