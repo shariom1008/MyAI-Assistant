@@ -1428,105 +1428,220 @@ if (
             return
         }
 
-        // =====================================================
-        // YOUTUBE PLAY
+           // =====================================================
+        // SMART YOUTUBE COMMANDS
         // =====================================================
 
         if (
-            command.startsWith("play ")
+            command.contains("youtube")
         ) {
 
-            val target =
-                command
-                    .removePrefix(
-                        "play "
+            // -------------------------------------------------
+            // DIRECT YOUTUBE SEARCH / PLAY
+            // -------------------------------------------------
+
+            var youtubeQuery: String? = null
+
+            when {
+
+                // YouTube kholo aur Arijit Singh search karo
+                command.contains("youtube kholo") &&
+                    command.contains("search karo") -> {
+
+                    youtubeQuery =
+                        command
+                            .substringAfter(
+                                "youtube kholo"
+                            )
+                            .substringBefore(
+                                "search karo"
+                            )
+                            .trim()
+
+                }
+
+                // YouTube kholo aur Arijit Singh chalao
+                command.contains("youtube kholo") &&
+                    command.contains("chalao") -> {
+
+                    youtubeQuery =
+                        command
+                            .substringAfter(
+                                "youtube kholo"
+                            )
+                            .substringBeforeLast(
+                                "chalao"
+                            )
+                            .trim()
+
+                }
+
+                // YouTube par Arijit Singh search karo
+                command.contains("youtube par") &&
+                    command.contains("search karo") -> {
+
+                    youtubeQuery =
+                        command
+                            .substringAfter(
+                                "youtube par"
+                            )
+                            .substringBefore(
+                                "search karo"
+                            )
+                            .trim()
+                    }
+
+                // YouTube pe Arijit Singh search karo
+                command.contains("youtube pe") &&
+                    command.contains("search karo") -> {
+
+                    youtubeQuery =
+                        command
+                            .substringAfter(
+                                "youtube pe"
+                            )
+                            .substringBefore(
+                                "search karo"
+                            )
+                            .trim()
+                    }
+
+                // Search YouTube Arijit Singh
+                command.startsWith(
+                    "search youtube "
+                ) -> {
+
+                    youtubeQuery =
+                        command
+                            .removePrefix(
+                                "search youtube "
+                            )
+                            .trim()
+                }
+
+                // YouTube search Arijit Singh
+                command.startsWith(
+                    "youtube search "
+                ) -> {
+
+                    youtubeQuery =
+                        command
+                            .removePrefix(
+                                "youtube search "
+                            )
+                            .trim()
+                }
+
+                // YouTube par Arijit Singh
+                command.startsWith(
+                    "youtube par "
+                ) -> {
+
+                    youtubeQuery =
+                        command
+                            .removePrefix(
+                                "youtube par "
+                            )
+                            .trim()
+                }
+
+                // Play Arijit Singh
+                command.startsWith(
+                    "play "
+                ) -> {
+
+                    youtubeQuery =
+                        command
+                            .removePrefix(
+                                "play "
+                            )
+                            .trim()
+                }
+            }
+
+            // -------------------------------------------------
+            // CLEAN QUERY
+            // -------------------------------------------------
+
+            if (
+                !youtubeQuery.isNullOrBlank()
+            ) {
+
+                var cleanQuery =
+                    youtubeQuery
+                        .trim()
+
+                cleanQuery =
+                    cleanQuery
+                        .removeSuffix(
+                            "search"
+                        )
+                        .removeSuffix(
+                            "search karo"
+                        )
+                        .removeSuffix(
+                            "chalao"
+                        )
+                        .removeSuffix(
+                            "play karo"
+                        )
+                        .removeSuffix(
+                            "gana chalao"
+                        )
+                        .trim()
+
+                // Remove common Hindi filler words
+                cleanQuery =
+                    cleanQuery
+                        .removePrefix(
+                            "ka "
+                        )
+                        .removePrefix(
+                            "ki "
+                        )
+                        .removePrefix(
+                            "ko "
+                        )
+                        .trim()
+
+                if (
+                    cleanQuery.isNotBlank()
+                ) {
+
+                    sendStatus(
+                        "EXECUTING"
                     )
-                    .trim()
 
-            if (
-                target.isNotBlank()
-            ) {
+                    searchYouTube(
+                        cleanQuery
+                    )
 
-                searchYouTube(
-                    target
-                )
+                } else {
 
-            } else {
+                    openYouTube()
+                }
 
-                openYouTube()
+                return
             }
 
-            return
-        }
-
-        // =====================================================
-        // YOUTUBE SEARCH
-        // =====================================================
-
-        if (
-            command.startsWith(
-                "search youtube"
-            ) ||
-            command.startsWith(
-                "youtube search"
-            ) ||
-            command.startsWith(
-                "youtube par"
-            )
-        ) {
-
-            val query =
-                when {
-
-                    command.startsWith(
-                        "search youtube"
-                    ) ->
-                        command.removePrefix(
-                            "search youtube"
-                        )
-
-                    command.startsWith(
-                        "youtube search"
-                    ) ->
-                        command.removePrefix(
-                            "youtube search"
-                        )
-
-                    else ->
-                        command.removePrefix(
-                            "youtube par"
-                        )
-                }.trim()
+            // -------------------------------------------------
+            // OPEN YOUTUBE ONLY
+            // -------------------------------------------------
 
             if (
-                query.isNotBlank()
+                command == "youtube" ||
+                command == "open youtube" ||
+                command == "launch youtube" ||
+                command == "youtube kholo" ||
+                command == "youtube open karo" ||
+                command == "youtube khol do"
             ) {
 
-                searchYouTube(
-                    query
-                )
-
-            } else {
-
                 openYouTube()
+
+                return
             }
-
-            return
         }
-
-        // =====================================================
-// OPEN YOUTUBE
-// =====================================================
-
-if (
-    command == "youtube" ||
-    command == "open youtube" ||
-    command == "launch youtube"
-) {
-
-    openYouTube()
-    return
-}
 
 // =====================================================
 // DIALER
