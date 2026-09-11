@@ -31,6 +31,7 @@ import java.util.Locale
 import java.util.regex.Pattern
 import java.net.HttpURLConnection
 import java.net.URL
+
 class AurixService :
     Service(),
     TextToSpeech.OnInitListener {
@@ -80,16 +81,25 @@ class AurixService :
     private var restarting = false
 
     private var serviceDestroyed = false
-        // =========================================================
-        // AI REQUEST PROTECTION
-        // =========================================================
 
-@Volatile
-private var aiRequestInProgress = false
-        @Volatile
-private var waitingForAIConfirmation = false
+    private val handler =
+        Handler(Looper.getMainLooper())
 
-private var pendingAICommand = ""
+    private var currentUserCommand = ""
+
+    private var currentResponseSent = false
+
+    // =========================================================
+    // AI REQUEST PROTECTION
+    // =========================================================
+
+    @Volatile
+    private var aiRequestInProgress = false
+
+    @Volatile
+    private var waitingForAIConfirmation = false
+
+    private var pendingAICommand = ""
         
     // =========================================================
     // CREATE
