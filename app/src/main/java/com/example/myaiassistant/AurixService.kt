@@ -1431,10 +1431,15 @@ if (
            // =====================================================
         // SMART YOUTUBE COMMANDS
         // =====================================================
-
-        if (
-            command.contains("youtube")
-        ) {
+if (
+    command.contains("youtube") ||
+    command.contains("ka song chalao") ||
+    command.contains("ka gana chalao") ||
+    command.contains("ka gaana chalao") ||
+    command.contains("song chalao") ||
+    command.contains("gana chalao") ||
+    command.contains("gaana chalao")
+){
 
             // -------------------------------------------------
             // DIRECT YOUTUBE SEARCH / PLAY
