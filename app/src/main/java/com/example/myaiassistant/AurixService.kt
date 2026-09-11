@@ -1443,6 +1443,48 @@ if (
             var youtubeQuery: String? = null
 
             when {
+                
+                // Smart Hindi YouTube song command
+command.contains("ka song chalao") ||
+command.contains("ka gana chalao") ||
+command.contains("ka gaana chalao") ||
+command.contains("song chalao") ||
+command.contains("gana chalao") ||
+command.contains("gaana chalao") -> {
+
+    youtubeQuery =
+        command
+            .replace(
+                "ka song chalao",
+                ""
+            )
+            .replace(
+                "ka gana chalao",
+                ""
+            )
+            .replace(
+                "ka gaana chalao",
+                ""
+            )
+            .replace(
+                "song chalao",
+                ""
+            )
+            .replace(
+                "gana chalao",
+                ""
+            )
+            .replace(
+                "gaana chalao",
+                ""
+            )
+            .replace(
+                "aurix",
+                ""
+            )
+            .trim()
+
+}
 
                 // YouTube kholo aur Arijit Singh search karo
                 command.contains("youtube kholo") &&
