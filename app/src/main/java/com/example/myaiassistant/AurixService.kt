@@ -83,6 +83,10 @@ class AurixService :
 
 @Volatile
 private var aiRequestInProgress = false
+        @Volatile
+private var waitingForAIConfirmation = false
+
+private var pendingAICommand = ""
         
     // =========================================================
     // CREATE
@@ -543,6 +547,55 @@ override fun
         if (command.isBlank()) {
             return
         }
+
+        // =====================================================
+// AI SEARCH PERMISSION RESPONSE
+// =====================================================
+
+if (waitingForAIConfirmation) {
+
+    when (command) {
+
+        "yes",
+        "haan",
+        "ha",
+        "han" -> {
+
+            waitingForAIConfirmation = false
+
+            val aiCommand =
+                pendingAICommand
+
+            pendingAICommand = ""
+
+            if (aiCommand.isNotBlank()) {
+                askFinalAI(aiCommand)
+            }
+
+            return
+        }
+
+        "no",
+        "nahi",
+        "nahin",
+        "naa",
+        "na" -> {
+
+            waitingForAIConfirmation = false
+            pendingAICommand = ""
+
+            speakOnce(
+                "Theek hai Boss."
+            )
+
+            return
+        }
+
+        else -> {
+            return
+        }
+    }
+}
 
         
         // =========================================================
@@ -1788,53 +1841,23 @@ if (
 
 
 
+// =========================================================
+// FINAL AI FALLBACK - PERMISSION FIRST
+// =========================================================
 
-        // =====================================================
-        // FINAL AI FALLBACK
-        // =====================================================
-           if (aiRequestInProgress) {
+if (aiRequestInProgress) {
     return
 }
 
-aiRequestInProgress = true
+pendingAICommand = command
+waitingForAIConfirmation = true
 
-sendStatus("THINKING")
-
-AurixAI.ask(
-    command
-) { answer ->
-
-    aiRequestInProgress = false
-
-    if (answer.isBlank()) {
-        sendStatus("ERROR")
-        return@ask
-    }
-
-    val finalAnswer =
-        aurixResponse(answer)
-
-    sendStatus("SPEAKING")
-
-    sendSpeak(finalAnswer)
-
-    textToSpeech?.speak(
-        finalAnswer,
-        TextToSpeech.QUEUE_FLUSH,
-        null,
-        "AURIX_AI"
-    )
-
-    AurixMemoryBridge.saveTurn(
-        this,
-        command,
-        finalAnswer
-    )
-}
+speakOnce(
+    "Boss, ultra search karu?"
+)
 
 return
-}
-
+        
 // =========================================================
 // AGENT
 // =========================================================
