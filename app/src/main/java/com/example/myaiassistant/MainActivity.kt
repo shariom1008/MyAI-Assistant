@@ -748,7 +748,7 @@ addAction(
     row1,
     "⌕",
     "Search"
-) {
+) 
     openUrl(
         "https://www.google.com"
     )
