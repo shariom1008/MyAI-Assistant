@@ -305,7 +305,7 @@ private fun startAurixService() {
         val menu =
             TextView(this)
 
-        menu.text = "☰"
+        menu.text = "鈽�"
         menu.textSize = 25f
         menu.setTextColor(white)
         menu.gravity = Gravity.CENTER
@@ -361,7 +361,7 @@ private fun startAurixService() {
             TextView(this)
 
         tagline.text =
-            "YOUR VOICE  •  YOUR AI"
+            "YOUR VOICE  鈥�  YOUR AI"
 
         tagline.textSize = 8f
         tagline.setTextColor(muted)
@@ -378,7 +378,7 @@ private fun startAurixService() {
         val online =
             TextView(this)
 
-        online.text = "● ONLINE"
+        online.text = "鈼� ONLINE"
         online.textSize = 10f
         online.setTextColor(
             Color.rgb(90, 235, 145)
@@ -401,7 +401,7 @@ private fun startAurixService() {
             TextView(this)
 
         coreLabel.text =
-            "A U R I X   •   INTELLIGENCE CORE"
+            "A U R I X   鈥�   INTELLIGENCE CORE"
 
         coreLabel.textSize = 9f
         coreLabel.setTextColor(
@@ -562,7 +562,7 @@ private fun startAurixService() {
             TextView(this)
 
         listening.text =
-            "  ◉  HEY AURIX  •  READY  "
+            "  鈼�  HEY AURIX  鈥�  READY  "
 
         listening.textSize = 11f
         listening.setTextColor(cyan)
@@ -740,7 +740,7 @@ private fun startAurixService() {
 
         addAction(
             row1,
-            "▶",
+            "鈻�",
             "YouTube"
         ) {
             openUrl(
@@ -750,7 +750,7 @@ private fun startAurixService() {
 
         addAction(
             row1,
-            "⌕",
+            "鈱�",
             "Search"
         ) {
             openUrl(
@@ -760,7 +760,7 @@ private fun startAurixService() {
 
         addAction(
             row1,
-            "♫",
+            "鈾�",
             "Music"
         ) {
             openUrl(
@@ -770,7 +770,7 @@ private fun startAurixService() {
 
         addAction(
             row1,
-            "☁",
+            "鈽�",
             "Weather"
         ) {
             openUrl(
@@ -794,7 +794,7 @@ private fun startAurixService() {
 
         addAction(
             row2,
-            "☎",
+            "鈽�",
             "Call"
         ) {
             val intent =
@@ -806,7 +806,7 @@ private fun startAurixService() {
 
         addAction(
             row2,
-            "✉",
+            "鉁�",
             "Messages"
         ) {
             val intent =
@@ -820,7 +820,7 @@ private fun startAurixService() {
 
         addAction(
             row2,
-            "▦",
+            "鈻�",
             "Apps"
         ) {
             try {
@@ -835,7 +835,7 @@ private fun startAurixService() {
 
         addAction(
             row2,
-            "•••",
+            "鈥⑩€⑩€�",
             "More"
         ) {
             updateStatus("READY")
@@ -849,7 +849,7 @@ private fun startAurixService() {
             TextView(this)
 
         input.text =
-            "  🎙   Tap to speak to AURIX                         "
+            "  馃帣   Tap to speak to AURIX                         "
 
         input.textSize = 12f
         input.setTextColor(white)
@@ -874,13 +874,29 @@ private fun startAurixService() {
         return@setOnClickListener
     }
 
-    if (!AurixService.isRunning) {
+    val intent =
+        Intent(
+            this,
+            AurixService::class.java
+        ).apply {
+            action =
+                AurixService.ACTION_LISTEN_ONCE
+        }
 
-        startAurixService()
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(
+                this,
+                intent
+            )
+        } else {
+            startService(intent)
+        }
 
-    } else {
-
+        active = true
         updateStatus("LISTENING")
+    } catch (_: Exception) {
+        updateStatus("START FAILED")
     }
         }
 
@@ -929,11 +945,11 @@ private fun startAurixService() {
             navParams
         )
 
-        addNavItem(nav, "⌂", "Home")
-        addNavItem(nav, "◷", "History")
+        addNavItem(nav, "鈱�", "Home")
+        addNavItem(nav, "鈼�", "History")
         addNavItem(nav, "A", "AURIX")
-        addNavItem(nav, "✦", "Shortcuts")
-        addNavItem(nav, "⚙", "Settings")
+        addNavItem(nav, "鉁�", "Shortcuts")
+        addNavItem(nav, "鈿�", "Settings")
     }
 
     // =========================================================
@@ -1039,7 +1055,7 @@ private fun startAurixService() {
         val cover =
             TextView(this)
 
-        cover.text = "♫"
+        cover.text = "鈾�"
         cover.textSize = 30f
         cover.setTextColor(white)
         cover.gravity = Gravity.CENTER
@@ -1094,7 +1110,7 @@ private fun startAurixService() {
         val artist =
             TextView(this)
 
-        artist.text = "B Praak  •  YouTube"
+        artist.text = "B Praak  鈥�  YouTube"
         artist.textSize = 10f
         artist.setTextColor(muted)
 
@@ -1103,7 +1119,7 @@ private fun startAurixService() {
         val play =
             TextView(this)
 
-        play.text = "▶"
+        play.text = "鈻�"
         play.textSize = 22f
         play.setTextColor(cyan)
         play.gravity = Gravity.CENTER
@@ -1554,7 +1570,7 @@ private fun startAurixService() {
 
         if (active) {
             systemText.text =
-                "SYSTEM ONLINE  •  ACTIVE"
+                "SYSTEM ONLINE  鈥�  ACTIVE"
         } else {
             systemText.text =
                 "SYSTEM ONLINE"
