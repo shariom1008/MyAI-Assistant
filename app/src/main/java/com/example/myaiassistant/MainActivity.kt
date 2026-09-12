@@ -305,7 +305,7 @@ private fun startAurixService() {
         val menu =
             TextView(this)
 
-        menu.text = "鈽�"
+        menu.text = "☰"
         menu.textSize = 25f
         menu.setTextColor(white)
         menu.gravity = Gravity.CENTER
@@ -360,8 +360,7 @@ private fun startAurixService() {
         val tagline =
             TextView(this)
 
-        tagline.text =
-            "YOUR VOICE  鈥�  YOUR AI"
+        tagline.text = "YOUR VOICE  |  YOUR AI"
 
         tagline.textSize = 8f
         tagline.setTextColor(muted)
@@ -378,7 +377,7 @@ private fun startAurixService() {
         val online =
             TextView(this)
 
-        online.text = "鈼� ONLINE"
+        online.text = "● ONLINE"
         online.textSize = 10f
         online.setTextColor(
             Color.rgb(90, 235, 145)
@@ -400,8 +399,8 @@ private fun startAurixService() {
         val coreLabel =
             TextView(this)
 
-        coreLabel.text =
-            "A U R I X   鈥�   INTELLIGENCE CORE"
+        coreLabel.text = "A U R I X   |  
+        INTELLIGENCE CORE"
 
         coreLabel.textSize = 9f
         coreLabel.setTextColor(
@@ -561,8 +560,7 @@ private fun startAurixService() {
         val listening =
             TextView(this)
 
-        listening.text =
-            "  鈼�  HEY AURIX  鈥�  READY  "
+        listening.text = "  ●  VOICE  |  READY  "
 
         listening.textSize = 11f
         listening.setTextColor(cyan)
@@ -1570,7 +1568,7 @@ private fun startAurixService() {
 
         if (active) {
             systemText.text =
-                "SYSTEM ONLINE  鈥�  ACTIVE"
+                "SYSTEM ONLINE  |  ACTIVE"
         } else {
             systemText.text =
                 "SYSTEM ONLINE"
