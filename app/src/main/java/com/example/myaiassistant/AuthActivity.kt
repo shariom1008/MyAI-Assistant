@@ -184,22 +184,21 @@ class AuthActivity : Activity() {
                     googleCredential.idToken
 
                 firebaseAuthWithGoogle(idToken)
+     } catch (e: GetCredentialException) {
 
-            } catch (e: GetCredentialException) {
+    Toast.makeText(
+        this@AuthActivity,
+        "Google error: ${e.javaClass.simpleName}\n${e.message ?: "No error message"}",
+        Toast.LENGTH_LONG
+    ).show()
 
-                Toast.makeText(
-                    this@AuthActivity,
-                    "Google Login cancel ya failed.",
-                    Toast.LENGTH_LONG
-                ).show()
+     } catch (e: Exception) {
 
-            } catch (e: Exception) {
-
-                Toast.makeText(
-                    this@AuthActivity,
-                    "Google Login failed.",
-                    Toast.LENGTH_LONG
-                ).show()
+    Toast.makeText(
+        this@AuthActivity,
+        "Google error: ${e.javaClass.simpleName}\n${e.message ?: "No error message"}",
+        Toast.LENGTH_LONG
+    ).show()
             }
         }
     }
