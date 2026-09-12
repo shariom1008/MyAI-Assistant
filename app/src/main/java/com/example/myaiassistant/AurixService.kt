@@ -5077,43 +5077,32 @@ private fun aurixResponse(
         // Do NOT immediately send LISTENING here.
         // TTS needs time to finish.
     }
-
- // =========================================================
-// AURIX GREETING
-// =========================================================
-
 private fun speakAurixGreeting() {
 
     val hour =
         Calendar.getInstance()
-            .get(
-                Calendar.HOUR_OF_DAY
-            )
+            .get(Calendar.HOUR_OF_DAY)
 
     val greeting =
         when {
-
             hour < 5 ->
-                "啶ㄠぎ啶膏啶む 啶啶膏イ 啶曕ぞ啶 啶︵啶� 啶灌 啶椸 啶灌啷� 啶曕啶� 啶溹ぐ啷傕ぐ啷€ 啶曕ぞ啶� 啶灌 啶曕啶ぞ?"
+                "Good night boss, abhi kya karna hai?"
 
             hour < 12 ->
-                "啶膏啶啶班き啶距い 啶啶膏イ 啶い啶距啶�, 啶嗋 啶曕啶ぞ 啶曕ぞ啶� 啶曕ぐ啶ㄠぞ 啶灌?"
+                "Good morning boss, aaj kya karna hai?"
 
             hour < 17 ->
-                "啶ㄠぎ啶膏啶曕ぞ啶� 啶啶膏イ 啶い啶距啶�, 啶啶� 啶嗋お啶曕 啶侧た啶� 啶曕啶ぞ 啶曕ぐ啷傕?"
+                "Good afternoon boss, aaj kya karna hai?"
 
             hour < 22 ->
-                "啶多啶� 啶膏啶о啶ぞ 啶啶膏イ 啶い啶距啶�, 啶嗋 啶曕啶ぞ 啶曕ぞ啶� 啶曕ぐ啶ㄠぞ 啶灌?"
+                "Good evening boss, aaj kya karna hai?"
 
             else ->
-                "啶ㄠぎ啶膏啶む 啶啶膏イ 啶曕ぞ啶 啶︵啶� 啶灌 啶椸 啶灌啷� 啶曕啶� 啶溹ぐ啷傕ぐ啷€ 啶曕ぞ啶� 啶灌 啶曕啶ぞ?"
+                "Good night boss, aaj kya karna hai?"
         }
 
-    speakOnce(
-        greeting
-    )
+    speakOnce(greeting)
 }
-
     // =========================================================
     // EVENTS
     // =========================================================
