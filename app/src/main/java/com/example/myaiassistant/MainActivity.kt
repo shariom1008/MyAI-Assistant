@@ -843,8 +843,7 @@ addAction(
             TextView(this)
 
         input.text =
-    "  🎙   Tap to speak to AURIX                       
-        "
+    "  🎙   Tap to speak to AURIX"                      
         input.textSize = 12f
         input.setTextColor(white)
         input.gravity = Gravity.CENTER_VERTICAL
