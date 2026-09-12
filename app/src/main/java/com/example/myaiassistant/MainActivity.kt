@@ -145,18 +145,13 @@ class MainActivity : Activity() {
             }
         )
 
-requestPermissionsIfNeeded()
+        requestPermissionsIfNeeded()
 
-if (
-    ContextCompat.checkSelfPermission(
-        this,
-        Manifest.permission.RECORD_AUDIO
-    ) == PackageManager.PERMISSION_GRANTED
-) {
-    startAurixService()
-} else {
-    updateStatus("MICROPHONE PERMISSION REQUIRED")
-}
+        active = AurixService.isRunning
+
+        updateInterface()
+    }
+
     // =========================================================
     // AURIX 2.0 FUTURISTIC INTERFACE
     // =========================================================
@@ -257,7 +252,7 @@ if (
             TextView(this)
 
         subtitle.text =
-            "A U R I X   •   INTELLIGENCE CORE"
+            "A U R I X   鈥�   INTELLIGENCE CORE"
 
         subtitle.textSize = 9f
 
@@ -970,35 +965,42 @@ override fun onRequestPermissionsResult(
             }
         }
     }
-// =========================================================
-// UPDATE INTERFACE
-// =========================================================
 
-private fun updateInterface() {
+    // =========================================================
+    // UPDATE INTERFACE
+    // =========================================================
 
-    if (active) {
+    private fun updateInterface() {
 
-        systemText.text =
-            "SYSTEM ONLINE"
+        if (active) {
 
-        statusText.text =
-            "LISTENING..."
+            activateButton.text =
+                "DEACTIVATE AURIX"
 
-        coreText.text =
-            "AURIX"
+            systemText.text =
+                "SYSTEM ACTIVE"
 
-    } else {
+            statusText.text =
+                "STARTING..."
 
-        systemText.text =
-            "SYSTEM ONLINE"
+            coreText.text =
+                "AURIX"
 
-        statusText.text =
-            "READY"
+        } else {
 
-        coreText.text =
-            "AURIX"
+            activateButton.text =
+                "ACTIVATE AURIX"
+
+            systemText.text =
+                "SYSTEM ONLINE"
+
+            statusText.text =
+                "READY"
+
+            coreText.text =
+                "AURIX"
+        }
     }
-}
 
     // =========================================================
     // PERMISSIONS
@@ -1102,6 +1104,11 @@ private fun updateInterface() {
 
         active =
             AurixService.isRunning
+
+        if (
+            ::activateButton.isInitialized
+        ) {
+
             updateInterface()
         }
     }
