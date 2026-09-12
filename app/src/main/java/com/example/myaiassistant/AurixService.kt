@@ -3814,7 +3814,7 @@ Thread {
                 .getJSONObject("id")
                 .getString("videoId")
 
-        runOnUiThread {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
             val youtubeIntent =
                 Intent(
                     Intent.ACTION_VIEW,
@@ -3842,7 +3842,7 @@ Thread {
         }
 
     } catch (_: Exception) {
-        runOnUiThread {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
             speakOnce("I could not find that video on YouTube.")
         }
     }
