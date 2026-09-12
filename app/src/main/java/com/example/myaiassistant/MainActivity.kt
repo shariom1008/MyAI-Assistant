@@ -145,13 +145,18 @@ class MainActivity : Activity() {
             }
         )
 
-        requestPermissionsIfNeeded()
+requestPermissionsIfNeeded()
 
-        active = AurixService.isRunning
-
-        updateInterface()
-    }
-
+if (
+    ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.RECORD_AUDIO
+    ) == PackageManager.PERMISSION_GRANTED
+) {
+    startAurixService()
+} else {
+    updateStatus("MICROPHONE PERMISSION REQUIRED")
+}
     // =========================================================
     // AURIX 2.0 FUTURISTIC INTERFACE
     // =========================================================
@@ -965,42 +970,35 @@ override fun onRequestPermissionsResult(
             }
         }
     }
+// =========================================================
+// UPDATE INTERFACE
+// =========================================================
 
-    // =========================================================
-    // UPDATE INTERFACE
-    // =========================================================
+private fun updateInterface() {
 
-    private fun updateInterface() {
+    if (active) {
 
-        if (active) {
+        systemText.text =
+            "SYSTEM ONLINE"
 
-            activateButton.text =
-                "DEACTIVATE AURIX"
+        statusText.text =
+            "LISTENING..."
 
-            systemText.text =
-                "SYSTEM ACTIVE"
+        coreText.text =
+            "AURIX"
 
-            statusText.text =
-                "STARTING..."
+    } else {
 
-            coreText.text =
-                "AURIX"
+        systemText.text =
+            "SYSTEM ONLINE"
 
-        } else {
+        statusText.text =
+            "READY"
 
-            activateButton.text =
-                "ACTIVATE AURIX"
-
-            systemText.text =
-                "SYSTEM ONLINE"
-
-            statusText.text =
-                "READY"
-
-            coreText.text =
-                "AURIX"
-        }
+        coreText.text =
+            "AURIX"
     }
+}
 
     // =========================================================
     // PERMISSIONS
@@ -1104,11 +1102,6 @@ override fun onRequestPermissionsResult(
 
         active =
             AurixService.isRunning
-
-        if (
-            ::activateButton.isInitialized
-        ) {
-
             updateInterface()
         }
     }
