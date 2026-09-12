@@ -12,16 +12,31 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.FirebaseUser
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AuthActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
+    private lateinit var credentialManager: CredentialManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         auth = FirebaseAuth.getInstance()
+        credentialManager = CredentialManager.create(this)
 
         if (auth.currentUser != null) {
             openAurix()
@@ -65,21 +80,19 @@ class AuthActivity : Activity() {
 
         val googleButton = Button(this).apply {
             text = "Continue with Google"
+
             setOnClickListener {
-                Toast.makeText(
-                    this@AuthActivity,
-                    "Google Login coming next.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                signInWithGoogle()
             }
         }
 
         val emailButton = Button(this).apply {
             text = "Login / Sign Up with Email"
+
             setOnClickListener {
                 Toast.makeText(
                     this@AuthActivity,
-                    "Email Login coming next.",
+                    "Email Login next step mein add karenge.",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -135,10 +148,102 @@ class AuthActivity : Activity() {
         setContentView(root)
     }
 
+    private fun signInWithGoogle() {
+
+        CoroutineScope(Dispatchers.Main).launch {
+
+            try {
+
+                val googleIdOption =
+                    GetGoogleIdOption.Builder()
+                        .setFilterByAuthorizedAccounts(false)
+                        .setServerClientId(
+                            getString(R.string.default_web_client_id)
+                        )
+                        .setAutoSelectEnabled(false)
+                        .build()
+
+                val request =
+                    GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+
+                val result =
+                    credentialManager.getCredential(
+                        context = this@AuthActivity,
+                        request = request
+                    )
+
+                val credential = result.credential
+
+                val googleCredential =
+                    GoogleIdTokenCredential
+                        .createFrom(credential.data)
+
+                val idToken =
+                    googleCredential.idToken
+
+                firebaseAuthWithGoogle(idToken)
+
+            } catch (e: GetCredentialException) {
+
+                Toast.makeText(
+                    this@AuthActivity,
+                    "Google Login cancel ya failed.",
+                    Toast.LENGTH_LONG
+                ).show()
+
+            } catch (e: Exception) {
+
+                Toast.makeText(
+                    this@AuthActivity,
+                    "Google Login failed.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun firebaseAuthWithGoogle(idToken: String) {
+
+        val credential =
+            GoogleAuthProvider.getCredential(
+                idToken,
+                null
+            )
+
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener(this) { task ->
+
+                if (task.isSuccessful) {
+
+                    val user: FirebaseUser? =
+                        auth.currentUser
+
+                    if (user != null) {
+                        openAurix()
+                    }
+
+                } else {
+
+                    Toast.makeText(
+                        this,
+                        "Firebase Google Login failed.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+    }
+
     private fun openAurix() {
+
         startActivity(
-            Intent(this, MainActivity::class.java)
+            Intent(
+                this,
+                MainActivity::class.java
+            )
         )
+
         finish()
     }
 }
