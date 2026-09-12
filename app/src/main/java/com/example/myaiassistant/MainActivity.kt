@@ -861,7 +861,27 @@ private fun startAurixService() {
             )
 
         input.setOnClickListener {
-            updateStatus("LISTENING")
+
+    if (
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) != PackageManager.PERMISSION_GRANTED
+    ) {
+
+        requestMicrophonePermission()
+
+        return@setOnClickListener
+    }
+
+    if (!AurixService.isRunning) {
+
+        startAurixService()
+
+    } else {
+
+        updateStatus("LISTENING")
+    }
         }
 
         val inputParams =
@@ -1627,22 +1647,31 @@ private fun startAurixService() {
             )
         }
     }
+// =========================================================
+// RESUME
+// =========================================================
 
-    // =========================================================
-    // RESUME
-    // =========================================================
+override fun onResume() {
 
-    override fun onResume() {
+    super.onResume()
 
-        super.onResume()
+    if (::statusText.isInitialized) {
 
-        active =
-            AurixService.isRunning
+        if (AurixService.isRunning) {
 
-        if (::statusText.isInitialized) {
-            updateInterface()
+            active = true
+
+            updateStatus("LISTENING")
+
+        } else {
+
+            active = false
+
+            updateStatus("READY")
         }
+
     }
+}
 
     // =========================================================
     // DESTROY
