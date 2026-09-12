@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import java.util.Locale
 import android.Manifest
 import android.content.pm.PackageManager
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : Activity() {
 
@@ -32,6 +33,7 @@ class MainActivity : Activity() {
     private lateinit var waveform: WaveformView
 
     private var active = false
+    private lateinit var auth: FirebaseAuth
 
     // =========================================================
     // COLORS
@@ -121,6 +123,15 @@ class MainActivity : Activity() {
 ) {
 
     super.onCreate(savedInstanceState)
+    auth = FirebaseAuth.getInstance()
+
+if (auth.currentUser == null) {
+    startActivity(
+        Intent(this, AuthActivity::class.java)
+    )
+    finish()
+    return
+}
 
     window.statusBarColor = Color.TRANSPARENT
     window.navigationBarColor = Color.BLACK
