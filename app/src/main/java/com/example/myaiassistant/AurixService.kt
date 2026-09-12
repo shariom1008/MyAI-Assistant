@@ -3794,14 +3794,16 @@ private fun askFinalAI(
             return
         }
 
-        val url =
+val latest = query.lowercase().contains("latest")
+
+val url =
     "https://www.googleapis.com/youtube/v3/search" +
     "?part=snippet" +
     "&q=" + Uri.encode(query) +
     "&type=video" +
     "&maxResults=1" +
+    if (latest) "&order=date" else "" +
     "&key=" + BuildConfig.YOUTUBE_API_KEY
-
         
 Thread {
     try {
