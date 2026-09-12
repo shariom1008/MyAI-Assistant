@@ -26,7 +26,6 @@ class MainActivity : Activity() {
 
     private lateinit var root: FrameLayout
     private lateinit var statusText: TextView
-    private lateinit var activateButton: TextView
     private lateinit var orb: View
     private lateinit var coreText: TextView
     private lateinit var systemText: TextView
@@ -533,99 +532,6 @@ class MainActivity : Activity() {
         startCoreAnimation(
             outerRing
         )
-
-        // =====================================================
-        // ACTIVATE BUTTON
-        // =====================================================
-
-        activateButton =
-            TextView(this)
-
-        activateButton.text =
-            "ACTIVATE AURIX"
-
-        activateButton.textSize =
-            15f
-
-        activateButton.setTextColor(
-            Color.WHITE
-        )
-
-        activateButton.gravity =
-            Gravity.CENTER
-
-        activateButton.typeface =
-            Typeface.DEFAULT_BOLD
-
-        activateButton.letterSpacing =
-            0.08f
-
-        activateButton.background =
-            createButtonBackground()
-
-        activateButton.setOnClickListener {
-
-            if (active) {
-
-                deactivateAurix()
-
-            } else {
-
-                activateAurix()
-            }
-        }
-
-        val buttonParams =
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(60)
-            )
-
-        buttonParams.gravity =
-            Gravity.BOTTOM
-
-        buttonParams.leftMargin =
-            dp(25)
-
-        buttonParams.rightMargin =
-            dp(25)
-
-        buttonParams.bottomMargin =
-            dp(18)
-
-        root.addView(
-            activateButton,
-            buttonParams
-        )
-
-        // =====================================================
-        // NAVIGATION SAFE AREA
-        // =====================================================
-
-        ViewCompat.setOnApplyWindowInsetsListener(
-            root
-        ) { _, insets ->
-
-            val navigation =
-                insets.getInsets(
-                    WindowInsetsCompat.Type.navigationBars()
-                )
-
-            val params =
-                activateButton.layoutParams
-                    as FrameLayout.LayoutParams
-
-            params.bottomMargin =
-                navigation.bottom + dp(14)
-
-            activateButton.layoutParams =
-                params
-
-            insets
-        }
-
-        ViewCompat.requestApplyInsets(root)
-    }
 
     // =========================================================
     // ORB
