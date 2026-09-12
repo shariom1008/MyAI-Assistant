@@ -398,9 +398,7 @@ private fun startAurixService() {
 
         val coreLabel =
             TextView(this)
-
-        coreLabel.text = "A U R I X   |  
-        INTELLIGENCE CORE"
+coreLabel.text = "A U R I X   |   INTELLIGENCE CORE""
 
         coreLabel.textSize = 9f
         coreLabel.setTextColor(
