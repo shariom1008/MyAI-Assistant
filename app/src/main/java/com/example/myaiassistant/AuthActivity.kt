@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.content.MutableContextWrapper
+import android.util.Log
 
 class AuthActivity : Activity() {
 
@@ -184,22 +185,35 @@ private fun signInWithGoogle() {
 
             firebaseAuthWithGoogle(idToken)
 
-        } catch (e: GetCredentialException) {
 
-            Toast.makeText(
-                this@AuthActivity,
-                "Google error: ${e.javaClass.simpleName}",
-                Toast.LENGTH_LONG
-            ).show()
+            catch (e: GetCredentialException) {
 
-        } catch (e: Exception) {
+    Log.e(
+        "AURIX_AUTH",
+        "Google CredentialManager error",
+        e
+    )
 
-            Toast.makeText(
-                this@AuthActivity,
-                "Google error: ${e.javaClass.simpleName}\n${e.message ?: "No error message"}",
-                Toast.LENGTH_LONG
-            ).show()
-        }
+    Toast.makeText(
+        this@AuthActivity,
+        "Google error: ${e.javaClass.name}",
+        Toast.LENGTH_LONG
+    ).show()
+            }
+catch (e: Exception) {
+
+    Log.e(
+        "AURIX_AUTH",
+        "Google unexpected error",
+        e
+    )
+
+    Toast.makeText(
+        this@AuthActivity,
+        "Google error: ${e.javaClass.name}",
+        Toast.LENGTH_LONG
+    ).show()
+}
     }
 }
 
