@@ -3849,60 +3849,7 @@ Thread {
 }.start()
 
 return
-            val youtubeIntent =
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse("https://www.youtube.com/watch?v=$videoId")
-                ).apply {
-
-                    setPackage(
-                        "com.google.android.youtube"
-                    )
-
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                    )
-                }
-
-            startActivity(
-                youtubeIntent
-            )
-
-            speakOnce(
-                "Searching YouTube for $query."
-            )
-
-        } catch (_: Exception) {
-
-            try {
-
-                val browserIntent =
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(url)
-                    ).apply {
-
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK
-                        )
-                    }
-
-                startActivity(
-                    browserIntent
-                )
-
-                speakOnce(
-                    "Opening YouTube search for $query."
-                )
-
-            } catch (_: Exception) {
-
-                speakOnce(
-                    "I could not open YouTube."
-                )
-            }
-        }
-    }
+            
 
     // =========================================================
     // CHROME
