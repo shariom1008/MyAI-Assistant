@@ -26,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.content.MutableContextWrapper
 
 class AuthActivity : Activity() {
 
@@ -164,11 +165,14 @@ class AuthActivity : Activity() {
         .addCredentialOption(googleSignInOption)
         .build()
 
-                val result =
-                    credentialManager.getCredential(
-                        context = this@AuthActivity,
-                        request = request
-                    )
+                val mutableContext =
+                MutableContextWrapper(this@AuthActivity)
+
+                  val result =
+    credentialManager.getCredential(
+        context = mutableContext,
+        request = request
+    )
 
                 val credential = result.credential
 
