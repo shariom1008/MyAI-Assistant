@@ -974,9 +974,6 @@ override fun onRequestPermissionsResult(
 
         if (active) {
 
-            activateButton.text =
-                "DEACTIVATE AURIX"
-
             systemText.text =
                 "SYSTEM ACTIVE"
 
@@ -988,8 +985,7 @@ override fun onRequestPermissionsResult(
 
         } else {
 
-            activateButton.text =
-                "ACTIVATE AURIX"
+            
 
             systemText.text =
                 "SYSTEM ONLINE"
@@ -1104,11 +1100,6 @@ override fun onRequestPermissionsResult(
 
         active =
             AurixService.isRunning
-
-        if (
-            ::activateButton.isInitialized
-        ) {
-
             updateInterface()
         }
     }
