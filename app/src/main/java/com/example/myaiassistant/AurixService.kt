@@ -318,184 +318,351 @@ class AurixService :
         )
     }
 
-    // =========================================================
-    // SPEECH RECOGNITION
-    // =========================================================
+// =========================================================
+// SPEECH RECOGNITION
+// =========================================================
 
-    private fun startListening() {
+private fun startListening() {
 
-        if (
-            serviceDestroyed ||
-            !isRunning
-        ) {
-            return
-        }
+    if (serviceDestroyed || !isRunning) {
+        return
+    }
 
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            sendStatus("Speech recognition unavailable")
-            return
-        }
+    if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+        sendStatus("Speech recognition unavailable")
+        return
+    }
 
+    try {
+
+        // Make sure previous recognition session is not running.
         try {
-            if (speechRecognizer == null) {
-                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+            speechRecognizer?.cancel()
+        } catch (_: Exception) {
+        }
 
-                speechRecognizer?.setRecognitionListener(
-                    object : RecognitionListener {
+        if (speechRecognizer == null) {
 
-                        override fun onReadyForSpeech(params: Bundle?) {
-                            listening = true
-                            sendStatus(if (wakeWordMode) "HEY AURIX READY" else "LISTENING")
+            speechRecognizer =
+                SpeechRecognizer.createSpeechRecognizer(this)
+
+            speechRecognizer?.setRecognitionListener(
+                object : RecognitionListener {
+
+                    override fun onReadyForSpeech(params: Bundle?) {
+                        listening = true
+
+                        sendStatus(
+                            if (wakeWordMode)
+                                "HEY AURIX READY"
+                            else
+                                "LISTENING"
+                        )
+                    }
+
+                    override fun onBeginningOfSpeech() {
+                        sendStatus("THINKING")
+                    }
+
+                    override fun onRmsChanged(rmsdB: Float) {
+                    }
+
+                    override fun onBufferReceived(buffer: ByteArray?) {
+                    }
+
+                    override fun onEndOfSpeech() {
+                    }
+
+                    override fun onError(error: Int) {
+
+                        listening = false
+
+                        if (!isRunning || serviceDestroyed) {
+                            return
                         }
 
-                        override fun onBeginningOfSpeech() {
-                            sendStatus("THINKING")
+                        /*
+                         * Important:
+                         * Manual tap mode should also recover from
+                         * temporary SpeechRecognizer errors.
+                         */
+
+                        if (!wakeWordMode) {
+                            sendStatus("READY")
+
+                            handler.postDelayed({
+
+                                if (
+                                    isRunning &&
+                                    !serviceDestroyed &&
+                                    !listening
+                                ) {
+                                    wakeWordMode = true
+                                    startListening()
+                                }
+
+                            }, 800)
+
+                            return
                         }
 
-                        override fun onRmsChanged(rmsdB: Float) {}
-                        override fun onBufferReceived(buffer: ByteArray?) {}
-                        override fun onEndOfSpeech() {}
+                        restartListening()
+                    }
 
-                        override fun onError(error: Int) {
-                            listening = false
+                    override fun onResults(results: Bundle?) {
 
-                            // One-shot mode must end after one recognition attempt.
-                            if (!wakeWordMode) {
-                                sendStatus("READY")
-                                return
-                            }
+                        listening = false
 
-                            if (isRunning && !serviceDestroyed) {
-                                restartListening()
-                            }
+                        if (!isRunning || serviceDestroyed) {
+                            return
                         }
 
-                        override fun onResults(results: Bundle?) {
-                            listening = false
-
-                            val text = results
-                                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        val text =
+                            results
+                                ?.getStringArrayList(
+                                    SpeechRecognizer.RESULTS_RECOGNITION
+                                )
                                 ?.firstOrNull()
                                 ?.trim()
                                 ?.lowercase(Locale.getDefault())
                                 .orEmpty()
 
-                            if (text.isBlank()) {
-                                if (wakeWordMode && isRunning && !serviceDestroyed) {
-                                    restartListening()
-                                }
-                                return
-                            }
-
-                            // Never interpret YouTube/music audio as a command.
-                            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                            if (audioManager.isMusicActive) {
-                                if (wakeWordMode && isRunning && !serviceDestroyed) {
-                                    restartListening()
-                                }
-                                return
-                            }
+                        if (text.isBlank()) {
 
                             if (wakeWordMode) {
-                                val wake = Regex("\\b(hey|hi|hello)\\s+aurix\\b")
-                                val match = wake.find(text)
+                                restartListening()
+                            } else {
+                                sendStatus("READY")
+                            }
 
-                                if (match == null) {
-                                    restartListening()
-                                    return
-                                }
+                            return
+                        }
 
-                                val command = text.substring(match.range.last + 1).trim(' ', ',', '.', ':', '-')
+                        /*
+                         * DO NOT reject recognition just because
+                         * music is currently playing.
+                         *
+                         * SpeechRecognizer itself decides what was heard.
+                         * The old isMusicActive check could throw away
+                         * perfectly valid commands.
+                         */
 
-                                if (command.isBlank()) {
-                                    wakeWordMode = false
-                                    sendStatus("LISTENING")
-                                    handler.postDelayed({
-                                        if (isRunning && !serviceDestroyed && !listening) {
-                                            startListening()
-                                        }
-                                    }, 1200)
-                                    return
-                                }
+                        if (wakeWordMode) {
 
-                                sendCommand(command)
-                                handler.postDelayed({
-                                    if (isRunning && !serviceDestroyed) {
-                                        processCommand(command)
-                                        wakeWordMode = true
-                                        handler.postDelayed({
-                                            if (isRunning && !serviceDestroyed && !listening) {
-                                                startListening()
-                                            }
-                                        }, 1800)
-                                    }
-                                }, 300)
+                            val wake =
+                                Regex(
+                                    "\\b(hey|hi|hello)\\s+aurix\\b",
+                                    RegexOption.IGNORE_CASE
+                                )
+
+                            val match = wake.find(text)
+
+                            if (match == null) {
+                                restartListening()
                                 return
                             }
 
-                            // Manual tap mode: exactly one command, then return to wake mode.
-                            sendCommand(text)
+                            val command =
+                                text
+                                    .substring(match.range.last + 1)
+                                    .trim(
+                                        ' ',
+                                        ',',
+                                        '.',
+                                        ':',
+                                        '-'
+                                    )
+
+                            if (command.isBlank()) {
+
+                                wakeWordMode = false
+
+                                sendStatus("LISTENING")
+
+                                handler.postDelayed({
+
+                                    if (
+                                        isRunning &&
+                                        !serviceDestroyed &&
+                                        !listening
+                                    ) {
+                                        startListening()
+                                    }
+
+                                }, 500)
+
+                                return
+                            }
+
+                            // Wake word + command in one sentence.
+                            sendCommand(command)
+
                             handler.postDelayed({
-                                if (isRunning && !serviceDestroyed) {
-                                    processCommand(text)
+
+                                if (
+                                    isRunning &&
+                                    !serviceDestroyed
+                                ) {
+
+                                    processCommand(command)
+
                                     wakeWordMode = true
+
                                     handler.postDelayed({
-                                        if (isRunning && !serviceDestroyed && !listening) {
+
+                                        if (
+                                            isRunning &&
+                                            !serviceDestroyed &&
+                                            !listening
+                                        ) {
                                             startListening()
                                         }
+
                                     }, 1800)
                                 }
+
                             }, 300)
+
+                            return
                         }
 
-                        override fun onPartialResults(partialResults: Bundle?) {}
-                        override fun onEvent(eventType: Int, params: Bundle?) {}
+                        // =================================================
+                        // MANUAL TAP MODE
+                        // =================================================
+
+                        sendCommand(text)
+
+                        handler.postDelayed({
+
+                            if (
+                                isRunning &&
+                                !serviceDestroyed
+                            ) {
+
+                                processCommand(text)
+
+                                wakeWordMode = true
+
+                                handler.postDelayed({
+
+                                    if (
+                                        isRunning &&
+                                        !serviceDestroyed &&
+                                        !listening
+                                    ) {
+                                        startListening()
+                                    }
+
+                                }, 1800)
+                            }
+
+                        }, 300)
                     }
+
+                    override fun onPartialResults(
+                        partialResults: Bundle?
+                    ) {
+                    }
+
+                    override fun onEvent(
+                        eventType: Int,
+                        params: Bundle?
+                    ) {
+                    }
+                }
+            )
+        }
+
+        val intent =
+            Intent(
+                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+            ).apply {
+
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                )
+
+                /*
+                 * Device default language.
+                 * This keeps Hindi/English/Hinglish recognition
+                 * dependent on the phone's configured speech language.
+                 */
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE,
+                    Locale.getDefault()
+                )
+
+                putExtra(
+                    RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                    false
+                )
+
+                putExtra(
+                    RecognizerIntent.EXTRA_MAX_RESULTS,
+                    3
                 )
             }
 
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            }
+        speechRecognizer?.startListening(intent)
 
-            speechRecognizer?.startListening(intent)
+    } catch (_: Exception) {
 
-        } catch (_: Exception) {
-            listening = false
-            if (wakeWordMode) {
-                restartListening()
-            }
-        }
-    }
-
-    // =========================================================
-    // SAFE RESTART
-    // =========================================================
-
-    private fun restartListening() {
-
-        if (
-            restarting ||
-            !isRunning ||
-            serviceDestroyed ||
-            !wakeWordMode
-        ) {
-            return
-        }
-
-        restarting = true
         listening = false
 
-        handler.postDelayed({
-            restarting = false
-            if (isRunning && !serviceDestroyed && wakeWordMode) {
-                startListening()
-            }
-        }, 1200)
+        if (
+            isRunning &&
+            !serviceDestroyed
+        ) {
+
+            handler.postDelayed({
+
+                if (
+                    isRunning &&
+                    !serviceDestroyed &&
+                    !listening
+                ) {
+                    startListening()
+                }
+
+            }, 1000)
+        }
     }
+}
+
+
+// =========================================================
+// SAFE RESTART
+// =========================================================
+
+private fun restartListening() {
+
+    if (
+        restarting ||
+        !isRunning ||
+        serviceDestroyed
+    ) {
+        return
+    }
+
+    restarting = true
+    listening = false
+
+    handler.postDelayed({
+
+        restarting = false
+
+        if (
+            isRunning &&
+            !serviceDestroyed &&
+            !listening
+        ) {
+            startListening()
+        }
+
+    }, 1000)
+}
+
 
     // =========================================================
     // MAIN COMMAND ENGINE
