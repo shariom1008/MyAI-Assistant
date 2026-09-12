@@ -78,6 +78,11 @@ class AurixService :
 
     private var listening = false
 
+    // One command per user tap. Listening is never restarted automatically
+    // after a command, which prevents media/YouTube audio from being
+    // captured as the next voice command.
+    private var listenRequested = false
+
     private var restarting = false
 
     private var serviceDestroyed = false
@@ -132,7 +137,8 @@ class AurixService :
                 this
             )
 
-        startListening()
+        // Do not start the microphone automatically.
+        // The UI's "Tap Here to Speak" action sends ACTION_START.
     }
 
     // =========================================================
@@ -149,6 +155,7 @@ class AurixService :
 
             ACTION_STOP -> {
 
+                listenRequested = false
                 stopAurix()
 
                 return START_NOT_STICKY
@@ -159,16 +166,16 @@ class AurixService :
                 isRunning = true
                 restarting = false
 
+                // One tap = one recognition session.
                 if (!listening) {
+                    listenRequested = true
                     startListening()
                 }
             }
 
             else -> {
 
-                if (!listening) {
-                    startListening()
-                }
+                // Do not silently open the microphone for unrelated service starts.
             }
         }
 
@@ -183,6 +190,7 @@ class AurixService :
 
         isRunning = false
         listening = false
+        listenRequested = false
         restarting = true
 
         handler.removeCallbacksAndMessages(
@@ -302,7 +310,8 @@ class AurixService :
 
         if (
             serviceDestroyed ||
-            !isRunning
+            !isRunning ||
+            !listenRequested
         ) {
             return
         }
@@ -380,14 +389,10 @@ class AurixService :
                                 ) {
 
                                 listening = false
+                                listenRequested = false
 
-                                if (
-                                    isRunning &&
-                                    !serviceDestroyed
-                                ) {
-
-                                    restartListening()
-                                }
+                                // IMPORTANT: never auto-restart here.
+                                // A retry must come from a fresh user tap.
                             }
 
 override fun
@@ -396,6 +401,7 @@ override fun
     ) {
 
     listening = false
+    listenRequested = false
 
     val list =
         results
@@ -437,13 +443,8 @@ override fun
         }, 500)
     }
 
-    if (
-        isRunning &&
-        !serviceDestroyed
-    ) {
-
-        restartListening()
-    }
+    // IMPORTANT: do not restart listening automatically.
+    // The next command begins only after the user taps the voice button again.
     }
 
                             override fun
@@ -503,7 +504,8 @@ override fun
 
         } catch (_: Exception) {
 
-            restartListening()
+            listening = false
+            listenRequested = false
         }
     }
 
@@ -513,30 +515,10 @@ override fun
 
     private fun restartListening() {
 
-        if (
-            restarting ||
-            !isRunning ||
-            serviceDestroyed
-        ) {
-            return
-        }
-
-        restarting = true
+        // Automatic microphone restart is intentionally disabled.
+        // A new recognition session must be explicitly requested by the UI.
+        restarting = false
         listening = false
-
-        handler.postDelayed({
-
-            restarting = false
-
-            if (
-                isRunning &&
-                !serviceDestroyed
-            ) {
-
-                startListening()
-            }
-
-        }, 1200)
     }
 
     // =========================================================
@@ -4490,147 +4472,147 @@ private fun aurixResponse(
         // -------------------------------------------------
 
         t == "Opening YouTube." ->
-            "बॉस, यूट्यूब खोल रहा हूँ।"
+            "啶啶�, 啶啶熰啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening camera." ->
-            "बॉस, कैमरा खोल रहा हूँ।"
+            "啶啶�, 啶曕啶ぐ啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening gallery." ->
-            "बॉस, गैलरी खोल रहा हूँ।"
+            "啶啶�, 啶椸啶侧ぐ啷€ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening music." ->
-            "बॉस, म्यूज़िक ऐप खोल रहा हूँ।"
+            "啶啶�, 啶啶啶溹ぜ啶苦 啶愢お 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening notes." ->
-            "बॉस, नोट्स खोल रहा हूँ।"
+            "啶啶�, 啶ㄠ啶熰啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening calculator." ->
-            "बॉस, कैलकुलेटर खोल रहा हूँ।"
+            "啶啶�, 啶曕啶侧啷佮げ啷囙啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening Chrome." ->
-            "बॉस, क्रोम खोल रहा हूँ।"
+            "啶啶�, 啶曕啶班啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening Maps." ->
-            "बॉस, मैप्स खोल रहा हूँ।"
+            "啶啶�, 啶啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening phone." ->
-            "बॉस, फोन खोल रहा हूँ।"
+            "啶啶�, 啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening settings." ->
-            "बॉस, सेटिंग्स खोल रहा हूँ।"
+            "啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         t == "Opening Wi-Fi settings." ->
-            "बॉस, वाई-फाई सेटिंग्स खोल रहा हूँ।"
+            "啶啶�, 啶掂ぞ啶�-啶ぞ啶� 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
 
         // -------------------------------------------------
         // VOLUME / MEDIA
         // -------------------------------------------------
 
         t == "Volume increased." ->
-            "बॉस, वॉल्यूम बढ़ा दिया।"
+            "啶啶�, 啶掂啶侧啶啶� 啶あ啶监ぞ 啶︵た啶ぞ啷�"
 
         t == "Volume decreased." ->
-            "बॉस, वॉल्यूम कम कर दिया।"
+            "啶啶�, 啶掂啶侧啶啶� 啶曕ぎ 啶曕ぐ 啶︵た啶ぞ啷�"
 
         t == "Media control executed." ->
-            "हो गया बॉस, मीडिया कंट्रोल कर दिया।"
+            "啶灌 啶椸く啶� 啶啶�, 啶啶∴た啶ぞ 啶曕啶熰啶班啶� 啶曕ぐ 啶︵た啶ぞ啷�"
 
         // -------------------------------------------------
         // FLASHLIGHT
         // -------------------------------------------------
 
         t == "Flashlight turned on." ->
-            "बॉस, फ्लैशलाइट चालू कर दी।"
+            "啶啶�, 啶啶侧啶多げ啶距啶� 啶氞ぞ啶侧 啶曕ぐ 啶︵啷�"
 
         t == "Flashlight turned off." ->
-            "बॉस, फ्लैशलाइट बंद कर दी।"
+            "啶啶�, 啶啶侧啶多げ啶距啶� 啶啶� 啶曕ぐ 啶︵啷�"
 
         t == "Flashlight is not available." ->
-            "सॉरी बॉस, फ्लैशलाइट उपलब्ध नहीं है।"
+            "啶膏啶班 啶啶�, 啶啶侧啶多げ啶距啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
 
         // -------------------------------------------------
         // DEVICE ERRORS
         // -------------------------------------------------
 
         t == "Camera is not available." ->
-            "सॉरी बॉस, कैमरा उपलब्ध नहीं है।"
+            "啶膏啶班 啶啶�, 啶曕啶ぐ啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "Gallery is not available." ->
-            "सॉरी बॉस, गैलरी उपलब्ध नहीं है।"
+            "啶膏啶班 啶啶�, 啶椸啶侧ぐ啷€ 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "Music app is not available." ->
-            "सॉरी बॉस, म्यूज़िक ऐप नहीं मिली।"
+            "啶膏啶班 啶啶�, 啶啶啶溹ぜ啶苦 啶愢お 啶ㄠす啷€啶� 啶た啶侧啷�"
 
         t == "Notes app is not available." ->
-            "सॉरी बॉस, नोट्स ऐप नहीं मिली।"
+            "啶膏啶班 啶啶�, 啶ㄠ啶熰啶� 啶愢お 啶ㄠす啷€啶� 啶た啶侧啷�"
 
         t == "Calculator is not available." ->
-            "सॉरी बॉस, कैलकुलेटर नहीं मिला।"
+            "啶膏啶班 啶啶�, 啶曕啶侧啷佮げ啷囙啶� 啶ㄠす啷€啶� 啶た啶侧ぞ啷�"
 
         t == "YouTube is not available." ->
-            "सॉरी बॉस, यूट्यूब उपलब्ध नहीं है।"
+            "啶膏啶班 啶啶�, 啶啶熰啶啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "Browser is not available." ->
-            "सॉरी बॉस, ब्राउज़र उपलब्ध नहीं है।"
+            "啶膏啶班 啶啶�, 啶啶班ぞ啶夃啶监ぐ 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "Maps is not available." ->
-            "सॉरी बॉस, मैप्स उपलब्ध नहीं है।"
+            "啶膏啶班 啶啶�, 啶啶啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "Phone app is not available." ->
-            "सॉरी बॉस, फोन ऐप उपलब्ध नहीं है।"
+            "啶膏啶班 啶啶�, 啶啶� 啶愢お 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "Settings is not available." ->
-            "सॉरी बॉस, सेटिंग्स नहीं खुल पाईं।"
+            "啶膏啶班 啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶堗啷�"
 
         t == "Wi-Fi settings are not available." ->
-            "सॉरी बॉस, वाई-फाई सेटिंग्स उपलब्ध नहीं हैं।"
+            "啶膏啶班 啶啶�, 啶掂ぞ啶�-啶ぞ啶� 啶膏啶熰た啶傕啷嵿じ 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啶傕イ"
 
         // -------------------------------------------------
         // CONTROL ERRORS
         // -------------------------------------------------
 
         t == "I could not control the flashlight." ->
-            "सॉरी बॉस, फ्लैशलाइट कंट्रोल नहीं कर पाया।"
+            "啶膏啶班 啶啶�, 啶啶侧啶多げ啶距啶� 啶曕啶熰啶班啶� 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
 
         t == "I could not change the volume." ->
-            "सॉरी बॉस, वॉल्यूम नहीं बदल पाया।"
+            "啶膏啶班 啶啶�, 啶掂啶侧啶啶� 啶ㄠす啷€啶� 啶う啶� 啶ぞ啶ぞ啷�"
 
         t == "I could not control media." ->
-            "सॉरी बॉस, मीडिया कंट्रोल नहीं कर पाया।"
+            "啶膏啶班 啶啶�, 啶啶∴た啶ぞ 啶曕啶熰啶班啶� 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
 
         t == "I could not check the battery." ->
-            "सॉरी बॉस, बैटरी चेक नहीं कर पाया।"
+            "啶膏啶班 啶啶�, 啶啶熰ぐ啷€ 啶氞啶� 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
 
         t == "I could not search that." ->
-            "सॉरी बॉस, ये सर्च नहीं कर पाया।"
+            "啶膏啶班 啶啶�, 啶 啶膏ぐ啷嵿 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
 
         t == "I could not open YouTube." ->
-            "सॉरी बॉस, यूट्यूब नहीं खुल पाया।"
+            "啶膏啶班 啶啶�, 啶啶熰啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
 
         t == "I could not open Maps." ->
-            "सॉरी बॉस, मैप्स नहीं खुल पाया।"
+            "啶膏啶班 啶啶�, 啶啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
 
         // -------------------------------------------------
         // MEMORY
         // -------------------------------------------------
 
         t == "Got it. I'll remember that." ->
-            "समझ गया बॉस, मैं इसे याद रखूँगा।"
+            "啶膏ぎ啶� 啶椸く啶� 啶啶�, 啶啶� 啶囙じ啷� 啶ぞ啶� 啶班啷傕啶椸ぞ啷�"
 
         t == "I've cleared my personal memory." ->
-            "हो गया बॉस, मेरी पर्सनल मेमोरी क्लियर कर दी।"
+            "啶灌 啶椸く啶� 啶啶�, 啶啶班 啶ぐ啷嵿じ啶ㄠげ 啶啶啶班 啶曕啶侧た啶ぐ 啶曕ぐ 啶︵啷�"
 
         t == "Okay. I'll forget that." ->
-            "ठीक है बॉस, मैं इसे भूल जाऊँगा।"
+            "啶犩啶� 啶灌 啶啶�, 啶啶� 啶囙じ啷� 啶啶� 啶溹ぞ啶娻啶椸ぞ啷�"
 
         t == "Tell me what you want me to forget." ->
-            "बॉस, बताओ क्या भूलना है।"
+            "啶啶�, 啶い啶距 啶曕啶ぞ 啶啶侧え啶� 啶灌啷�"
 
         t == "I don't have any personal memory about you yet." ->
-            "बॉस, अभी मेरे पास आपकी कोई पर्सनल मेमोरी नहीं है।"
+            "啶啶�, 啶呧き啷€ 啶啶班 啶ぞ啶� 啶嗋お啶曕 啶曕啶� 啶ぐ啷嵿じ啶ㄠげ 啶啶啶班 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "All personal memory has been cleared." ->
-            "हो गया बॉस, सारी पर्सनल मेमोरी क्लियर कर दी।"
+            "啶灌 啶椸く啶� 啶啶�, 啶膏ぞ啶班 啶ぐ啷嵿じ啶ㄠげ 啶啶啶班 啶曕啶侧た啶ぐ 啶曕ぐ 啶︵啷�"
 
         // -------------------------------------------------
         // TIMER
@@ -4649,7 +4631,7 @@ private fun aurixResponse(
                     ?.get(1)
                     ?: ""
 
-            "बॉस, $value घंटे का टाइमर लगा दिया।"
+            "啶啶�, $value 啶樴啶熰 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶� 啶︵た啶ぞ啷�"
         }
 
         Regex(
@@ -4665,7 +4647,7 @@ private fun aurixResponse(
                     ?.get(1)
                     ?: ""
 
-            "बॉस, $value मिनट का टाइमर लगा दिया।"
+            "啶啶�, $value 啶た啶ㄠ 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶� 啶︵た啶ぞ啷�"
         }
 
         Regex(
@@ -4681,21 +4663,21 @@ private fun aurixResponse(
                     ?.get(1)
                     ?: ""
 
-            "बॉस, $value सेकंड का टाइमर लगा दिया।"
+            "啶啶�, $value 啶膏啶曕啶� 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶� 啶︵た啶ぞ啷�"
         }
 
         t == "Please tell me the timer duration." ->
-            "बॉस, कितने समय का टाइमर लगाना है?"
+            "啶啶�, 啶曕た啶むえ啷� 啶膏ぎ啶� 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶距え啶� 啶灌?"
 
         // -------------------------------------------------
         // ALARM
         // -------------------------------------------------
 
         t == "That is not a valid alarm time." ->
-            "बॉस, ये सही अलार्म टाइम नहीं है।"
+            "啶啶�, 啶 啶膏す啷€ 啶呧げ啶距ぐ啷嵿ぎ 啶熰ぞ啶囙ぎ 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "Please tell me the alarm time, for example seven PM." ->
-            "बॉस, अलार्म किस समय लगाना है?"
+            "啶啶�, 啶呧げ啶距ぐ啷嵿ぎ 啶曕た啶� 啶膏ぎ啶� 啶侧啶距え啶� 啶灌?"
 
         t.startsWith("Alarm set for ") &&
             t.endsWith(".") -> {
@@ -4705,7 +4687,7 @@ private fun aurixResponse(
                     "Alarm set for "
                 ).removeSuffix(".")
 
-            "बॉस, अलार्म $time के लिए लगा दिया।"
+            "啶啶�, 啶呧げ啶距ぐ啷嵿ぎ $time 啶曕 啶侧た啶� 啶侧啶� 啶︵た啶ぞ啷�"
         }
 
         // -------------------------------------------------
@@ -4720,7 +4702,7 @@ private fun aurixResponse(
                     "Today is "
                 ).removeSuffix(".")
 
-            "बॉस, आज $value है।"
+            "啶啶�, 啶嗋 $value 啶灌啷�"
         }
 
         t.startsWith("The time is ") &&
@@ -4731,7 +4713,7 @@ private fun aurixResponse(
                     "The time is "
                 ).removeSuffix(".")
 
-            "बॉस, अभी समय $value है।"
+            "啶啶�, 啶呧き啷€ 啶膏ぎ啶� $value 啶灌啷�"
         }
 
         // -------------------------------------------------
@@ -4748,7 +4730,7 @@ private fun aurixResponse(
                     " percent."
                 )
 
-            "बॉस, बैटरी अभी $value प्रतिशत है।"
+            "啶啶�, 啶啶熰ぐ啷€ 啶呧き啷€ $value 啶啶班い啶苦ざ啶� 啶灌啷�"
         }
 
         // -------------------------------------------------
@@ -4763,7 +4745,7 @@ private fun aurixResponse(
                     "Searching YouTube for "
                 ).removeSuffix(".")
 
-            "बॉस, यूट्यूब पर $query सर्च कर रहा हूँ।"
+            "啶啶�, 啶啶熰啶啶� 啶ぐ $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
         }
 
         t.startsWith("Opening YouTube search for ") &&
@@ -4774,7 +4756,7 @@ private fun aurixResponse(
                     "Opening YouTube search for "
                 ).removeSuffix(".")
 
-            "बॉस, यूट्यूब पर $query की सर्च खोल रहा हूँ।"
+            "啶啶�, 啶啶熰啶啶� 啶ぐ $query 啶曕 啶膏ぐ啷嵿 啶栢啶� 啶班す啶� 啶灌啶佮イ"
         }
 
         t.startsWith("Searching Maps for ") &&
@@ -4785,7 +4767,7 @@ private fun aurixResponse(
                     "Searching Maps for "
                 ).removeSuffix(".")
 
-            "बॉस, मैप्स पर $query सर्च कर रहा हूँ।"
+            "啶啶�, 啶啶啶� 啶ぐ $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
         }
 
         t.startsWith("Searching for ") &&
@@ -4796,7 +4778,7 @@ private fun aurixResponse(
                     "Searching for "
                 ).removeSuffix(".")
 
-            "बॉस, $query सर्च कर रहा हूँ।"
+            "啶啶�, $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
         }
 
         // -------------------------------------------------
@@ -4804,28 +4786,28 @@ private fun aurixResponse(
         // -------------------------------------------------
 
         t == "Agent completed all planned steps." ->
-            "हो गया बॉस, सारे काम पूरे कर दिए।"
+            "啶灌 啶椸く啶� 啶啶�, 啶膏ぞ啶班 啶曕ぞ啶� 啶啶班 啶曕ぐ 啶︵た啶忇イ"
 
         t == "YouTube opened." ->
-            "बॉस, यूट्यूब खोल दिया।"
+            "啶啶�, 啶啶熰啶啶� 啶栢啶� 啶︵た啶ぞ啷�"
 
         t == "Phone opened." ->
-            "बॉस, फोन खोल दिया।"
+            "啶啶�, 啶啶� 啶栢啶� 啶︵た啶ぞ啷�"
 
         t == "Settings opened." ->
-            "बॉस, सेटिंग्स खोल दी।"
+            "啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶︵啷�"
 
         t == "I couldn't open YouTube." ->
-            "सॉरी बॉस, यूट्यूब नहीं खोल पाया।"
+            "啶膏啶班 啶啶�, 啶啶熰啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
 
         t == "I couldn't open phone." ->
-            "सॉरी बॉस, फोन नहीं खोल पाया।"
+            "啶膏啶班 啶啶�, 啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
 
         t == "I couldn't open settings." ->
-            "सॉरी बॉस, सेटिंग्स नहीं खोल पाया।"
+            "啶膏啶班 啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
 
         t == "I couldn't execute this step." ->
-            "सॉरी बॉस, ये काम पूरा नहीं कर पाया।"
+            "啶膏啶班 啶啶�, 啶 啶曕ぞ啶� 啶啶班ぞ 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
 
         // -------------------------------------------------
         // APP NOT FOUND
@@ -4845,7 +4827,7 @@ private fun aurixResponse(
                     " on your phone."
                 )
 
-            "सॉरी बॉस, आपके फोन में $app नहीं मिला।"
+            "啶膏啶班 啶啶�, 啶嗋お啶曕 啶啶� 啶啶� $app 啶ㄠす啷€啶� 啶た啶侧ぞ啷�"
         }
 
         // -------------------------------------------------
@@ -4860,7 +4842,7 @@ private fun aurixResponse(
                     "Opening "
                 ).removeSuffix(".")
 
-            "बॉस, $app खोल रहा हूँ।"
+            "啶啶�, $app 啶栢啶� 啶班す啶� 啶灌啶佮イ"
         }
 
         // -------------------------------------------------
@@ -4868,17 +4850,17 @@ private fun aurixResponse(
         // -------------------------------------------------
 
         t == "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?" ->
-            "नमस्ते बॉस। मैं ऑरिक्स हूँ। बताइए, क्या मदद चाहिए?"
+            "啶ㄠぎ啶膏啶む 啶啶膏イ 啶啶� 啶戉ぐ啶苦啷嵿じ 啶灌啶佮イ 啶い啶距啶�, 啶曕啶ぞ 啶う啶� 啶氞ぞ啶灌た啶�?"
 
         t == "Main AURIX hoon, aapka personal AI assistant." ->
-            "मैं ऑरिक्स हूँ, आपका पर्सनल एआई असिस्टेंट।"
+            "啶啶� 啶戉ぐ啶苦啷嵿じ 啶灌啶�, 啶嗋お啶曕ぞ 啶ぐ啷嵿じ啶ㄠげ 啶忇啶� 啶呧じ啶苦じ啷嵿啷囙啶熰イ"
 
         // -------------------------------------------------
         // HOME
         // -------------------------------------------------
 
         t == "Unable to go to home screen." ->
-            "सॉरी बॉस, होम स्क्रीन पर नहीं जा पाया।"
+            "啶膏啶班 啶啶�, 啶灌啶� 啶膏啶曕啶班啶� 啶ぐ 啶ㄠす啷€啶� 啶溹ぞ 啶ぞ啶ぞ啷�"
 
             // -------------------------------------------------
             // FALLBACK
@@ -4969,19 +4951,19 @@ private fun speakAurixGreeting() {
         when {
 
             hour < 5 ->
-                "नमस्ते बॉस। काफी देर हो गई है। कोई जरूरी काम है क्या?"
+                "啶ㄠぎ啶膏啶む 啶啶膏イ 啶曕ぞ啶 啶︵啶� 啶灌 啶椸 啶灌啷� 啶曕啶� 啶溹ぐ啷傕ぐ啷€ 啶曕ぞ啶� 啶灌 啶曕啶ぞ?"
 
             hour < 12 ->
-                "सुप्रभात बॉस। बताइए, आज क्या काम करना है?"
+                "啶膏啶啶班き啶距い 啶啶膏イ 啶い啶距啶�, 啶嗋 啶曕啶ぞ 啶曕ぞ啶� 啶曕ぐ啶ㄠぞ 啶灌?"
 
             hour < 17 ->
-                "नमस्कार बॉस। बताइए, मैं आपके लिए क्या करूँ?"
+                "啶ㄠぎ啶膏啶曕ぞ啶� 啶啶膏イ 啶い啶距啶�, 啶啶� 啶嗋お啶曕 啶侧た啶� 啶曕啶ぞ 啶曕ぐ啷傕?"
 
             hour < 22 ->
-                "शुभ संध्या बॉस। बताइए, आज क्या काम करना है?"
+                "啶多啶� 啶膏啶о啶ぞ 啶啶膏イ 啶い啶距啶�, 啶嗋 啶曕啶ぞ 啶曕ぞ啶� 啶曕ぐ啶ㄠぞ 啶灌?"
 
             else ->
-                "नमस्ते बॉस। काफी देर हो गई है। कोई जरूरी काम है क्या?"
+                "啶ㄠぎ啶膏啶む 啶啶膏イ 啶曕ぞ啶 啶︵啶� 啶灌 啶椸 啶灌啷� 啶曕啶� 啶溹ぐ啷傕ぐ啷€ 啶曕ぞ啶� 啶灌 啶曕啶ぞ?"
         }
 
     speakOnce(
