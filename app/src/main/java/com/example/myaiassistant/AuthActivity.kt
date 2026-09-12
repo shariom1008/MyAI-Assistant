@@ -18,7 +18,6 @@ import androidx.credentials.exceptions.GetCredentialException
 
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseUser
@@ -150,31 +149,26 @@ class AuthActivity : Activity() {
         setContentView(root)
     }
 
-    private fun signInWithGoogle() {
+private fun signInWithGoogle() {
 
     CoroutineScope(Dispatchers.Main).launch {
 
         try {
 
-            val googleIdOption =
-                GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(
-                        getString(R.string.default_web_client_id)
-                    )
+            val googleSignInOption =
+                GetSignInWithGoogleOption.Builder(
+                    getString(R.string.default_web_client_id)
+                )
                     .build()
 
             val request =
                 GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
+                    .addCredentialOption(googleSignInOption)
                     .build()
-
-            val mutableContext =
-                MutableContextWrapper(this@AuthActivity)
 
             val result =
                 credentialManager.getCredential(
-                    context = mutableContext,
+                    context = this@AuthActivity,
                     request = request
                 )
 
@@ -207,7 +201,7 @@ class AuthActivity : Activity() {
             ).show()
         }
     }
-    }
+}
 
     private fun firebaseAuthWithGoogle(idToken: String) {
 
