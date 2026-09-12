@@ -27,7 +27,7 @@ import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
+import android.util.Log
 import java.security.SecureRandom
 
 class AuthActivity : Activity() {
@@ -199,12 +199,17 @@ class AuthActivity : Activity() {
 
             } catch (e: GetCredentialException) {
 
-                Toast.makeText(
-                    this@AuthActivity,
-                    "Google error: ${e.javaClass.simpleName}",
-                    Toast.LENGTH_LONG
-                ).show()
+    Log.e(
+        "AURIX_AUTH",
+        "Google CredentialManager error",
+        e
+    )
 
+    Toast.makeText(
+        this@AuthActivity,
+        "Google error: ${e.javaClass.name}\n${e.message}",
+        Toast.LENGTH_LONG
+    ).show()
             } catch (e: Exception) {
 
                 Toast.makeText(
