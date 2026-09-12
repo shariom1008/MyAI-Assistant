@@ -3802,25 +3802,53 @@ private fun askFinalAI(
     "&maxResults=1" +
     "&key=" + BuildConfig.YOUTUBE_API_KEY
 
-        try {
-            val videoId =
+        
+Thread {
     try {
-        org.json.JSONObject(
-            java.net.URL(url).readText()
-        )
-            .getJSONArray("items")
-            .getJSONObject(0)
-            .getJSONObject("id")
-            .getString("videoId")
+        val response = java.net.URL(url).readText()
+
+        val videoId =
+            org.json.JSONObject(response)
+                .getJSONArray("items")
+                .getJSONObject(0)
+                .getJSONObject("id")
+                .getString("videoId")
+
+        runOnUiThread {
+            val youtubeIntent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://www.youtube.com/watch?v=$videoId")
+                ).apply {
+                    setPackage("com.google.android.youtube")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+            try {
+                startActivity(youtubeIntent)
+                speakOnce("Playing $query on YouTube.")
+            } catch (_: Exception) {
+                val browserIntent =
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://www.youtube.com/watch?v=$videoId")
+                    ).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+
+                startActivity(browserIntent)
+                speakOnce("Opening $query on YouTube.")
+            }
+        }
+
     } catch (_: Exception) {
-        null
+        runOnUiThread {
+            speakOnce("I could not find that video on YouTube.")
+        }
     }
+}.start()
 
-if (videoId == null) {
-    speakOnce("I could not find that video on YouTube.")
-    return
-}
-
+return
             val youtubeIntent =
                 Intent(
                     Intent.ACTION_VIEW,
