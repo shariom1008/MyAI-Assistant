@@ -3814,12 +3814,27 @@ Thread {
     try {
         val response = java.net.URL(url).readText()
 
-        val videoId =
-            org.json.JSONObject(response)
-                .getJSONArray("items")
-                .getJSONObject(0)
-                .getJSONObject("id")
-                .getString("videoId")
+        val items =
+    org.json.JSONObject(response)
+        .getJSONArray("items")
+
+var videoId: String? = null
+
+for (i in 0 until items.length()) {
+    val idObject =
+        items.getJSONObject(i).getJSONObject("id")
+
+    if (idObject.optString("kind") == "youtube#video") {
+        videoId = idObject.optString("videoId")
+        if (!videoId.isNullOrBlank()) {
+            break
+        }
+    }
+}
+
+if (videoId.isNullOrBlank()) {
+    throw Exception("No video found")
+}
 
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             val youtubeIntent =
