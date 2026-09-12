@@ -3795,10 +3795,12 @@ private fun askFinalAI(
         }
 
         val url =
-            "https://www.youtube.com/results?search_query=" +
-                Uri.encode(
-                    query
-                )
+    "https://www.googleapis.com/youtube/v3/search" +
+    "?part=snippet" +
+    "&q=" + Uri.encode(query) +
+    "&type=video" +
+    "&maxResults=1" +
+    "&key=" + BuildConfig.YOUTUBE_API_KEY
 
         try {
 
