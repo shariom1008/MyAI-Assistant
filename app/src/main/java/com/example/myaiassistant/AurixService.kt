@@ -44,6 +44,9 @@ class AurixService :
         const val ACTION_STOP =
             "com.example.myaiassistant.ACTION_STOP"
 
+        const val ACTION_LISTEN_ONCE =
+            "com.example.myaiassistant.ACTION_LISTEN_ONCE"
+
         const val ACTION_EVENT =
             "com.example.myaiassistant.AURIX_EVENT"
 
@@ -78,10 +81,8 @@ class AurixService :
 
     private var listening = false
 
-    // One command per user tap. Listening is never restarted automatically
-    // after a command, which prevents media/YouTube audio from being
-    // captured as the next voice command.
-    private var listenRequested = false
+    // true = passive wake-word mode, false = one-shot command mode
+    private var wakeWordMode = true
 
     private var restarting = false
 
@@ -137,8 +138,7 @@ class AurixService :
                 this
             )
 
-        // Do not start the microphone automatically.
-        // The UI's "Tap Here to Speak" action sends ACTION_START.
+        startListening()
     }
 
     // =========================================================
@@ -155,7 +155,6 @@ class AurixService :
 
             ACTION_STOP -> {
 
-                listenRequested = false
                 stopAurix()
 
                 return START_NOT_STICKY
@@ -165,17 +164,35 @@ class AurixService :
 
                 isRunning = true
                 restarting = false
+                wakeWordMode = true
 
-                // One tap = one recognition session.
                 if (!listening) {
-                    listenRequested = true
                     startListening()
                 }
             }
 
+            ACTION_LISTEN_ONCE -> {
+
+                isRunning = true
+                restarting = false
+                wakeWordMode = false
+
+                try {
+                    speechRecognizer?.cancel()
+                } catch (_: Exception) {
+                }
+
+                listening = false
+                startListening()
+            }
+
             else -> {
 
-                // Do not silently open the microphone for unrelated service starts.
+                wakeWordMode = true
+
+                if (!listening) {
+                    startListening()
+                }
             }
         }
 
@@ -190,7 +207,6 @@ class AurixService :
 
         isRunning = false
         listening = false
-        listenRequested = false
         restarting = true
 
         handler.removeCallbacksAndMessages(
@@ -310,202 +326,148 @@ class AurixService :
 
         if (
             serviceDestroyed ||
-            !isRunning ||
-            !listenRequested
+            !isRunning
         ) {
             return
         }
 
-        if (
-            !SpeechRecognizer
-                .isRecognitionAvailable(this)
-        ) {
-
-            sendStatus(
-                "Speech recognition unavailable"
-            )
-
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            sendStatus("Speech recognition unavailable")
             return
         }
 
         try {
-
-            // IMPORTANT:
-            // SpeechRecognizer is created only once.
-            // Do NOT destroy/recreate it on every listening cycle.
-
             if (speechRecognizer == null) {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
 
-                speechRecognizer =
-                    SpeechRecognizer
-                        .createSpeechRecognizer(
-                            this
-                        )
+                speechRecognizer?.setRecognitionListener(
+                    object : RecognitionListener {
 
-                speechRecognizer
-                    ?.setRecognitionListener(
-                        object :
-                            RecognitionListener {
+                        override fun onReadyForSpeech(params: Bundle?) {
+                            listening = true
+                            sendStatus(if (wakeWordMode) "HEY AURIX READY" else "LISTENING")
+                        }
 
-                            override fun
-                                onReadyForSpeech(
-                                    params: Bundle?
-                                ) {
+                        override fun onBeginningOfSpeech() {
+                            sendStatus("THINKING")
+                        }
 
-                                listening = true
+                        override fun onRmsChanged(rmsdB: Float) {}
+                        override fun onBufferReceived(buffer: ByteArray?) {}
+                        override fun onEndOfSpeech() {}
 
-                                sendStatus(
-                                    "LISTENING"
-                                )
+                        override fun onError(error: Int) {
+                            listening = false
+
+                            // One-shot mode must end after one recognition attempt.
+                            if (!wakeWordMode) {
+                                sendStatus("READY")
+                                return
                             }
 
-                            override fun
-                                onBeginningOfSpeech() {
-
-                                sendStatus(
-                                    "THINKING"
-                                )
-                            }
-
-                            override fun
-                                onRmsChanged(
-                                    rmsdB: Float
-                                ) {
-                            }
-
-                            override fun
-                                onBufferReceived(
-                                    buffer: ByteArray?
-                                ) {
-                            }
-
-                            override fun
-                                onEndOfSpeech() {
-                            }
-
-                            override fun
-                                onError(
-                                    error: Int
-                                ) {
-
-                                listening = false
-                                listenRequested = false
-
-                                // IMPORTANT: never auto-restart here.
-                                // A retry must come from a fresh user tap.
-                            }
-
-override fun
-    onResults(
-        results: Bundle?
-    ) {
-
-    listening = false
-    listenRequested = false
-
-    val list =
-        results
-            ?.getStringArrayList(
-                SpeechRecognizer
-                    .RESULTS_RECOGNITION
-            )
-
-    val command =
-        list
-            ?.firstOrNull()
-            ?.trim()
-            ?.lowercase(
-                Locale.getDefault()
-            )
-
-    if (
-        !command.isNullOrBlank()
-    ) {
-
-        sendCommand(
-            command
-        )
-
-        // Give the recognizer result a moment
-        // before processing the command.
-        handler.postDelayed({
-
-            if (
-                isRunning &&
-                !serviceDestroyed
-            ) {
-
-                processCommand(
-                    command
-                )
-            }
-
-        }, 500)
-    }
-
-    // IMPORTANT: do not restart listening automatically.
-    // The next command begins only after the user taps the voice button again.
-    }
-
-                            override fun
-                                onPartialResults(
-                                    partialResults:
-                                    Bundle?
-                                ) {
-                            }
-
-                            override fun
-                                onEvent(
-                                    eventType: Int,
-                                    params: Bundle?
-                                ) {
+                            if (isRunning && !serviceDestroyed) {
+                                restartListening()
                             }
                         }
-                    )
+
+                        override fun onResults(results: Bundle?) {
+                            listening = false
+
+                            val text = results
+                                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                                ?.firstOrNull()
+                                ?.trim()
+                                ?.lowercase(Locale.getDefault())
+                                .orEmpty()
+
+                            if (text.isBlank()) {
+                                if (wakeWordMode && isRunning && !serviceDestroyed) {
+                                    restartListening()
+                                }
+                                return
+                            }
+
+                            // Never interpret YouTube/music audio as a command.
+                            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                            if (audioManager.isMusicActive) {
+                                if (wakeWordMode && isRunning && !serviceDestroyed) {
+                                    restartListening()
+                                }
+                                return
+                            }
+
+                            if (wakeWordMode) {
+                                val wake = Regex("\\b(hey|hi|hello)\\s+aurix\\b")
+                                val match = wake.find(text)
+
+                                if (match == null) {
+                                    restartListening()
+                                    return
+                                }
+
+                                val command = text.substring(match.range.last + 1).trim(' ', ',', '.', ':', '-')
+
+                                if (command.isBlank()) {
+                                    wakeWordMode = false
+                                    sendStatus("LISTENING")
+                                    handler.postDelayed({
+                                        if (isRunning && !serviceDestroyed && !listening) {
+                                            startListening()
+                                        }
+                                    }, 1200)
+                                    return
+                                }
+
+                                sendCommand(command)
+                                handler.postDelayed({
+                                    if (isRunning && !serviceDestroyed) {
+                                        processCommand(command)
+                                        wakeWordMode = true
+                                        handler.postDelayed({
+                                            if (isRunning && !serviceDestroyed && !listening) {
+                                                startListening()
+                                            }
+                                        }, 1800)
+                                    }
+                                }, 300)
+                                return
+                            }
+
+                            // Manual tap mode: exactly one command, then return to wake mode.
+                            sendCommand(text)
+                            handler.postDelayed({
+                                if (isRunning && !serviceDestroyed) {
+                                    processCommand(text)
+                                    wakeWordMode = true
+                                    handler.postDelayed({
+                                        if (isRunning && !serviceDestroyed && !listening) {
+                                            startListening()
+                                        }
+                                    }, 1800)
+                                }
+                            }, 300)
+                        }
+
+                        override fun onPartialResults(partialResults: Bundle?) {}
+                        override fun onEvent(eventType: Int, params: Bundle?) {}
+                    }
+                )
             }
 
-            val intent =
-                Intent(
-                    RecognizerIntent
-                        .ACTION_RECOGNIZE_SPEECH
-                ).apply {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            }
 
-                    putExtra(
-                        RecognizerIntent
-                            .EXTRA_LANGUAGE_MODEL,
-                        RecognizerIntent
-                            .LANGUAGE_MODEL_FREE_FORM
-                    )
-
-                    putExtra(
-                        RecognizerIntent
-                            .EXTRA_LANGUAGE,
-                        Locale.getDefault()
-                    )
-
-                    putExtra(
-                        RecognizerIntent
-                            .EXTRA_PARTIAL_RESULTS,
-                        false
-                    )
-
-                
-                    putExtra(
-                        RecognizerIntent
-                            .EXTRA_MAX_RESULTS,
-                        3
-                    )
-                }
-
-            speechRecognizer
-                ?.startListening(
-                    intent
-                )
+            speechRecognizer?.startListening(intent)
 
         } catch (_: Exception) {
-
             listening = false
-            listenRequested = false
+            if (wakeWordMode) {
+                restartListening()
+            }
         }
     }
 
@@ -515,10 +477,24 @@ override fun
 
     private fun restartListening() {
 
-        // Automatic microphone restart is intentionally disabled.
-        // A new recognition session must be explicitly requested by the UI.
-        restarting = false
+        if (
+            restarting ||
+            !isRunning ||
+            serviceDestroyed ||
+            !wakeWordMode
+        ) {
+            return
+        }
+
+        restarting = true
         listening = false
+
+        handler.postDelayed({
+            restarting = false
+            if (isRunning && !serviceDestroyed && wakeWordMode) {
+                startListening()
+            }
+        }, 1200)
     }
 
     // =========================================================
