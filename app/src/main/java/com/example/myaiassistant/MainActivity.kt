@@ -20,6 +20,9 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import java.util.Locale
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 class MainActivity : Activity() {
 
@@ -115,35 +118,38 @@ class MainActivity : Activity() {
     // =========================================================
 
     override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    savedInstanceState: Bundle?
+) {
 
-        super.onCreate(savedInstanceState)
+    super.onCreate(savedInstanceState)
 
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.BLACK
+    window.statusBarColor = Color.TRANSPARENT
+    window.navigationBarColor = Color.BLACK
 
-        createInterface()
-        registerAurixReceiver()
+    createInterface()
+    registerAurixReceiver()
 
-        registerReceiver(
-            homeReceiver,
-            IntentFilter(
-                "com.example.myaiassistant.GO_HOME"
-            ),
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.TIRAMISU
-            ) {
-                Context.RECEIVER_NOT_EXPORTED
-            } else {
-                0
-            }
-        )
+    registerReceiver(
+        homeReceiver,
+        IntentFilter(
+            "com.example.myaiassistant.GO_HOME"
+        ),
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
+        ) {
+            Context.RECEIVER_NOT_EXPORTED
+        } else {
+            0
+        }
+    )
 
-        active = AurixService.isRunning
+    requestMicrophonePermission()
 
-        updateInterface()
+    active =
+        AurixService.isRunning
+
+    updateInterface()
     }
 
     // =========================================================
