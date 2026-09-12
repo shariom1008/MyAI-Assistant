@@ -1689,20 +1689,18 @@ class MainActivity : Activity() {
                 val x =
                     gap * i + gap / 2f
 
-                val wave =
-                    kotlin.math.sin(
-                        phase + i * 0.55
-                    )
+           val wave =
+    kotlin.math.sin(
+        (phase + i * 0.55f).toDouble()
+    ).toFloat()
 
-                val heightValue =
-                    if (running)
-                        7f + (
-                            kotlin.math.abs(
-                                wave
-                            ) * 17f
-                        )
-                    else
-                        5f
+val heightValue =
+    if (running)
+        7f + (
+            kotlin.math.abs(wave) * 17f
+        )
+    else
+        5f
 
                 canvas.drawLine(
                     x,
