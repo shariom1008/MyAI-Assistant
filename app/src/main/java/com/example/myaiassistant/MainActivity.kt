@@ -735,42 +735,40 @@ private fun startAurixService() {
                 dp(76)
             )
         )
-
-        addAction(
-            row1,
-            "鈻�",
-            "YouTube"
-        ) {
+addAction(
+    row1,
+    "▶",
+    "YouTube"
+) {
             openUrl(
                 "https://www.youtube.com"
             )
         }
 
+        {
         addAction(
-            row1,
-            "鈱�",
-            "Search"
-        ) {
-            openUrl(
+    row1,
+    "⌕",
+    "Search"
+)    openUrl(
                 "https://www.google.com"
             )
         }
 
         addAction(
-            row1,
-            "鈾�",
-            "Music"
-        ) {
+    row1,
+    "♪",
+    "Music"
+){
             openUrl(
                 "https://music.youtube.com"
             )
         }
-
-        addAction(
-            row1,
-            "鈽�",
-            "Weather"
-        ) {
+addAction(
+    row1,
+    "☁",
+    "Weather"
+) {
             openUrl(
                 "https://www.google.com/search?q=weather"
             )
@@ -791,10 +789,10 @@ private fun startAurixService() {
         )
 
         addAction(
-            row2,
-            "鈽�",
-            "Call"
-        ) {
+    row2,
+    "☎",
+    "Call"
+) {
             val intent =
                 Intent(
                     Intent.ACTION_DIAL
@@ -803,10 +801,10 @@ private fun startAurixService() {
         }
 
         addAction(
-            row2,
-            "鉁�",
-            "Messages"
-        ) {
+    row2,
+    "✉",
+    "Messages"
+) {
             val intent =
                 Intent(
                     Intent.ACTION_SENDTO
@@ -817,10 +815,10 @@ private fun startAurixService() {
         }
 
         addAction(
-            row2,
-            "鈻�",
-            "Apps"
-        ) {
+    row2,
+    "▦",
+    "Apps"
+){
             try {
                 startActivity(
                     Intent(
@@ -832,10 +830,10 @@ private fun startAurixService() {
         }
 
         addAction(
-            row2,
-            "鈥⑩€⑩€�",
-            "More"
-        ) {
+    row2,
+    "•••",
+    "More"
+) {
             updateStatus("READY")
         }
 
@@ -847,7 +845,7 @@ private fun startAurixService() {
             TextView(this)
 
         input.text =
-            "  馃帣   Tap to speak to AURIX                         "
+    "  🎙   Tap to speak to AURIX                         "                         "
 
         input.textSize = 12f
         input.setTextColor(white)
@@ -943,11 +941,11 @@ private fun startAurixService() {
             navParams
         )
 
-        addNavItem(nav, "鈱�", "Home")
-        addNavItem(nav, "鈼�", "History")
+        addNavItem(nav, "⌂", "Home")
+        addNavItem(nav, "↶", "History")
         addNavItem(nav, "A", "AURIX")
-        addNavItem(nav, "鉁�", "Shortcuts")
-        addNavItem(nav, "鈿�", "Settings")
+        addNavItem(nav, "★", "Shortcuts")
+        addNavItem(nav, "⚙", "Settings")
     }
 
     // =========================================================
@@ -1053,7 +1051,7 @@ private fun startAurixService() {
         val cover =
             TextView(this)
 
-        cover.text = "鈾�"
+        cover.text = "♪"
         cover.textSize = 30f
         cover.setTextColor(white)
         cover.gravity = Gravity.CENTER
@@ -1108,7 +1106,7 @@ private fun startAurixService() {
         val artist =
             TextView(this)
 
-        artist.text = "B Praak  鈥�  YouTube"
+        artist.text = "B Praak  |  YouTube"
         artist.textSize = 10f
         artist.setTextColor(muted)
 
@@ -1117,7 +1115,7 @@ private fun startAurixService() {
         val play =
             TextView(this)
 
-        play.text = "鈻�"
+        play.text = "▶"
         play.textSize = 22f
         play.setTextColor(cyan)
         play.gravity = Gravity.CENTER
