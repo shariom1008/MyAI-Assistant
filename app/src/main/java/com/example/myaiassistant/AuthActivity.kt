@@ -185,35 +185,34 @@ private fun signInWithGoogle() {
 
             firebaseAuthWithGoogle(idToken)
 
-
         } catch (e: GetCredentialException) {
 
-    Log.e(
-        "AURIX_AUTH",
-        "Google CredentialManager error",
-        e
-    )
+            Log.e(
+                "AURIX_AUTH",
+                "Google CredentialManager error",
+                e
+            )
 
-    Toast.makeText(
-        this@AuthActivity,
-        "Google error: ${e.javaClass.name}",
-        Toast.LENGTH_LONG
-    ).show()
-            }
-    }catch (e: Exception) {
+            Toast.makeText(
+                this@AuthActivity,
+                "Google error: ${e.javaClass.name}",
+                Toast.LENGTH_LONG
+            ).show()
 
-    Log.e(
-        "AURIX_AUTH",
-        "Google unexpected error",
-        e
-    )
+        } catch (e: Exception) {
 
-    Toast.makeText(
-        this@AuthActivity,
-        "Google error: ${e.javaClass.name}",
-        Toast.LENGTH_LONG
-    ).show()
-}
+            Log.e(
+                "AURIX_AUTH",
+                "Google unexpected error",
+                e
+            )
+
+            Toast.makeText(
+                this@AuthActivity,
+                "Google error: ${e.javaClass.name}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 }
 
