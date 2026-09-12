@@ -3794,14 +3794,20 @@ private fun askFinalAI(
             return
         }
 
-val latest = query.lowercase().contains("latest")
+val isLatest = query.lowercase().contains("latest")
+
+val cleanQuery = query
+    .replace("latest song", "song", ignoreCase = true)
+    .replace("latest", "", ignoreCase = true)
+    .trim()
 
 val url =
     "https://www.googleapis.com/youtube/v3/search" +
     "?part=snippet" +
-    "&q=" + Uri.encode(query) +
+    "&q=" + Uri.encode(cleanQuery) +
     "&type=video" +
-    "&maxResults=1" +
+    "&maxResults=5" +
+    if (isLatest) "&order=date" else "" +
     "&key=" + BuildConfig.YOUTUBE_API_KEY
         
 Thread {
