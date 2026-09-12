@@ -18,8 +18,6 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import java.util.Locale
 
 class MainActivity : Activity() {
@@ -123,6 +121,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         window.statusBarColor = Color.TRANSPARENT
+
         window.navigationBarColor =
             Color.rgb(2, 4, 10)
 
@@ -147,13 +146,14 @@ class MainActivity : Activity() {
 
         requestPermissionsIfNeeded()
 
-        active = AurixService.isRunning
+        active =
+            AurixService.isRunning
 
         updateInterface()
     }
 
     // =========================================================
-    // AURIX 2.0 FUTURISTIC INTERFACE
+    // AURIX FUTURISTIC INTERFACE
     // =========================================================
 
     private fun createInterface() {
@@ -191,7 +191,7 @@ class MainActivity : Activity() {
         )
 
         // =====================================================
-        // TOP HEADER
+        // HEADER
         // =====================================================
 
         val header =
@@ -221,9 +221,11 @@ class MainActivity : Activity() {
         val title =
             TextView(this)
 
-        title.text = "AURIX"
+        title.text =
+            "AURIX"
 
-        title.textSize = 34f
+        title.textSize =
+            34f
 
         title.setTextColor(
             Color.WHITE
@@ -238,7 +240,8 @@ class MainActivity : Activity() {
                 Typeface.BOLD
             )
 
-        title.letterSpacing = 0.12f
+        title.letterSpacing =
+            0.12f
 
         header.addView(
             title,
@@ -252,9 +255,10 @@ class MainActivity : Activity() {
             TextView(this)
 
         subtitle.text =
-            "A U R I X   鈥�   INTELLIGENCE CORE"
+            "A U R I X  •  INTELLIGENCE CORE"
 
-        subtitle.textSize = 9f
+        subtitle.textSize =
+            9f
 
         subtitle.setTextColor(
             Color.rgb(
@@ -267,7 +271,8 @@ class MainActivity : Activity() {
         subtitle.gravity =
             Gravity.CENTER
 
-        subtitle.letterSpacing = 0.18f
+        subtitle.letterSpacing =
+            0.18f
 
         header.addView(
             subtitle,
@@ -287,16 +292,20 @@ class MainActivity : Activity() {
         val centerParams =
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                0
+                FrameLayout.LayoutParams.MATCH_PARENT
             )
 
-        centerParams.topMargin = dp(95)
-        centerParams.bottomMargin = dp(160)
-        centerParams.leftMargin = dp(15)
-        centerParams.rightMargin = dp(15)
+        centerParams.topMargin =
+            dp(95)
 
-        centerParams.height =
-            FrameLayout.LayoutParams.MATCH_PARENT
+        centerParams.bottomMargin =
+            dp(160)
+
+        centerParams.leftMargin =
+            dp(15)
+
+        centerParams.rightMargin =
+            dp(15)
 
         root.addView(
             center,
@@ -405,7 +414,8 @@ class MainActivity : Activity() {
         coreText.text =
             "AURIX"
 
-        coreText.textSize = 23f
+        coreText.textSize =
+            23f
 
         coreText.setTextColor(
             Color.WHITE
@@ -444,7 +454,8 @@ class MainActivity : Activity() {
         statusText.text =
             "READY"
 
-        statusText.textSize = 14f
+        statusText.textSize =
+            14f
 
         statusText.setTextColor(
             Color.rgb(
@@ -491,7 +502,8 @@ class MainActivity : Activity() {
         systemText.text =
             "SYSTEM ONLINE"
 
-        systemText.textSize = 9f
+        systemText.textSize =
+            9f
 
         systemText.setTextColor(
             Color.rgb(
@@ -535,7 +547,7 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // ORB
+    // OVAL
     // =========================================================
 
     private fun createOval(
@@ -553,6 +565,10 @@ class MainActivity : Activity() {
 
         return drawable
     }
+
+    // =========================================================
+    // ORB
+    // =========================================================
 
     private fun createOrb():
         GradientDrawable {
@@ -607,7 +623,6 @@ class MainActivity : Activity() {
             .rotationBy(360f)
             .setDuration(9000)
             .withEndAction {
-
                 startCoreAnimation(ring)
             }
             .start()
@@ -674,177 +689,19 @@ class MainActivity : Activity() {
                     )
                 }
 
-            startActivity(homeIntent)
+            startActivity(
+                homeIntent
+            )
 
         } catch (_: Exception) {
         }
     }
 
     // =========================================================
-    // BUTTON BACKGROUND
+    // START AURIX SERVICE
     // =========================================================
 
-    private fun createButtonBackground():
-        GradientDrawable {
-
-        val drawable =
-            GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(
-                    Color.rgb(
-                        25,
-                        95,
-                        220
-                    ),
-                    Color.rgb(
-                        110,
-                        40,
-                        200
-                    )
-                )
-            )
-
-        drawable.cornerRadius =
-            dp(30).toFloat()
-
-        drawable.setStroke(
-            dp(1),
-            Color.argb(
-                190,
-                165,
-                225,
-                255
-            )
-        )
-
-        return drawable
-    }
-        // =========================================================
-        // ACTIVATE
-        // =========================================================
-
-           private fun activateAurix() {
-
-    if (
-        ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECORD_AUDIO
-        ) != PackageManager.PERMISSION_GRANTED
-    ) {
-
-        requestPermissionsIfNeeded()
-        updateStatus("MICROPHONE PERMISSION REQUIRED")
-        return
-    }
-
-    startAurixService()
-}
-
-// =========================================================
-// START AURIX SERVICE
-// =========================================================
-
-private fun startAurixService() {
-
-    val intent =
-        Intent(
-            this,
-            AurixService::class.java
-        )
-
-    intent.action =
-        AurixService.ACTION_START
-
-    try {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            ContextCompat.startForegroundService(
-                this,
-                intent
-            )
-
-        } else {
-
-            startService(intent)
-        }
-
-        active = true
-
-        updateInterface()
-
-    } catch (_: SecurityException) {
-
-        active = false
-
-        updateStatus(
-            "MICROPHONE PERMISSION DENIED"
-        )
-
-        updateInterface()
-
-    } catch (_: Exception) {
-
-        active = false
-
-        updateStatus(
-            "START FAILED"
-        )
-
-        updateInterface()
-    }
-}
-
-// =========================================================
-// PERMISSION RESULT
-// =========================================================
-
-override fun onRequestPermissionsResult(
-    requestCode: Int,
-    permissions: Array<out String>,
-    grantResults: IntArray
-) {
-
-    super.onRequestPermissionsResult(
-        requestCode,
-        permissions,
-        grantResults
-    )
-
-    if (requestCode != 500) {
-        return
-    }
-
-    val microphoneGranted =
-        ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
-
-    if (microphoneGranted) {
-
-        startAurixService()
-
-    } else {
-
-        active = false
-
-        updateStatus(
-            "MICROPHONE PERMISSION DENIED"
-        )
-
-        updateInterface()
-    }
-}
-
-    // =========================================================
-    // DEACTIVATE
-    // =========================================================
-
-    private fun deactivateAurix() {
+    private fun startAurixService() {
 
         val intent =
             Intent(
@@ -853,18 +710,91 @@ override fun onRequestPermissionsResult(
             )
 
         intent.action =
-            AurixService.ACTION_STOP
+            AurixService.ACTION_START
 
         try {
 
-            startService(intent)
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O
+            ) {
+
+                ContextCompat.startForegroundService(
+                    this,
+                    intent
+                )
+
+            } else {
+
+                startService(intent)
+            }
+
+            active = true
+
+            updateInterface()
+
+        } catch (_: SecurityException) {
+
+            active = false
+
+            updateStatus(
+                "MICROPHONE PERMISSION DENIED"
+            )
+
+            updateInterface()
 
         } catch (_: Exception) {
+
+            active = false
+
+            updateStatus(
+                "START FAILED"
+            )
+
+            updateInterface()
+        }
+    }
+
+    // =========================================================
+    // PERMISSION RESULT
+    // =========================================================
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        )
+
+        if (requestCode != 500) {
+            return
         }
 
-        active = false
+        val microphoneGranted =
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
 
-        updateInterface()
+        if (microphoneGranted) {
+
+            startAurixService()
+
+        } else {
+
+            active = false
+
+            updateStatus(
+                "MICROPHONE PERMISSION DENIED"
+            )
+
+            updateInterface()
+        }
     }
 
     // =========================================================
@@ -975,17 +905,15 @@ override fun onRequestPermissionsResult(
         if (active) {
 
             systemText.text =
-                "SYSTEM ACTIVE"
+                "SYSTEM ONLINE"
 
             statusText.text =
-                "STARTING..."
+                "LISTENING..."
 
             coreText.text =
                 "AURIX"
 
         } else {
-
-            
 
             systemText.text =
                 "SYSTEM ONLINE"
@@ -1056,7 +984,7 @@ override fun onRequestPermissionsResult(
                 500
             )
         }
-    
+    }
 
     // =========================================================
     // RECEIVER
@@ -1100,8 +1028,8 @@ override fun onRequestPermissionsResult(
 
         active =
             AurixService.isRunning
-            updateInterface()
-        }
+
+        updateInterface()
     }
 
     // =========================================================
@@ -1111,16 +1039,20 @@ override fun onRequestPermissionsResult(
     override fun onDestroy() {
 
         try {
+
             unregisterReceiver(
                 aurixReceiver
             )
+
         } catch (_: Exception) {
         }
 
         try {
+
             unregisterReceiver(
                 homeReceiver
             )
+
         } catch (_: Exception) {
         }
 
