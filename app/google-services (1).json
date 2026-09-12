@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "618534099886",
+    "project_id": "aurix-6578b",
+    "storage_bucket": "aurix-6578b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:618534099886:android:bf033b0dc918bcc51e863f",
+        "android_client_info": {
+          "package_name": "com.example.myaiassistant"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "618534099886-8aer449fe23q5dcjvuij0g1src32lorp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.myaiassistant",
+            "certificate_hash": "e71cf669cffd7ae83689cbcce101c85cde354bf2"
+          }
+        },
+        {
+          "client_id": "618534099886-9j254hch9qein08cibcoesffc8s4i0fg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnyB8mxcIdcEAopGttwDeyguKw1AE016Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "618534099886-9j254hch9qein08cibcoesffc8s4i0fg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
