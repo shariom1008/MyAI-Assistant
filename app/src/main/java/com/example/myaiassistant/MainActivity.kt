@@ -743,7 +743,7 @@ addAction(
             )
         }
 
-        {
+        
 addAction(
     row1,
     "⌕",
