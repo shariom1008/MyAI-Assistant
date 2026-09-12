@@ -144,10 +144,6 @@ class MainActivity : Activity() {
     )
 
     requestMicrophonePermission()
-
-    active =
-        AurixService.isRunning
-
     updateInterface()
     }
 
