@@ -23,6 +23,12 @@ defaultConfig {
         "GEMINI_API_KEY",
         "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\""
     )
+
+buildConfigField(
+    "String",
+    "YOUTUBE_API_KEY",
+    "\"${project.findProperty("YOUTUBE_API_KEY") ?: ""}\""
+)
 }
     buildTypes {
         release {
