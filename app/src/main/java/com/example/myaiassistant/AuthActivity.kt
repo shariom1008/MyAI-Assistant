@@ -5,12 +5,14 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.util.Base64
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.content.MutableContextWrapper
 
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -25,8 +27,8 @@ import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import android.content.MutableContextWrapper
+
+import java.security.SecureRandom
 
 class AuthActivity : Activity() {
 
@@ -149,61 +151,91 @@ class AuthActivity : Activity() {
         setContentView(root)
     }
 
-private fun signInWithGoogle() {
+    private fun signInWithGoogle() {
 
-    CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.Main).launch {
 
-        try {
+            try {
 
-            val googleSignInOption =
-                GetSignInWithGoogleOption.Builder(
-                    getString(R.string.default_web_client_id)
-                )
-                    .build()
+                val nonce =
+                    generateSecureRandomNonce()
 
-            val request =
-                GetCredentialRequest.Builder()
-                    .addCredentialOption(googleSignInOption)
-                    .build()
+                val googleSignInOption =
+                    GetSignInWithGoogleOption.Builder(
+                        getString(R.string.default_web_client_id)
+                    )
+                        .setNonce(nonce)
+                        .build()
 
-            val result =
-                credentialManager.getCredential(
-                    context = this@AuthActivity,
-                    request = request
-                )
+                val request =
+                    GetCredentialRequest.Builder()
+                        .addCredentialOption(
+                            googleSignInOption
+                        )
+                        .build()
 
-            val credential =
-                result.credential
+                val mutableContext =
+                    MutableContextWrapper(this@AuthActivity)
 
-            val googleCredential =
-                GoogleIdTokenCredential
-                    .createFrom(credential.data)
+                val result =
+                    credentialManager.getCredential(
+                        context = mutableContext,
+                        request = request
+                    )
 
-            val idToken =
-                googleCredential.idToken
+                val credential =
+                    result.credential
 
-            firebaseAuthWithGoogle(idToken)
+                val googleCredential =
+                    GoogleIdTokenCredential
+                        .createFrom(
+                            credential.data
+                        )
 
-        } catch (e: GetCredentialException) {
+                val idToken =
+                    googleCredential.idToken
 
-            Toast.makeText(
-                this@AuthActivity,
-                "Google error: ${e.javaClass.simpleName}",
-                Toast.LENGTH_LONG
-            ).show()
+                firebaseAuthWithGoogle(idToken)
 
-        } catch (e: Exception) {
+            } catch (e: GetCredentialException) {
 
-            Toast.makeText(
-                this@AuthActivity,
-                "Google error: ${e.javaClass.simpleName}\n${e.message ?: "No error message"}",
-                Toast.LENGTH_LONG
-            ).show()
+                Toast.makeText(
+                    this@AuthActivity,
+                    "Google error: ${e.javaClass.simpleName}",
+                    Toast.LENGTH_LONG
+                ).show()
+
+            } catch (e: Exception) {
+
+                Toast.makeText(
+                    this@AuthActivity,
+                    "Google error: ${e.javaClass.simpleName}\n${e.message ?: "No error message"}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
-}
 
-    private fun firebaseAuthWithGoogle(idToken: String) {
+    private fun generateSecureRandomNonce(
+        byteLength: Int = 32
+    ): String {
+
+        val randomBytes =
+            ByteArray(byteLength)
+
+        SecureRandom().nextBytes(randomBytes)
+
+        return Base64.encodeToString(
+            randomBytes,
+            Base64.NO_WRAP or
+                    Base64.URL_SAFE or
+                    Base64.NO_PADDING
+        )
+    }
+
+    private fun firebaseAuthWithGoogle(
+        idToken: String
+    ) {
 
         val credential =
             GoogleAuthProvider.getCredential(
