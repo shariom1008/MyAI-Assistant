@@ -3802,7 +3802,6 @@ val url =
     "&q=" + Uri.encode(query) +
     "&type=video" +
     "&maxResults=1" +
-    if (latest) "&order=date" else "" +
     "&key=" + BuildConfig.YOUTUBE_API_KEY
         
 Thread {
