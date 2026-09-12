@@ -3803,11 +3803,28 @@ private fun askFinalAI(
     "&key=" + BuildConfig.YOUTUBE_API_KEY
 
         try {
+            val videoId =
+    try {
+        org.json.JSONObject(
+            java.net.URL(url).readText()
+        )
+            .getJSONArray("items")
+            .getJSONObject(0)
+            .getJSONObject("id")
+            .getString("videoId")
+    } catch (_: Exception) {
+        null
+    }
+
+if (videoId == null) {
+    speakOnce("I could not find that video on YouTube.")
+    return
+}
 
             val youtubeIntent =
                 Intent(
                     Intent.ACTION_VIEW,
-                    Uri.parse(url)
+                    Uri.parse("https://www.youtube.com/watch?v=$videoId")
                 ).apply {
 
                     setPackage(
