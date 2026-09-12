@@ -1056,7 +1056,7 @@ override fun onRequestPermissionsResult(
                 500
             )
         }
-    }
+    
 
     // =========================================================
     // RECEIVER
