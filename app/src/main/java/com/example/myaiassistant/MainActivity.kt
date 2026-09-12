@@ -532,6 +532,7 @@ class MainActivity : Activity() {
         startCoreAnimation(
             outerRing
         )
+    }
 
     // =========================================================
     // ORB
