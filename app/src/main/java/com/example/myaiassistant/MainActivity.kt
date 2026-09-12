@@ -22,7 +22,6 @@ import androidx.core.content.ContextCompat
 import java.util.Locale
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 
 class MainActivity : Activity() {
 
@@ -175,6 +174,52 @@ private fun requestMicrophonePermission() {
     } else {
 
         startAurixService()
+    }
+}
+
+// =========================================================
+// START AURIX SERVICE
+// =========================================================
+
+private fun startAurixService() {
+
+    val intent =
+        Intent(
+            this,
+            AurixService::class.java
+        ).apply {
+            action =
+                AurixService.ACTION_START
+        }
+
+    try {
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
+
+            ContextCompat.startForegroundService(
+                this,
+                intent
+            )
+
+        } else {
+
+            startService(intent)
+        }
+
+        active = true
+
+        updateStatus("LISTENING")
+        updateInterface()
+
+    } catch (_: Exception) {
+
+        active = false
+
+        updateStatus("START FAILED")
+        updateInterface()
     }
 }
 
