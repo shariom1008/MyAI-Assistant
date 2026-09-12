@@ -196,8 +196,7 @@ class AuthActivity : Activity() {
                     googleCredential.idToken
 
                 firebaseAuthWithGoogle(idToken)
-
-            } catch (e: GetCredentialException) {
+} catch (e: GetCredentialException) {
 
     Log.e(
         "AURIX_AUTH",
@@ -205,11 +204,14 @@ class AuthActivity : Activity() {
         e
     )
 
-    Toast.makeText(
-        this@AuthActivity,
-        "Google error: ${e.javaClass.name}\n${e.message}",
-        Toast.LENGTH_LONG
-    ).show()
+    android.app.AlertDialog.Builder(this@AuthActivity)
+        .setTitle("Google Sign-In Error")
+        .setMessage(
+            "${e.javaClass.name}\n\n${e.message ?: "No error message"}"
+        )
+        .setPositiveButton("OK", null)
+        .show()
+        
             } catch (e: Exception) {
 
                 Toast.makeText(
