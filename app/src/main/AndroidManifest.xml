@@ -102,6 +102,10 @@
         android:usesCleartextTraffic="true"
         android:icon="@drawable/aurix_logo">
 
+        <activity
+            android:name=".AuthActivity"
+            android:exported="false" />
+ 
         <!-- ================================================= -->
         <!-- MAIN ACTIVITY -->
         <!-- ================================================= -->
