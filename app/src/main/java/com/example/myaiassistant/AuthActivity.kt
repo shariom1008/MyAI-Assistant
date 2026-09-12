@@ -186,7 +186,7 @@ private fun signInWithGoogle() {
             firebaseAuthWithGoogle(idToken)
 
 
-            catch (e: GetCredentialException) {
+        } catch (e: GetCredentialException) {
 
     Log.e(
         "AURIX_AUTH",
@@ -200,7 +200,7 @@ private fun signInWithGoogle() {
         Toast.LENGTH_LONG
     ).show()
             }
-catch (e: Exception) {
+    }catch (e: Exception) {
 
     Log.e(
         "AURIX_AUTH",
