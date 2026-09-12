@@ -28,6 +28,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.content.MutableContextWrapper
 import android.util.Log
+import android.util.Base64
+import java.security.SecureRandom
 
 class AuthActivity : Activity() {
 
@@ -157,10 +159,11 @@ private fun signInWithGoogle() {
         try {
 
             val googleSignInOption =
-                GetSignInWithGoogleOption.Builder(
-                    getString(R.string.default_web_client_id)
-                )
-                    .build()
+    GetSignInWithGoogleOption.Builder(
+        getString(R.string.default_web_client_id)
+    )
+        .setNonce(generateSecureRandomNonce())
+        .build()
 
             val request =
                 GetCredentialRequest.Builder()
@@ -245,6 +248,19 @@ private fun signInWithGoogle() {
                     ).show()
                 }
             }
+    }
+    private fun generateSecureRandomNonce(): String {
+
+    val randomBytes = ByteArray(32)
+
+    SecureRandom().nextBytes(randomBytes)
+
+    return Base64.encodeToString(
+        randomBytes,
+        Base64.NO_WRAP or
+                Base64.URL_SAFE or
+                Base64.NO_PADDING
+    )
     }
 
     private fun openAurix() {
