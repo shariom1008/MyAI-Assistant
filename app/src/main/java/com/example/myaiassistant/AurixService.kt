@@ -4595,89 +4595,7 @@ override fun onInit(
 // AURIX RESPONSE LOCALIZATION
 // =========================================================
 
-private fun aurixResponse(
-    text: String
-): String {
 
-    val t =
-        text.trim()
-
-    if (
-        t.isBlank()
-    ) {
-        return t
-    }
-
-    return when {
-
-        // -------------------------------------------------
-        // APP OPENING
-        // -------------------------------------------------
-
-        t == "Opening YouTube." ->
-            "啶啶�, 啶啶熰啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening camera." ->
-            "啶啶�, 啶曕啶ぐ啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening gallery." ->
-            "啶啶�, 啶椸啶侧ぐ啷€ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening music." ->
-            "啶啶�, 啶啶啶溹ぜ啶苦 啶愢お 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening notes." ->
-            "啶啶�, 啶ㄠ啶熰啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening calculator." ->
-            "啶啶�, 啶曕啶侧啷佮げ啷囙啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening Chrome." ->
-            "啶啶�, 啶曕啶班啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening Maps." ->
-            "啶啶�, 啶啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening phone." ->
-            "啶啶�, 啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening settings." ->
-            "啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        t == "Opening Wi-Fi settings." ->
-            "啶啶�, 啶掂ぞ啶�-啶ぞ啶� 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
-
-        // -------------------------------------------------
-        // VOLUME / MEDIA
-        // -------------------------------------------------
-
-        t == "Volume increased." ->
-            "啶啶�, 啶掂啶侧啶啶� 啶あ啶监ぞ 啶︵た啶ぞ啷�"
-
-        t == "Volume decreased." ->
-            "啶啶�, 啶掂啶侧啶啶� 啶曕ぎ 啶曕ぐ 啶︵た啶ぞ啷�"
-
-        t == "Media control executed." ->
-            "啶灌 啶椸く啶� 啶啶�, 啶啶∴た啶ぞ 啶曕啶熰啶班啶� 啶曕ぐ 啶︵た啶ぞ啷�"
-
-        // -------------------------------------------------
-        // FLASHLIGHT
-        // -------------------------------------------------
-
-        t == "Flashlight turned on." ->
-            "啶啶�, 啶啶侧啶多げ啶距啶� 啶氞ぞ啶侧 啶曕ぐ 啶︵啷�"
-
-        t == "Flashlight turned off." ->
-            "啶啶�, 啶啶侧啶多げ啶距啶� 啶啶� 啶曕ぐ 啶︵啷�"
-
-        t == "Flashlight is not available." ->
-            "啶膏啶班 啶啶�, 啶啶侧啶多げ啶距啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
-
-        // -------------------------------------------------
-        // DEVICE ERRORS
-        // -------------------------------------------------
-
-        t == "Camera is not available." ->
             "啶膏啶班 啶啶�, 啶曕啶ぐ啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
 
         t == "Gallery is not available." ->
@@ -4801,70 +4719,282 @@ private fun aurixResponse(
                 Regex(
                     "(\\d+) second timer started"
                 )
+private fun aurixResponse(
+    text: String
+): String {
+
+    val t = text.trim()
+
+    if (t.isBlank()) {
+        return t
+    }
+
+    return when {
+
+        // -------------------------------------------------
+        // APP OPENING
+        // -------------------------------------------------
+
+        t == "Opening YouTube." ->
+            "Boss, YouTube khol raha hoon."
+
+        t == "Opening camera." ->
+            "Boss, camera khol raha hoon."
+
+        t == "Opening gallery." ->
+            "Boss, gallery khol raha hoon."
+
+        t == "Opening music." ->
+            "Boss, music khol raha hoon."
+
+        t == "Opening notes." ->
+            "Boss, notes khol raha hoon."
+
+        t == "Opening calculator." ->
+            "Boss, calculator khol raha hoon."
+
+        t == "Opening Chrome." ->
+            "Boss, Chrome khol raha hoon."
+
+        t == "Opening Maps." ->
+            "Boss, Maps khol raha hoon."
+
+        t == "Opening phone." ->
+            "Boss, phone khol raha hoon."
+
+        t == "Opening settings." ->
+            "Boss, settings khol raha hoon."
+
+        t == "Opening Wi-Fi settings." ->
+            "Boss, Wi-Fi settings khol raha hoon."
+
+
+        // -------------------------------------------------
+        // VOLUME / MEDIA
+        // -------------------------------------------------
+
+        t == "Volume increased." ->
+            "Boss, volume badha diya."
+
+        t == "Volume decreased." ->
+            "Boss, volume kam kar diya."
+
+        t == "Media control executed." ->
+            "Boss, media control kar diya."
+
+
+        // -------------------------------------------------
+        // FLASHLIGHT
+        // -------------------------------------------------
+
+        t == "Flashlight turned on." ->
+            "Boss, flashlight on kar di."
+
+        t == "Flashlight turned off." ->
+            "Boss, flashlight off kar di."
+
+        t == "Flashlight is not available." ->
+            "Boss, flashlight available nahi hai."
+
+
+        // -------------------------------------------------
+        // DEVICE ERRORS
+        // -------------------------------------------------
+
+        t == "Camera is not available." ->
+            "Boss, camera available nahi hai."
+
+        t == "Gallery is not available." ->
+            "Boss, gallery available nahi hai."
+
+        t == "Music app is not available." ->
+            "Boss, music app available nahi hai."
+
+        t == "Notes app is not available." ->
+            "Boss, notes app available nahi hai."
+
+        t == "Calculator is not available." ->
+            "Boss, calculator available nahi hai."
+
+        t == "YouTube is not available." ->
+            "Boss, YouTube available nahi hai."
+
+        t == "Browser is not available." ->
+            "Boss, browser available nahi hai."
+
+        t == "Maps is not available." ->
+            "Boss, Maps available nahi hai."
+
+        t == "Phone app is not available." ->
+            "Boss, phone app available nahi hai."
+
+        t == "Settings is not available." ->
+            "Boss, settings available nahi hain."
+
+        t == "Wi-Fi settings are not available." ->
+            "Boss, Wi-Fi settings available nahi hain."
+
+
+        // -------------------------------------------------
+        // CONTROL ERRORS
+        // -------------------------------------------------
+
+        t == "I could not control the flashlight." ->
+            "Boss, main flashlight control nahi kar saka."
+
+        t == "I could not change the volume." ->
+            "Boss, main volume change nahi kar saka."
+
+        t == "I could not control media." ->
+            "Boss, main media control nahi kar saka."
+
+        t == "I could not check the battery." ->
+            "Boss, main battery check nahi kar saka."
+
+        t == "I could not search that." ->
+            "Boss, main uski search nahi kar saka."
+
+        t == "I could not open YouTube." ->
+            "Boss, main YouTube nahi khol saka."
+
+        t == "I could not open Maps." ->
+            "Boss, main Maps nahi khol saka."
+
+
+        // -------------------------------------------------
+        // MEMORY
+        // -------------------------------------------------
+
+        t == "Got it. I'll remember that." ->
+            "Got it boss, main ye yaad rakhunga."
+
+        t == "I've cleared my personal memory." ->
+            "Boss, maine tumhari personal memory clear kar di."
+
+        t == "Okay. I'll forget that." ->
+            "Okay boss, main ye bhool jaunga."
+
+        t == "Tell me what you want me to forget." ->
+            "Boss, batao tum kya bhulwana chahte ho."
+
+        t == "I don't have any personal memory about you yet." ->
+            "Boss, mere paas abhi tumhare baare mein koi personal memory nahi hai."
+
+        t == "All personal memory has been cleared." ->
+            "Boss, saari personal memory clear kar di."
+
+
+        // -------------------------------------------------
+        // TIMER
+        // -------------------------------------------------
+
+        Regex(
+            "(\\d+) hour timer started"
+        ).matches(t) -> {
+
+            val value =
+                Regex(
+                    "(\\d+) hour timer started"
+                )
                     .find(t)
                     ?.groupValues
                     ?.get(1)
                     ?: ""
 
-            "啶啶�, $value 啶膏啶曕啶� 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶� 啶︵た啶ぞ啷�"
+            "Boss, $value hour ka timer start kar diya."
+        }
+
+        Regex(
+            "(\\d+) minute timer started"
+        ).matches(t) -> {
+
+            val value =
+                Regex(
+                    "(\\d+) minute timer started"
+                )
+                    .find(t)
+                    ?.groupValues
+                    ?.get(1)
+                    ?: ""
+
+            "Boss, $value minute ka timer start kar diya."
+        }
+
+        Regex(
+            "(\\d+) second timer started"
+        ).matches(t) -> {
+
+            val value =
+                Regex(
+                    "(\\d+) second timer started"
+                )
+                    .find(t)
+                    ?.groupValues
+                    ?.get(1)
+                    ?: ""
+
+            "Boss, $value second ka timer start kar diya."
         }
 
         t == "Please tell me the timer duration." ->
-            "啶啶�, 啶曕た啶むえ啷� 啶膏ぎ啶� 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶距え啶� 啶灌?"
+            "Boss, timer kitne time ka lagana hai?"
+
 
         // -------------------------------------------------
         // ALARM
         // -------------------------------------------------
 
         t == "That is not a valid alarm time." ->
-            "啶啶�, 啶 啶膏す啷€ 啶呧げ啶距ぐ啷嵿ぎ 啶熰ぞ啶囙ぎ 啶ㄠす啷€啶� 啶灌啷�"
+            "Boss, ye valid alarm time nahi hai."
 
         t == "Please tell me the alarm time, for example seven PM." ->
-            "啶啶�, 啶呧げ啶距ぐ啷嵿ぎ 啶曕た啶� 啶膏ぎ啶� 啶侧啶距え啶� 啶灌?"
+            "Boss, alarm ka time batao, jaise seven PM."
 
         t.startsWith("Alarm set for ") &&
-            t.endsWith(".") -> {
+                t.endsWith(".") -> {
 
             val time =
                 t.removePrefix(
                     "Alarm set for "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶呧げ啶距ぐ啷嵿ぎ $time 啶曕 啶侧た啶� 啶侧啶� 啶︵た啶ぞ啷�"
+            "Boss, $time ka alarm set kar diya."
         }
+
 
         // -------------------------------------------------
         // DATE / DAY / TIME
         // -------------------------------------------------
 
         t.startsWith("Today is ") &&
-            t.endsWith(".") -> {
+                t.endsWith(".") -> {
 
             val value =
                 t.removePrefix(
                     "Today is "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶嗋 $value 啶灌啷�"
+            "Boss, aaj $value hai."
         }
 
         t.startsWith("The time is ") &&
-            t.endsWith(".") -> {
+                t.endsWith(".") -> {
 
             val value =
                 t.removePrefix(
                     "The time is "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶呧き啷€ 啶膏ぎ啶� $value 啶灌啷�"
+            "Boss, abhi time $value hai."
         }
+
 
         // -------------------------------------------------
         // BATTERY
         // -------------------------------------------------
 
         t.startsWith("Battery is at ") &&
-            t.endsWith(" percent.") -> {
+                t.endsWith(" percent.") -> {
 
             val value =
                 t.removePrefix(
@@ -4873,84 +5003,87 @@ private fun aurixResponse(
                     " percent."
                 )
 
-            "啶啶�, 啶啶熰ぐ啷€ 啶呧き啷€ $value 啶啶班い啶苦ざ啶� 啶灌啷�"
+            "Boss, battery $value percent hai."
         }
+
 
         // -------------------------------------------------
         // SEARCH
         // -------------------------------------------------
 
         t.startsWith("Searching YouTube for ") &&
-            t.endsWith(".") -> {
+                t.endsWith(".") -> {
 
             val query =
                 t.removePrefix(
                     "Searching YouTube for "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶啶熰啶啶� 啶ぐ $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
+            "Boss, YouTube par $query search kar raha hoon."
         }
 
         t.startsWith("Opening YouTube search for ") &&
-            t.endsWith(".") -> {
+                t.endsWith(".") -> {
 
             val query =
                 t.removePrefix(
                     "Opening YouTube search for "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶啶熰啶啶� 啶ぐ $query 啶曕 啶膏ぐ啷嵿 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "Boss, YouTube par $query search khol raha hoon."
         }
 
         t.startsWith("Searching Maps for ") &&
-            t.endsWith(".") -> {
+                t.endsWith(".") -> {
 
             val query =
                 t.removePrefix(
                     "Searching Maps for "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶啶啶� 啶ぐ $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
+            "Boss, Maps par $query search kar raha hoon."
         }
 
         t.startsWith("Searching for ") &&
-            t.endsWith(".") -> {
+                t.endsWith(".") -> {
 
             val query =
                 t.removePrefix(
                     "Searching for "
                 ).removeSuffix(".")
 
-            "啶啶�, $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
+            "Boss, $query search kar raha hoon."
         }
+
 
         // -------------------------------------------------
         // AGENT
         // -------------------------------------------------
 
         t == "Agent completed all planned steps." ->
-            "啶灌 啶椸く啶� 啶啶�, 啶膏ぞ啶班 啶曕ぞ啶� 啶啶班 啶曕ぐ 啶︵た啶忇イ"
+            "Boss, saare planned steps complete ho gaye."
 
         t == "YouTube opened." ->
-            "啶啶�, 啶啶熰啶啶� 啶栢啶� 啶︵た啶ぞ啷�"
+            "Boss, YouTube khul gaya."
 
         t == "Phone opened." ->
-            "啶啶�, 啶啶� 啶栢啶� 啶︵た啶ぞ啷�"
+            "Boss, phone khul gaya."
 
         t == "Settings opened." ->
-            "啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶︵啷�"
+            "Boss, settings khul gayi."
 
         t == "I couldn't open YouTube." ->
-            "啶膏啶班 啶啶�, 啶啶熰啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
+            "Boss, YouTube nahi khol saka."
 
         t == "I couldn't open phone." ->
-            "啶膏啶班 啶啶�, 啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
+            "Boss, phone nahi khol saka."
 
         t == "I couldn't open settings." ->
-            "啶膏啶班 啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
+            "Boss, settings nahi khol saka."
 
         t == "I couldn't execute this step." ->
-            "啶膏啶班 啶啶�, 啶 啶曕ぞ啶� 啶啶班ぞ 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
+            "Boss, main ye step execute nahi kar saka."
+
 
         // -------------------------------------------------
         // APP NOT FOUND
@@ -4959,9 +5092,9 @@ private fun aurixResponse(
         t.startsWith(
             "I couldn't find "
         ) &&
-            t.endsWith(
-                " on your phone."
-            ) -> {
+                t.endsWith(
+                    " on your phone."
+                ) -> {
 
             val app =
                 t.removePrefix(
@@ -4970,49 +5103,53 @@ private fun aurixResponse(
                     " on your phone."
                 )
 
-            "啶膏啶班 啶啶�, 啶嗋お啶曕 啶啶� 啶啶� $app 啶ㄠす啷€啶� 啶た啶侧ぞ啷�"
+            "Boss, tumhare phone mein $app nahi mila."
         }
+
 
         // -------------------------------------------------
         // GENERIC APP OPENING
         // -------------------------------------------------
 
         t.startsWith("Opening ") &&
-            t.endsWith(".") -> {
+                t.endsWith(".") -> {
 
             val app =
                 t.removePrefix(
                     "Opening "
                 ).removeSuffix(".")
 
-            "啶啶�, $app 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "Boss, $app khol raha hoon."
         }
+
 
         // -------------------------------------------------
         // GREETING / IDENTITY
         // -------------------------------------------------
 
         t == "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?" ->
-            "啶ㄠぎ啶膏啶む 啶啶膏イ 啶啶� 啶戉ぐ啶苦啷嵿じ 啶灌啶佮イ 啶い啶距啶�, 啶曕啶ぞ 啶う啶� 啶氞ぞ啶灌た啶�?"
+            "Hello boss, main AURIX hoon. Batao, kya help chahiye?"
 
         t == "Main AURIX hoon, aapka personal AI assistant." ->
-            "啶啶� 啶戉ぐ啶苦啷嵿じ 啶灌啶�, 啶嗋お啶曕ぞ 啶ぐ啷嵿じ啶ㄠげ 啶忇啶� 啶呧じ啶苦じ啷嵿啷囙啶熰イ"
+            "Main AURIX hoon, aapka personal AI assistant."
+
 
         // -------------------------------------------------
         // HOME
         // -------------------------------------------------
 
         t == "Unable to go to home screen." ->
-            "啶膏啶班 啶啶�, 啶灌啶� 啶膏啶曕啶班啶� 啶ぐ 啶ㄠす啷€啶� 啶溹ぞ 啶ぞ啶ぞ啷�"
+            "Boss, main home screen par nahi ja saka."
 
-            // -------------------------------------------------
-            // FALLBACK
-            // -------------------------------------------------
 
-            else ->
-                t
-        }
+        // -------------------------------------------------
+        // FALLBACK
+        // -------------------------------------------------
+
+        else ->
+            t
     }
+}
 
     // =========================================================
     // SPEAK ONCE
