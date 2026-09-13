@@ -920,33 +920,6 @@ class MainActivity : ComponentActivity() {
     )
 }
 
-                setOnClickListener {
-                    action()
-                }
-            }
-
-
-        val params =
-            LinearLayout.LayoutParams(
-                0,
-                dp(40),
-                1f
-            )
-
-        params.setMargins(
-            dp(3),
-            dp(3),
-            dp(3),
-            dp(3)
-        )
-
-        row.addView(
-            button,
-            params
-        )
-    }
-
-
     // =================================================
     // BOTTOM NAVIGATION
     // =================================================
