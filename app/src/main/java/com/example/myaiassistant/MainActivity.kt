@@ -50,6 +50,24 @@ class MainActivity : ComponentActivity() {
     private val historyPrefsName = "aurix_history"
     private val historyKey = "messages"
 
+    /*
+     * Every time a new conversation starts, a new session ID
+     * is created. Messages inside the same conversation use
+     * the same session ID.
+     */
+    private var currentSessionId: String = createSessionId()
+
+    private data class HistoryMessage(
+        val sessionId: String,
+        val speaker: String,
+        val timestamp: Long,
+        val message: String
+    )
+
+    private fun createSessionId(): String {
+        return System.currentTimeMillis().toString()
+    }
+
     // -------------------------------------------------
     // SIDE DRAWER
     // -------------------------------------------------
@@ -530,7 +548,7 @@ class MainActivity : ComponentActivity() {
                     LinearLayout.VERTICAL
             }
 
-        // Welcome message is NOT saved into history.
+        // Welcome message is NOT saved.
         addAurixMessage(
             "AURIX ready. Tap the voice icon to speak.",
             false
@@ -574,6 +592,7 @@ class MainActivity : ComponentActivity() {
         )
 
         saveHistory(
+            currentSessionId,
             "YOU",
             message
         )
@@ -597,7 +616,9 @@ class MainActivity : ComponentActivity() {
         )
 
         if (save) {
+
             saveHistory(
+                currentSessionId,
                 "AURIX",
                 message
             )
@@ -605,10 +626,11 @@ class MainActivity : ComponentActivity() {
     }
 
     // =================================================
-    // HISTORY STORAGE
+    // HISTORY STORAGE V2
     // =================================================
 
     private fun saveHistory(
+        sessionId: String,
         speaker: String,
         message: String
     ) {
@@ -619,6 +641,14 @@ class MainActivity : ComponentActivity() {
                 getSharedPreferences(
                     historyPrefsName,
                     Context.MODE_PRIVATE
+                )
+
+            val encodedSession =
+                Base64.encodeToString(
+                    sessionId.toByteArray(
+                        Charsets.UTF_8
+                    ),
+                    Base64.NO_WRAP
                 )
 
             val encodedSpeaker =
@@ -637,8 +667,16 @@ class MainActivity : ComponentActivity() {
                     Base64.NO_WRAP
                 )
 
+            val timestamp =
+                System.currentTimeMillis()
+
+            /*
+             * V2 format:
+             *
+             * sessionId | speaker | timestamp | message
+             */
             val entry =
-                "$encodedSpeaker|$encodedMessage"
+                "$encodedSession|$encodedSpeaker|$timestamp|$encodedMessage"
 
             val existing =
                 prefs.getString(
@@ -665,11 +703,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun getHistory():
-        List<Pair<String, String>> {
+    private fun getHistory(): List<HistoryMessage> {
 
         val result =
-            mutableListOf<Pair<String, String>>()
+            mutableListOf<HistoryMessage>()
 
         try {
 
@@ -693,49 +730,134 @@ class MainActivity : ComponentActivity() {
             raw.split("\n")
                 .forEach { entry ->
 
-                    val separator =
-                        entry.indexOf("|")
-
-                    if (separator <= 0) {
+                    if (entry.isBlank()) {
                         return@forEach
                     }
 
-                    try {
+                    val parts =
+                        entry.split("|")
 
-                        val speaker =
-                            String(
-                                Base64.decode(
-                                    entry.substring(
-                                        0,
-                                        separator
+                    /*
+                     * -------------------------------------------------
+                     * V2
+                     *
+                     * session | speaker | timestamp | message
+                     * -------------------------------------------------
+                     */
+                    if (parts.size >= 4) {
+
+                        try {
+
+                            val sessionId =
+                                String(
+                                    Base64.decode(
+                                        parts[0],
+                                        Base64.NO_WRAP
                                     ),
-                                    Base64.NO_WRAP
-                                ),
-                                Charsets.UTF_8
-                            )
+                                    Charsets.UTF_8
+                                )
 
-                        val message =
-                            String(
-                                Base64.decode(
-                                    entry.substring(
-                                        separator + 1
+                            val speaker =
+                                String(
+                                    Base64.decode(
+                                        parts[1],
+                                        Base64.NO_WRAP
                                     ),
-                                    Base64.NO_WRAP
-                                ),
-                                Charsets.UTF_8
-                            )
+                                    Charsets.UTF_8
+                                )
 
-                        if (
-                            speaker.isNotBlank() &&
-                            message.isNotBlank()
-                        ) {
+                            val timestamp =
+                                parts[2].toLongOrNull()
+                                    ?: System.currentTimeMillis()
 
-                            result.add(
-                                speaker to message
-                            )
+                            val encodedMessage =
+                                parts
+                                    .drop(3)
+                                    .joinToString("|")
+
+                            val message =
+                                String(
+                                    Base64.decode(
+                                        encodedMessage,
+                                        Base64.NO_WRAP
+                                    ),
+                                    Charsets.UTF_8
+                                )
+
+                            if (
+                                sessionId.isNotBlank() &&
+                                speaker.isNotBlank() &&
+                                message.isNotBlank()
+                            ) {
+
+                                result.add(
+                                    HistoryMessage(
+                                        sessionId,
+                                        speaker,
+                                        timestamp,
+                                        message
+                                    )
+                                )
+                            }
+
+                            return@forEach
+
+                        } catch (_: Exception) {
+                            // Try V1 format below.
                         }
+                    }
 
-                    } catch (_: Exception) {
+                    /*
+                     * -------------------------------------------------
+                     * V1 COMPATIBILITY
+                     *
+                     * speaker | message
+                     * -------------------------------------------------
+                     */
+                    if (parts.size >= 2) {
+
+                        try {
+
+                            val speaker =
+                                String(
+                                    Base64.decode(
+                                        parts[0],
+                                        Base64.NO_WRAP
+                                    ),
+                                    Charsets.UTF_8
+                                )
+
+                            val encodedMessage =
+                                parts
+                                    .drop(1)
+                                    .joinToString("|")
+
+                            val message =
+                                String(
+                                    Base64.decode(
+                                        encodedMessage,
+                                        Base64.NO_WRAP
+                                    ),
+                                    Charsets.UTF_8
+                                )
+
+                            if (
+                                speaker.isNotBlank() &&
+                                message.isNotBlank()
+                            ) {
+
+                                result.add(
+                                    HistoryMessage(
+                                        "legacy",
+                                        speaker,
+                                        System.currentTimeMillis(),
+                                        message
+                                    )
+                                )
+                            }
+
+                        } catch (_: Exception) {
+                        }
                     }
                 }
 
@@ -744,6 +866,10 @@ class MainActivity : ComponentActivity() {
 
         return result
     }
+
+    // =================================================
+    // HISTORY SCREEN V2
+    // =================================================
 
     private fun showHistory() {
 
@@ -776,17 +902,410 @@ class MainActivity : ComponentActivity() {
             "${history.size} messages saved"
         )
 
+        /*
+         * Group all messages by session.
+         *
+         * LinkedHashMap keeps insertion order.
+         */
+        val grouped =
+            linkedMapOf<String, MutableList<HistoryMessage>>()
+
         history.forEach { item ->
 
-            val speaker =
-                item.first
+            grouped
+                .getOrPut(
+                    item.sessionId
+                ) {
+                    mutableListOf()
+                }
+                .add(item)
+        }
 
-            val message =
-                item.second
+        /*
+         * Latest conversation first.
+         */
+        val sessions =
+            grouped.entries
+                .sortedByDescending { entry ->
+
+                    entry.value.maxOfOrNull {
+                        it.timestamp
+                    } ?: 0L
+                }
+
+        sessions.forEach { entry ->
+
+            addConversationHeader(
+                entry.key,
+                entry.value
+            )
+        }
+    }
+
+    private fun addConversationHeader(
+        sessionId: String,
+        messages: List<HistoryMessage>
+    ) {
+
+        if (messages.isEmpty()) {
+            return
+        }
+
+        val latest =
+            messages.maxByOrNull {
+                it.timestamp
+            }
+                ?: return
+
+        val firstUserMessage =
+            messages.firstOrNull {
+                it.speaker.equals(
+                    "YOU",
+                    ignoreCase = true
+                )
+            }
+
+        val title =
+            firstUserMessage
+                ?.message
+                ?.trim()
+                ?.take(42)
+                ?.ifBlank {
+                    "AURIX Conversation"
+                }
+                ?: "AURIX Conversation"
+
+        val dateText =
+            android.text.format.DateFormat.format(
+                "dd MMM yyyy",
+                latest.timestamp
+            ).toString()
+
+        val timeText =
+            android.text.format.DateFormat.format(
+                "hh:mm a",
+                latest.timestamp
+            ).toString()
+
+        val card =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(15),
+                    dp(13),
+                    dp(15),
+                    dp(13)
+                )
+
+                background =
+                    GradientDrawable().apply {
+
+                        cornerRadius =
+                            dp(17).toFloat()
+
+                        setColor(
+                            Color.argb(
+                                70,
+                                25,
+                                35,
+                                70
+                            )
+                        )
+
+                        setStroke(
+                            dp(1),
+                            Color.argb(
+                                100,
+                                75,
+                                180,
+                                255
+                            )
+                        )
+                    }
+
+                elevation =
+                    dp(3).toFloat()
+
+                isClickable = true
+
+                setOnClickListener {
+
+                    openSavedConversation(
+                        sessionId,
+                        messages
+                    )
+                }
+            }
+
+        val topRow =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+            }
+
+        topRow.addView(
+            TextView(this).apply {
+
+                text =
+                    "CONVERSATION"
+
+                textSize = 8f
+
+                letterSpacing =
+                    0.16f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.rgb(
+                        80,
+                        210,
+                        255
+                    )
+                )
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(22),
+                1f
+            )
+        )
+
+        topRow.addView(
+            TextView(this).apply {
+
+                text =
+                    "$dateText  •  $timeText"
+
+                textSize = 8f
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+
+                setTextColor(
+                    Color.rgb(
+                        145,
+                        160,
+                        195
+                    )
+                )
+            }
+        )
+
+        card.addView(
+            topRow,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(22)
+            )
+        )
+
+        card.addView(
+            TextView(this).apply {
+
+                text =
+                    title
+
+                textSize = 12f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                maxLines = 1
+
+                ellipsize =
+                    android.text.TextUtils.TruncateAt.END
+
+                setPadding(
+                    0,
+                    dp(5),
+                    0,
+                    dp(2)
+                )
+            }
+        )
+
+        card.addView(
+            TextView(this).apply {
+
+                text =
+                    "${messages.size} messages  •  Tap to open"
+
+                textSize = 9f
+
+                setTextColor(
+                    Color.rgb(
+                        125,
+                        140,
+                        175
+                    )
+                )
+            }
+        )
+
+        val params =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        params.setMargins(
+            0,
+            dp(5),
+            0,
+            dp(5)
+        )
+
+        conversationBox.addView(
+            card,
+            params
+        )
+    }
+
+    // =================================================
+    // OPEN SAVED CONVERSATION
+    // =================================================
+
+    private fun openSavedConversation(
+        sessionId: String,
+        messages: List<HistoryMessage>
+    ) {
+
+        conversationBox.removeAllViews()
+
+        statusText.text =
+            "Saved conversation"
+
+        /*
+         * Header row.
+         */
+        val header =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+
+                setPadding(
+                    0,
+                    dp(5),
+                    0,
+                    dp(8)
+                )
+            }
+
+        val backButton =
+            TextView(this).apply {
+
+                text =
+                    "‹"
+
+                textSize = 30f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                background =
+                    GradientDrawable().apply {
+
+                        shape =
+                            GradientDrawable.OVAL
+
+                        setColor(
+                            Color.rgb(
+                                20,
+                                30,
+                                60
+                            )
+                        )
+
+                        setStroke(
+                            dp(1),
+                            Color.rgb(
+                                65,
+                                120,
+                                180
+                            )
+                        )
+                    }
+
+                setOnClickListener {
+                    showHistory()
+                }
+            }
+
+        header.addView(
+            backButton,
+            LinearLayout.LayoutParams(
+                dp(42),
+                dp(42)
+            )
+        )
+
+        header.addView(
+            TextView(this).apply {
+
+                text =
+                    "  SAVED CONVERSATION"
+
+                textSize = 10f
+
+                letterSpacing =
+                    0.14f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.rgb(
+                        90,
+                        210,
+                        255
+                    )
+                )
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+            },
+            LinearLayout.LayoutParams(
+                0,
+                dp(42),
+                1f
+            )
+        )
+
+        conversationBox.addView(
+            header
+        )
+
+        val sortedMessages =
+            messages.sortedBy {
+                it.timestamp
+            }
+
+        sortedMessages.forEach { item ->
 
             val accent =
                 if (
-                    speaker.equals(
+                    item.speaker.equals(
                         "YOU",
                         ignoreCase = true
                     )
@@ -804,12 +1323,66 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-            conversationBox.addView(
+            val wrapper =
+                LinearLayout(this).apply {
+
+                    orientation =
+                        LinearLayout.VERTICAL
+                }
+
+            val time =
+                android.text.format.DateFormat.format(
+                    "dd MMM • hh:mm a",
+                    item.timestamp
+                ).toString()
+
+            wrapper.addView(
+                TextView(this).apply {
+
+                    text =
+                        time
+
+                    textSize = 8f
+
+                    setTextColor(
+                        Color.rgb(
+                            105,
+                            120,
+                            155
+                        )
+                    )
+
+                    gravity =
+                        if (
+                            item.speaker.equals(
+                                "YOU",
+                                ignoreCase = true
+                            )
+                        ) {
+                            Gravity.END
+                        } else {
+                            Gravity.START
+                        }
+
+                    setPadding(
+                        0,
+                        dp(2),
+                        0,
+                        0
+                    )
+                }
+            )
+
+            wrapper.addView(
                 messageCard(
-                    speaker,
-                    message,
+                    item.speaker,
+                    item.message,
                     accent
                 )
+            )
+
+            conversationBox.addView(
+                wrapper
             )
         }
     }
@@ -887,6 +1460,12 @@ class MainActivity : ComponentActivity() {
             .remove(historyKey)
             .apply()
 
+        /*
+         * Start a completely new session after clearing.
+         */
+        currentSessionId =
+            createSessionId()
+
         conversationBox.removeAllViews()
 
         addAurixMessage(
@@ -897,6 +1476,10 @@ class MainActivity : ComponentActivity() {
         statusText.text =
             "Conversation history cleared"
     }
+
+    // =================================================
+    // MESSAGE CARD
+    // =================================================
 
     private fun messageCard(
         title: String,
@@ -1577,11 +2160,23 @@ class MainActivity : ComponentActivity() {
             drawerDivider()
         )
 
+        // -------------------------------------------------
+        // NEW CONVERSATION
+        // -------------------------------------------------
+
         addDrawerItem(
             drawer,
             "＋",
             "New Conversation"
         ) {
+
+            /*
+             * IMPORTANT:
+             * New Conversation does NOT delete history.
+             * It only creates a new session for future messages.
+             */
+            currentSessionId =
+                createSessionId()
 
             conversationBox.removeAllViews()
 
@@ -1596,6 +2191,10 @@ class MainActivity : ComponentActivity() {
             closeSideDrawer()
         }
 
+        // -------------------------------------------------
+        // HISTORY
+        // -------------------------------------------------
+
         addDrawerItem(
             drawer,
             "◷",
@@ -1606,6 +2205,10 @@ class MainActivity : ComponentActivity() {
 
             closeSideDrawer()
         }
+
+        // -------------------------------------------------
+        // CLEAR HISTORY
+        // -------------------------------------------------
 
         addDrawerItem(
             drawer,
