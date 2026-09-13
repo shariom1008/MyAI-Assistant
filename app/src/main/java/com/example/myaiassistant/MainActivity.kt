@@ -1021,49 +1021,123 @@ private fun addAction(
 
 
     private fun addNavItem(
-        nav: LinearLayout,
-        label: String,
-        action: () -> Unit
-    ) {
+    nav: LinearLayout,
+    label: String,
+    action: () -> Unit
+) {
 
-        nav.addView(
-            TextView(this).apply {
+    val item =
+        LinearLayout(this).apply {
 
-                text = label
+            orientation =
+                LinearLayout.VERTICAL
 
-                textSize = 8f
+            gravity =
+                Gravity.CENTER
 
-                gravity =
-                    Gravity.CENTER
-
-                setTextColor(
-                    if (label == "AURIX")
-                        Color.rgb(
-                            90,
-                            210,
-                            255
-                        )
-                    else
-                        Color.rgb(
-                            130,
-                            140,
-                            175
-                        )
-                )
-
-                setOnClickListener {
-                    action()
-                }
-            },
-
-            LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                1f
+            setPadding(
+                dp(2),
+                dp(2),
+                dp(2),
+                dp(2)
             )
-        )
-    }
 
+            setOnClickListener {
+                action()
+            }
+        }
+
+
+    // ---------------------------------------------
+    // NAV ICON
+    // ---------------------------------------------
+
+    val icon =
+        BottomNavIcon(
+            this@MainActivity,
+            label,
+            label == "AURIX"
+        )
+
+
+    item.addView(
+        icon,
+        LinearLayout.LayoutParams(
+            dp(23),
+            dp(23)
+        ).apply {
+            gravity =
+                Gravity.CENTER
+        }
+    )
+
+
+    // ---------------------------------------------
+    // NAV LABEL
+    // ---------------------------------------------
+
+    val text =
+        TextView(this).apply {
+
+            this.text = label
+
+            textSize = 8f
+
+            gravity =
+                Gravity.CENTER
+
+            maxLines = 1
+
+            includeFontPadding =
+                false
+
+            setTextColor(
+                if (label == "AURIX") {
+                    Color.rgb(
+                        90,
+                        210,
+                        255
+                    )
+                } else {
+                    Color.rgb(
+                        130,
+                        140,
+                        175
+                    )
+                }
+            )
+
+            setPadding(
+                0,
+                dp(2),
+                0,
+                0
+            )
+        }
+
+
+    item.addView(
+        text,
+        LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            dp(17)
+        )
+    )
+
+
+    // ---------------------------------------------
+    // NAV ITEM WIDTH
+    // ---------------------------------------------
+
+    nav.addView(
+        item,
+        LinearLayout.LayoutParams(
+            0,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            1f
+        )
+    )
+    }
 
     // =================================================
     // SIDE DRAWER
@@ -2826,4 +2900,347 @@ private fun addAction(
                 resources.displayMetrics.density
     }
 }
+    private class BottomNavIcon(
+    context: Context,
+    private val label: String,
+    private val active: Boolean
+) : View(context) {
+
+    private val paint =
+        Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private val path =
+        Path()
+
+
+    override fun onDraw(
+        canvas: Canvas
+    ) {
+
+        super.onDraw(canvas)
+
+        val w =
+            width.toFloat()
+
+        val h =
+            height.toFloat()
+
+
+        val color =
+            if (active) {
+                Color.rgb(
+                    90,
+                    210,
+                    255
+                )
+            } else {
+                Color.rgb(
+                    125,
+                    140,
+                    175
+                )
+            }
+
+
+        paint.shader = null
+
+        paint.color = color
+
+        paint.style =
+            Paint.Style.STROKE
+
+        paint.strokeWidth =
+            dp(2f)
+
+        paint.strokeCap =
+            Paint.Cap.ROUND
+
+        paint.strokeJoin =
+            Paint.Join.ROUND
+
+
+        when (label.lowercase()) {
+
+            // -----------------------------------------
+            // HOME
+            // -----------------------------------------
+
+            "home" -> {
+
+                path.reset()
+
+                path.moveTo(
+                    w * 0.18f,
+                    h * 0.46f
+                )
+
+                path.lineTo(
+                    w * 0.50f,
+                    h * 0.18f
+                )
+
+                path.lineTo(
+                    w * 0.82f,
+                    h * 0.46f
+                )
+
+                path.moveTo(
+                    w * 0.25f,
+                    h * 0.40f
+                )
+
+                path.lineTo(
+                    w * 0.25f,
+                    h * 0.82f
+                )
+
+                path.lineTo(
+                    w * 0.75f,
+                    h * 0.82f
+                )
+
+                path.lineTo(
+                    w * 0.75f,
+                    h * 0.40f
+                )
+
+                canvas.drawPath(
+                    path,
+                    paint
+                )
+            }
+
+
+            // -----------------------------------------
+            // HISTORY
+            // -----------------------------------------
+
+            "history" -> {
+
+                canvas.drawCircle(
+                    w * 0.50f,
+                    h * 0.50f,
+                    w * 0.31f,
+                    paint
+                )
+
+                canvas.drawLine(
+                    w * 0.50f,
+                    h * 0.50f,
+                    w * 0.50f,
+                    h * 0.31f,
+                    paint
+                )
+
+                canvas.drawLine(
+                    w * 0.50f,
+                    h * 0.50f,
+                    w * 0.65f,
+                    h * 0.59f,
+                    paint
+                )
+
+                path.reset()
+
+                path.moveTo(
+                    w * 0.17f,
+                    h * 0.27f
+                )
+
+                path.lineTo(
+                    w * 0.17f,
+                    h * 0.45f
+                )
+
+                path.lineTo(
+                    w * 0.32f,
+                    h * 0.37f
+                )
+
+                canvas.drawPath(
+                    path,
+                    paint
+                )
+            }
+
+
+            // -----------------------------------------
+            // AURIX
+            // -----------------------------------------
+
+            "aurix" -> {
+
+                paint.style =
+                    Paint.Style.STROKE
+
+                paint.strokeWidth =
+                    dp(2f)
+
+                canvas.drawCircle(
+                    w * 0.50f,
+                    h * 0.50f,
+                    w * 0.36f,
+                    paint
+                )
+
+                paint.style =
+                    Paint.Style.FILL
+
+                canvas.drawCircle(
+                    w * 0.50f,
+                    h * 0.50f,
+                    w * 0.15f,
+                    paint
+                )
+
+                paint.color =
+                    Color.WHITE
+
+                canvas.drawCircle(
+                    w * 0.50f,
+                    h * 0.50f,
+                    w * 0.055f,
+                    paint
+                )
+            }
+
+
+            // -----------------------------------------
+            // SHORTCUTS
+            // -----------------------------------------
+
+            "shortcuts" -> {
+
+                paint.style =
+                    Paint.Style.FILL
+
+                path.reset()
+
+                path.moveTo(
+                    w * 0.57f,
+                    h * 0.10f
+                )
+
+                path.lineTo(
+                    w * 0.27f,
+                    h * 0.55f
+                )
+
+                path.lineTo(
+                    w * 0.49f,
+                    h * 0.55f
+                )
+
+                path.lineTo(
+                    w * 0.40f,
+                    h * 0.90f
+                )
+
+                path.lineTo(
+                    w * 0.76f,
+                    h * 0.42f
+                )
+
+                path.lineTo(
+                    w * 0.54f,
+                    h * 0.42f
+                )
+
+                path.close()
+
+                canvas.drawPath(
+                    path,
+                    paint
+                )
+            }
+
+
+            // -----------------------------------------
+            // SETTINGS
+            // -----------------------------------------
+
+            "settings" -> {
+
+                paint.style =
+                    Paint.Style.STROKE
+
+                paint.strokeWidth =
+                    dp(2.2f)
+
+                canvas.drawCircle(
+                    w * 0.50f,
+                    h * 0.50f,
+                    w * 0.28f,
+                    paint
+                )
+
+                paint.style =
+                    Paint.Style.FILL
+
+                canvas.drawCircle(
+                    w * 0.50f,
+                    h * 0.50f,
+                    w * 0.10f,
+                    paint
+                )
+
+
+                for (i in 0 until 8) {
+
+                    val angle =
+                        Math.toRadians(
+                            (i * 45).toDouble()
+                        )
+
+                    val x1 =
+                        w * 0.50f +
+                            kotlin.math.cos(angle)
+                                .toFloat() *
+                            w * 0.34f
+
+                    val y1 =
+                        h * 0.50f +
+                            kotlin.math.sin(angle)
+                                .toFloat() *
+                            h * 0.34f
+
+                    val x2 =
+                        w * 0.50f +
+                            kotlin.math.cos(angle)
+                                .toFloat() *
+                            w * 0.43f
+
+                    val y2 =
+                        h * 0.50f +
+                            kotlin.math.sin(angle)
+                                .toFloat() *
+                            h * 0.43f
+
+                    paint.style =
+                        Paint.Style.STROKE
+
+                    paint.strokeWidth =
+                        dp(2f)
+
+                    canvas.drawLine(
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        paint
+                    )
+                }
+            }
+        }
+    }
+
+
+    private fun dp(
+        value: Float
+    ): Float {
+
+        return value *
+            resources.displayMetrics.density
+    }
+    }
 }
