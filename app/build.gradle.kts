@@ -8,29 +8,32 @@ android {
     namespace = "com.example.myaiassistant"
 
     compileSdk = 34
-buildFeatures {
-    buildConfig = true
-}
 
-defaultConfig {
-    applicationId = "com.example.myaiassistant"
-    minSdk = 24
-    targetSdk = 34
-    versionCode = 6
-    versionName = "6.0"
+    buildFeatures {
+        buildConfig = true
+    }
 
-    buildConfigField(
-        "String",
-        "GEMINI_API_KEY",
-        "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\""
-    )
+    defaultConfig {
+        applicationId = "com.example.myaiassistant"
+        minSdk = 24
+        targetSdk = 34
 
-buildConfigField(
-    "String",
-    "YOUTUBE_API_KEY",
-    "\"${project.findProperty("YOUTUBE_API_KEY") ?: ""}\""
-)
-}
+        versionCode = 6
+        versionName = "6.0"
+
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\""
+        )
+
+        buildConfigField(
+            "String",
+            "YOUTUBE_API_KEY",
+            "\"${project.findProperty("YOUTUBE_API_KEY") ?: ""}\""
+        )
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -55,12 +58,20 @@ buildConfigField(
 }
 
 dependencies {
+
     implementation("androidx.core:core-ktx:1.12.0")
+
     implementation("androidx.activity:activity-ktx:1.8.2")
-implementation("com.google.firebase:firebase-auth:23.1.0")
-implementation("androidx.credentials:credentials:1.3.0")
-implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
-implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-implementation("androidx.credentials:credentials:1.3.0")
-implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+
+    // Firebase Auth — KEEP THIS VERSION
+    implementation("com.google.firebase:firebase-auth:23.1.0")
+
+    // Credential Manager — UPDATED FOR THIS TEST
+    implementation("androidx.credentials:credentials:1.6.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+
+    // Google Identity Services
+    implementation(
+        "com.google.android.libraries.identity.googleid:googleid:1.2.0"
+    )
 }
