@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "618534099886-lvmsb449gfe52e6k9rj6h7c1itqt9q2r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.myaiassistant",
+            "certificate_hash": "fcac48b8ff2e629a2c94d1858eb8c6047aa4fa98"
+          }
+        },
+        {
           "client_id": "618534099886-u79mvj4jugdl3ms25n8kb1vfs7oisrrr.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
