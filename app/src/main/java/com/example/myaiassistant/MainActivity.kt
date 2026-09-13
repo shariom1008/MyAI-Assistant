@@ -15,10 +15,16 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import androidx.lifecycle.lifecycleScope
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 import kotlin.math.min
 
 class MainActivity : Activity() {
@@ -35,61 +41,158 @@ class MainActivity : Activity() {
 
     private var listening = false
 
-    private val statusReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action != AurixService.ACTION_EVENT) return
+    // -------------------------------------------------
+    // SIDE DRAWER
+    // -------------------------------------------------
 
-            when (intent.getStringExtra(AurixService.EXTRA_TYPE)) {
+    private var drawerView: LinearLayout? = null
+    private var drawerOverlay: View? = null
+
+
+    // -------------------------------------------------
+    // AURIX STATUS RECEIVER
+    // -------------------------------------------------
+
+    private val statusReceiver = object : BroadcastReceiver() {
+
+        override fun onReceive(
+            context: Context?,
+            intent: Intent?
+        ) {
+
+            if (intent?.action != AurixService.ACTION_EVENT) {
+                return
+            }
+
+            when (
+                intent.getStringExtra(
+                    AurixService.EXTRA_TYPE
+                )
+            ) {
+
                 AurixService.TYPE_STATUS -> {
-                    when (intent.getStringExtra(AurixService.EXTRA_TEXT)) {
-                        "LISTENING", "HEY AURIX READY" -> setListeningState()
-                        "THINKING" -> setThinkingState()
-                        "READY" -> setReadyState()
+
+                    when (
+                        intent.getStringExtra(
+                            AurixService.EXTRA_TEXT
+                        )
+                    ) {
+
+                        "LISTENING",
+                        "HEY AURIX READY" -> {
+                            setListeningState()
+                        }
+
+                        "THINKING" -> {
+                            setThinkingState()
+                        }
+
+                        "READY" -> {
+                            setReadyState()
+                        }
+
                         else -> Unit
                     }
                 }
 
+
                 AurixService.TYPE_COMMAND -> {
-                    val command = intent.getStringExtra(AurixService.EXTRA_TEXT)
-                        ?.trim()
-                        .orEmpty()
-                    if (command.isNotBlank()) addUserMessage(command)
+
+                    val command =
+                        intent.getStringExtra(
+                            AurixService.EXTRA_TEXT
+                        )
+                            ?.trim()
+                            .orEmpty()
+
+                    if (command.isNotBlank()) {
+                        addUserMessage(command)
+                    }
                 }
 
+
                 AurixService.TYPE_SPEAK -> {
-                    val response = intent.getStringExtra(AurixService.EXTRA_TEXT)
-                        ?.trim()
-                        .orEmpty()
-                    if (response.isNotBlank()) addAurixMessage(response)
+
+                    val response =
+                        intent.getStringExtra(
+                            AurixService.EXTRA_TEXT
+                        )
+                            ?.trim()
+                            .orEmpty()
+
+                    if (response.isNotBlank()) {
+                        addAurixMessage(response)
+                    }
                 }
             }
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+
+    // -------------------------------------------------
+    // ACTIVITY
+    // -------------------------------------------------
+
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
         super.onCreate(savedInstanceState)
+
         buildInterface()
+
         ContextCompat.registerReceiver(
             this,
             statusReceiver,
-            IntentFilter(AurixService.ACTION_EVENT),
+            IntentFilter(
+                AurixService.ACTION_EVENT
+            ),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
+
         checkMicrophonePermission()
     }
 
+
+    override fun onBackPressed() {
+
+        if (drawerView != null) {
+            closeSideDrawer()
+            return
+        }
+
+        super.onBackPressed()
+    }
+
+
     override fun onDestroy() {
+
         try {
             unregisterReceiver(statusReceiver)
         } catch (_: Exception) {
         }
+
         super.onDestroy()
     }
 
+
+    // =================================================
+    // MAIN INTERFACE
+    // =================================================
+
     private fun buildInterface() {
+
         root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(14), dp(18), dp(10))
+
+            orientation =
+                LinearLayout.VERTICAL
+
+            setPadding(
+                dp(18),
+                dp(14),
+                dp(18),
+                dp(10)
+            )
+
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(
@@ -101,6 +204,7 @@ class MainActivity : Activity() {
         }
 
         setContentView(root)
+
         buildHeader()
         buildTitle()
         buildCore()
@@ -109,508 +213,2183 @@ class MainActivity : Activity() {
         buildBottomNavigation()
     }
 
+
+    // =================================================
+    // HEADER
+    // =================================================
+
     private fun buildHeader() {
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
 
-        val menu = TextView(this).apply {
-            text = "☰"
-            textSize = 24f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            setOnClickListener { openMore() }
-        }
-        header.addView(menu, LinearLayout.LayoutParams(dp(42), dp(48)))
+        val header =
+            LinearLayout(this).apply {
 
-        val brandBox = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
+                orientation =
+                    LinearLayout.HORIZONTAL
 
-        val brand = TextView(this).apply {
-            text = "A U R I X"
-            textSize = 21f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
-        }
+                gravity =
+                    Gravity.CENTER_VERTICAL
+            }
 
-        val tagline = TextView(this).apply {
-            text = "INTELLIGENCE CORE"
-            textSize = 8f
-            letterSpacing = 0.18f
-            setTextColor(Color.rgb(120, 190, 255))
-        }
+
+        // MENU BUTTON
+
+        val menu =
+            TextView(this).apply {
+
+                text = "☰"
+
+                textSize = 24f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                setOnClickListener {
+                    openSideDrawer()
+                }
+            }
+
+        header.addView(
+            menu,
+            LinearLayout.LayoutParams(
+                dp(42),
+                dp(48)
+            )
+        )
+
+
+        // BRAND
+
+        val brandBox =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+            }
+
+
+        val brand =
+            TextView(this).apply {
+
+                text = "A U R I X"
+
+                textSize = 21f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.WHITE
+                )
+            }
+
+
+        val tagline =
+            TextView(this).apply {
+
+                text =
+                    "INTELLIGENCE CORE"
+
+                textSize = 8f
+
+                letterSpacing = 0.18f
+
+                setTextColor(
+                    Color.rgb(
+                        120,
+                        190,
+                        255
+                    )
+                )
+            }
+
 
         brandBox.addView(brand)
         brandBox.addView(tagline)
 
+
         header.addView(
             brandBox,
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
         )
 
-        val online = TextView(this).apply {
-            text = "● ONLINE"
-            textSize = 9f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.rgb(80, 220, 255))
-            gravity = Gravity.CENTER
-        }
+
+        // ONLINE
+
+        val online =
+            TextView(this).apply {
+
+                text = "● ONLINE"
+
+                textSize = 9f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.rgb(
+                        80,
+                        220,
+                        255
+                    )
+                )
+
+                gravity =
+                    Gravity.CENTER
+            }
+
 
         header.addView(
             online,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(40))
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(40)
+            )
         )
 
-        voiceButton = TextView(this).apply {
-            text = "◉"
-            textSize = 22f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            background = createVoiceBackground(false)
-            elevation = dp(8).toFloat()
-            setOnClickListener { activateVoice() }
-        }
 
-        val micParams = LinearLayout.LayoutParams(dp(48), dp(48))
-        micParams.marginStart = dp(10)
-        header.addView(voiceButton, micParams)
+        // VOICE BUTTON
+
+        voiceButton =
+            TextView(this).apply {
+
+                text = "◉"
+
+                textSize = 22f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                background =
+                    createVoiceBackground(false)
+
+                elevation =
+                    dp(8).toFloat()
+
+                setOnClickListener {
+                    activateVoice()
+                }
+            }
+
+
+        val micParams =
+            LinearLayout.LayoutParams(
+                dp(48),
+                dp(48)
+            )
+
+        micParams.marginStart =
+            dp(10)
+
+        header.addView(
+            voiceButton,
+            micParams
+        )
+
 
         root.addView(
             header,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(54))
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(54)
+            )
         )
     }
 
+
+    // =================================================
+    // TITLE
+    // =================================================
+
     private fun buildTitle() {
+
         root.addView(
             TextView(this).apply {
-                text = "A U R I X  |  INTELLIGENCE CORE"
+
+                text =
+                    "A U R I X  |  INTELLIGENCE CORE"
+
                 textSize = 9f
+
                 letterSpacing = 0.20f
-                gravity = Gravity.CENTER
-                setTextColor(Color.rgb(100, 190, 255))
-                setPadding(0, dp(12), 0, dp(3))
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.rgb(
+                        100,
+                        190,
+                        255
+                    )
+                )
+
+                setPadding(
+                    0,
+                    dp(12),
+                    0,
+                    dp(3)
+                )
             }
         )
     }
 
+
+    // =================================================
+    // CORE
+    // =================================================
+
     private fun buildCore() {
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-        }
+
+        val container =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                gravity =
+                    Gravity.CENTER
+            }
+
 
         container.addView(
             AurixOrbView(this),
-            LinearLayout.LayoutParams(dp(220), dp(220))
+            LinearLayout.LayoutParams(
+                dp(220),
+                dp(220)
+            )
         )
 
-        voiceStatus = TextView(this).apply {
-            text = "VOICE  •  READY"
-            textSize = 10f
-            letterSpacing = 0.18f
-            gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.rgb(90, 210, 255))
-        }
+
+        voiceStatus =
+            TextView(this).apply {
+
+                text =
+                    "VOICE  •  READY"
+
+                textSize = 10f
+
+                letterSpacing = 0.18f
+
+                gravity =
+                    Gravity.CENTER
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.rgb(
+                        90,
+                        210,
+                        255
+                    )
+                )
+            }
+
 
         container.addView(
             voiceStatus,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(34))
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(34)
+            )
         )
 
-        statusText = TextView(this).apply {
-            text = "Tap the AURIX voice icon to speak"
-            textSize = 10f
-            gravity = Gravity.CENTER
-            setTextColor(Color.rgb(145, 155, 190))
-        }
+
+        statusText =
+            TextView(this).apply {
+
+                text =
+                    "Tap the AURIX voice icon to speak"
+
+                textSize = 10f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.rgb(
+                        145,
+                        155,
+                        190
+                    )
+                )
+            }
+
 
         container.addView(statusText)
 
+
         root.addView(
             container,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(285))
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(285)
+            )
         )
     }
 
+
+    // =================================================
+    // CONVERSATION
+    // =================================================
+
     private fun buildConversation() {
-        conversationBox = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
 
-        addAurixMessage("AURIX ready. Tap the voice icon to speak.")
+        conversationBox =
+            LinearLayout(this).apply {
 
-        val scroll = ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-            addView(conversationBox)
-        }
+                orientation =
+                    LinearLayout.VERTICAL
+            }
+
+
+        addAurixMessage(
+            "AURIX ready. Tap the voice icon to speak."
+        )
+
+
+        val scroll =
+            ScrollView(this).apply {
+
+                isVerticalScrollBarEnabled =
+                    false
+
+                addView(
+                    conversationBox
+                )
+            }
+
 
         root.addView(
             scroll,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
         )
     }
 
-    private fun addUserMessage(message: String) {
+
+    private fun addUserMessage(
+        message: String
+    ) {
+
         conversationBox.addView(
-            messageCard("YOU", message, Color.rgb(125, 95, 255))
+            messageCard(
+                "YOU",
+                message,
+                Color.rgb(
+                    125,
+                    95,
+                    255
+                )
+            )
         )
     }
 
-    private fun addAurixMessage(message: String) {
+
+    private fun addAurixMessage(
+        message: String
+    ) {
+
         conversationBox.addView(
-            messageCard("AURIX", message, Color.rgb(60, 205, 255))
+            messageCard(
+                "AURIX",
+                message,
+                Color.rgb(
+                    60,
+                    205,
+                    255
+                )
+            )
         )
     }
 
-    private fun messageCard(title: String, message: String, accent: Int): LinearLayout {
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
-                setColor(Color.argb(75, 20, 28, 60))
-                setStroke(
-                    dp(1),
-                    Color.argb(100, Color.red(accent), Color.green(accent), Color.blue(accent))
+
+    private fun messageCard(
+        title: String,
+        message: String,
+        accent: Int
+    ): LinearLayout {
+
+        val box =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(14),
+                    dp(10),
+                    dp(14),
+                    dp(10)
+                )
+
+                background =
+                    GradientDrawable().apply {
+
+                        cornerRadius =
+                            dp(16).toFloat()
+
+                        setColor(
+                            Color.argb(
+                                75,
+                                20,
+                                28,
+                                60
+                            )
+                        )
+
+                        setStroke(
+                            dp(1),
+                            Color.argb(
+                                100,
+                                Color.red(accent),
+                                Color.green(accent),
+                                Color.blue(accent)
+                            )
+                        )
+                    }
+            }
+
+
+        box.addView(
+            TextView(this).apply {
+
+                text = title
+
+                textSize = 8f
+
+                letterSpacing = 0.18f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(accent)
+            }
+        )
+
+
+        box.addView(
+            TextView(this).apply {
+
+                text = message
+
+                textSize = 12f
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                setPadding(
+                    0,
+                    dp(4),
+                    0,
+                    0
                 )
             }
-        }
-
-        box.addView(TextView(this).apply {
-            text = title
-            textSize = 8f
-            letterSpacing = 0.18f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(accent)
-        })
-
-        box.addView(TextView(this).apply {
-            text = message
-            textSize = 12f
-            setTextColor(Color.WHITE)
-            setPadding(0, dp(4), 0, 0)
-        })
-
-        val params = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, dp(4), 0, dp(4))
+
+
+        val params =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        params.setMargins(
+            0,
+            dp(4),
+            0,
+            dp(4)
+        )
+
         box.layoutParams = params
+
         return box
     }
 
-    private fun buildQuickActions() {
-        root.addView(TextView(this).apply {
-            text = "QUICK ACTIONS"
-            textSize = 9f
-            letterSpacing = 0.18f
-            setTextColor(Color.rgb(110, 170, 230))
-            setPadding(0, dp(7), 0, dp(6))
-        })
 
-        val row1 = LinearLayout(this)
-        addAction(row1, "YouTube") { openYouTube() }
-        addAction(row1, "Search") { openSearch() }
-        addAction(row1, "Music") { openMusic() }
-        addAction(row1, "Weather") { openWeather() }
+    // =================================================
+    // QUICK ACTIONS
+    // =================================================
+
+    private fun buildQuickActions() {
+
+        root.addView(
+            TextView(this).apply {
+
+                text =
+                    "QUICK ACTIONS"
+
+                textSize = 9f
+
+                letterSpacing = 0.18f
+
+                setTextColor(
+                    Color.rgb(
+                        110,
+                        170,
+                        230
+                    )
+                )
+
+                setPadding(
+                    0,
+                    dp(7),
+                    0,
+                    dp(6)
+                )
+            }
+        )
+
+
+        val row1 =
+            LinearLayout(this)
+
+        addAction(
+            row1,
+            "YouTube"
+        ) {
+            openYouTube()
+        }
+
+        addAction(
+            row1,
+            "Search"
+        ) {
+            openSearch()
+        }
+
+        addAction(
+            row1,
+            "Music"
+        ) {
+            openMusic()
+        }
+
+        addAction(
+            row1,
+            "Weather"
+        ) {
+            openWeather()
+        }
+
+
         root.addView(row1)
 
-        val row2 = LinearLayout(this)
-        addAction(row2, "Call") { openDialer() }
-        addAction(row2, "Messages") { openMessages() }
-        addAction(row2, "Apps") { openApps() }
-        addAction(row2, "More") { openMore() }
+
+        val row2 =
+            LinearLayout(this)
+
+        addAction(
+            row2,
+            "Call"
+        ) {
+            openDialer()
+        }
+
+        addAction(
+            row2,
+            "Messages"
+        ) {
+            openMessages()
+        }
+
+        addAction(
+            row2,
+            "Apps"
+        ) {
+            openApps()
+        }
+
+        addAction(
+            row2,
+            "More"
+        ) {
+            openMore()
+        }
+
+
         root.addView(row2)
     }
 
-    private fun addAction(row: LinearLayout, label: String, action: () -> Unit) {
-        val button = TextView(this).apply {
-            text = label
-            textSize = 9f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            background = GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
-                setColor(Color.argb(65, 35, 45, 85))
-                setStroke(dp(1), Color.argb(80, 90, 160, 255))
+
+    private fun addAction(
+        row: LinearLayout,
+        label: String,
+        action: () -> Unit
+    ) {
+
+        val button =
+            TextView(this).apply {
+
+                text = label
+
+                textSize = 9f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                background =
+                    GradientDrawable().apply {
+
+                        cornerRadius =
+                            dp(12).toFloat()
+
+                        setColor(
+                            Color.argb(
+                                65,
+                                35,
+                                45,
+                                85
+                            )
+                        )
+
+                        setStroke(
+                            dp(1),
+                            Color.argb(
+                                80,
+                                90,
+                                160,
+                                255
+                            )
+                        )
+                    }
+
+                setOnClickListener {
+                    action()
+                }
             }
-            setOnClickListener { action() }
-        }
 
-        val params = LinearLayout.LayoutParams(0, dp(40), 1f)
-        params.setMargins(dp(3), dp(3), dp(3), dp(3))
-        row.addView(button, params)
-    }
 
-    private fun buildBottomNavigation() {
-        val nav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(0, dp(8), 0, 0)
-        }
+        val params =
+            LinearLayout.LayoutParams(
+                0,
+                dp(40),
+                1f
+            )
 
-        addNavItem(nav, "Home") { setReadyState() }
-        addNavItem(nav, "History") { statusText.text = "Conversation history" }
-        addNavItem(nav, "AURIX") { setReadyState() }
-        addNavItem(nav, "Shortcuts") { statusText.text = "Quick actions are ready" }
-        addNavItem(nav, "Settings") { openMore() }
+        params.setMargins(
+            dp(3),
+            dp(3),
+            dp(3),
+            dp(3)
+        )
 
-        root.addView(
-            nav,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(50))
+        row.addView(
+            button,
+            params
         )
     }
 
-    private fun addNavItem(nav: LinearLayout, label: String, action: () -> Unit) {
-        nav.addView(TextView(this).apply {
-            text = label
-            textSize = 8f
-            gravity = Gravity.CENTER
-            setTextColor(
-                if (label == "AURIX") Color.rgb(90, 210, 255)
-                else Color.rgb(130, 140, 175)
+
+    // =================================================
+    // BOTTOM NAVIGATION
+    // =================================================
+
+    private fun buildBottomNavigation() {
+
+        val nav =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    0,
+                    dp(8),
+                    0,
+                    0
+                )
+            }
+
+
+        addNavItem(
+            nav,
+            "Home"
+        ) {
+            setReadyState()
+        }
+
+
+        addNavItem(
+            nav,
+            "History"
+        ) {
+            statusText.text =
+                "Conversation history"
+        }
+
+
+        addNavItem(
+            nav,
+            "AURIX"
+        ) {
+            setReadyState()
+        }
+
+
+        addNavItem(
+            nav,
+            "Shortcuts"
+        ) {
+            statusText.text =
+                "Quick actions are ready"
+        }
+
+
+        addNavItem(
+            nav,
+            "Settings"
+        ) {
+            openSideDrawer()
+        }
+
+
+        root.addView(
+            nav,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(50)
             )
-            setOnClickListener { action() }
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+        )
     }
 
-    private fun activateVoice() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_AUDIO)
+
+    private fun addNavItem(
+        nav: LinearLayout,
+        label: String,
+        action: () -> Unit
+    ) {
+
+        nav.addView(
+            TextView(this).apply {
+
+                text = label
+
+                textSize = 8f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    if (label == "AURIX")
+                        Color.rgb(
+                            90,
+                            210,
+                            255
+                        )
+                    else
+                        Color.rgb(
+                            130,
+                            140,
+                            175
+                        )
+                )
+
+                setOnClickListener {
+                    action()
+                }
+            },
+
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                1f
+            )
+        )
+    }
+
+
+    // =================================================
+    // SIDE DRAWER
+    // =================================================
+
+    private fun openSideDrawer() {
+
+        if (drawerView != null) {
             return
         }
 
-        listening = true
-        voiceButton.text = "●"
-        voiceButton.background = createVoiceBackground(true)
-        voiceStatus.text = "VOICE  •  LISTENING"
-        statusText.text = "Listening for your command..."
 
-        val intent = Intent(this, AurixService::class.java).apply {
-            action = AurixService.ACTION_LISTEN_ONCE
+        // -------------------------------------------------
+        // DARK OVERLAY
+        // -------------------------------------------------
+
+        val overlay =
+            View(this).apply {
+
+                setBackgroundColor(
+                    Color.argb(
+                        160,
+                        0,
+                        0,
+                        0
+                    )
+                )
+
+                setOnClickListener {
+                    closeSideDrawer()
+                }
+            }
+
+
+        drawerOverlay = overlay
+
+
+        addContentView(
+            overlay,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+
+        // -------------------------------------------------
+        // DRAWER
+        // -------------------------------------------------
+
+        val drawer =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(22),
+                    dp(24),
+                    dp(18),
+                    dp(18)
+                )
+
+                background =
+                    GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(
+                            Color.rgb(
+                                8,
+                                12,
+                                35
+                            ),
+                            Color.rgb(
+                                10,
+                                18,
+                                48
+                            ),
+                            Color.rgb(
+                                5,
+                                8,
+                                26
+                            )
+                        )
+                    )
+
+                elevation =
+                    dp(20).toFloat()
+
+                translationX =
+                    -dp(340).toFloat()
+            }
+
+
+        drawerView = drawer
+
+
+        addContentView(
+            drawer,
+            ViewGroup.LayoutParams(
+                dp(340),
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+
+        // -------------------------------------------------
+        // DRAWER HEADER
+        // -------------------------------------------------
+
+        val header =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+            }
+
+
+        val brandBox =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+            }
+
+
+        brandBox.addView(
+            TextView(this).apply {
+
+                text =
+                    "A U R I X"
+
+                textSize = 22f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.WHITE
+                )
+            }
+        )
+
+
+        brandBox.addView(
+            TextView(this).apply {
+
+                text =
+                    "INTELLIGENCE CORE"
+
+                textSize = 8f
+
+                letterSpacing = 0.20f
+
+                setTextColor(
+                    Color.rgb(
+                        90,
+                        210,
+                        255
+                    )
+                )
+            }
+        )
+
+
+        header.addView(
+            brandBox,
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        )
+
+
+        header.addView(
+            TextView(this).apply {
+
+                text =
+                    "● ONLINE"
+
+                textSize = 8f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.rgb(
+                        70,
+                        225,
+                        190
+                    )
+                )
+            }
+        )
+
+
+        drawer.addView(
+            header,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(60)
+            )
+        )
+
+
+        drawer.addView(
+            drawerDivider()
+        )
+
+
+        // -------------------------------------------------
+        // MENU ITEMS
+        // -------------------------------------------------
+
+        addDrawerItem(
+            drawer,
+            "＋",
+            "New Conversation"
+        ) {
+
+            conversationBox.removeAllViews()
+
+            addAurixMessage(
+                "AURIX ready. Tap the voice icon to speak."
+            )
+
+            statusText.text =
+                "New conversation started"
+
+            closeSideDrawer()
         }
 
-        ContextCompat.startForegroundService(this, intent)
+
+        addDrawerItem(
+            drawer,
+            "◷",
+            "History"
+        ) {
+
+            statusText.text =
+                "Conversation history"
+
+            closeSideDrawer()
+        }
+
+
+        addDrawerItem(
+            drawer,
+            "⚡",
+            "Shortcuts"
+        ) {
+
+            statusText.text =
+                "Quick actions are ready"
+
+            closeSideDrawer()
+        }
+
+
+        addDrawerItem(
+            drawer,
+            "♪",
+            "Music"
+        ) {
+
+            closeSideDrawer()
+
+            openMusic()
+        }
+
+
+        addDrawerItem(
+            drawer,
+            "▦",
+            "Apps"
+        ) {
+
+            closeSideDrawer()
+
+            openApps()
+        }
+
+
+        addDrawerItem(
+            drawer,
+            "⚙",
+            "Settings"
+        ) {
+
+            closeSideDrawer()
+
+            openMore()
+        }
+
+
+        addDrawerItem(
+            drawer,
+            "ⓘ",
+            "About AURIX"
+        ) {
+
+            statusText.text =
+                "AURIX • Personal AI Assistant"
+
+            closeSideDrawer()
+        }
+
+
+        // -------------------------------------------------
+        // SPACER
+        // -------------------------------------------------
+
+        drawer.addView(
+            View(this),
+            LinearLayout.LayoutParams(
+                1,
+                0,
+                1f
+            )
+        )
+
+
+        drawer.addView(
+            drawerDivider()
+        )
+
+
+        // -------------------------------------------------
+        // ACCOUNT
+        // -------------------------------------------------
+
+        drawer.addView(
+            TextView(this).apply {
+
+                text =
+                    "GOOGLE ACCOUNT"
+
+                textSize = 8f
+
+                letterSpacing = 0.18f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.rgb(
+                        100,
+                        180,
+                        240
+                    )
+                )
+
+                setPadding(
+                    0,
+                    dp(8),
+                    0,
+                    dp(5)
+                )
+            }
+        )
+
+
+        val accountEmail =
+            FirebaseAuth
+                .getInstance()
+                .currentUser
+                ?.email
+                ?: "Google account"
+
+
+        drawer.addView(
+            TextView(this).apply {
+
+                text =
+                    accountEmail
+
+                textSize = 11f
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                setPadding(
+                    0,
+                    0,
+                    0,
+                    dp(12)
+                )
+
+                maxLines = 1
+
+                ellipsize =
+                    android.text.TextUtils.TruncateAt.END
+            }
+        )
+
+
+        // -------------------------------------------------
+        // SIGN OUT
+        // -------------------------------------------------
+
+        addDrawerItem(
+            drawer,
+            "⇥",
+            "Sign out"
+        ) {
+
+            signOutGoogle()
+        }
+
+
+        // -------------------------------------------------
+        // OPEN ANIMATION
+        // -------------------------------------------------
+
+        drawer.animate()
+            .translationX(0f)
+            .setDuration(280)
+            .setInterpolator(
+                android.view.animation.DecelerateInterpolator()
+            )
+            .start()
     }
+
+
+    private fun addDrawerItem(
+        drawer: LinearLayout,
+        icon: String,
+        title: String,
+        action: () -> Unit
+    ) {
+
+        val item =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+
+                setPadding(
+                    dp(12),
+                    0,
+                    dp(10),
+                    0
+                )
+
+                background =
+                    GradientDrawable().apply {
+
+                        cornerRadius =
+                            dp(14).toFloat()
+
+                        setColor(
+                            Color.argb(
+                                45,
+                                50,
+                                80,
+                                140
+                            )
+                        )
+
+                        setStroke(
+                            dp(1),
+                            Color.argb(
+                                60,
+                                90,
+                                180,
+                                255
+                            )
+                        )
+                    }
+
+                isClickable = true
+
+                setOnClickListener {
+                    action()
+                }
+            }
+
+
+        val iconView =
+            TextView(this).apply {
+
+                text = icon
+
+                textSize = 19f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.rgb(
+                        100,
+                        215,
+                        255
+                    )
+                )
+            }
+
+
+        item.addView(
+            iconView,
+            LinearLayout.LayoutParams(
+                dp(42),
+                dp(48)
+            )
+        )
+
+
+        item.addView(
+            TextView(this).apply {
+
+                text = title
+
+                textSize = 11f
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+            }
+        )
+
+
+        val params =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(50)
+            )
+
+
+        params.setMargins(
+            0,
+            dp(4),
+            0,
+            dp(4)
+        )
+
+
+        drawer.addView(
+            item,
+            params
+        )
+    }
+
+
+    private fun drawerDivider(): View {
+
+        return View(this).apply {
+
+            setBackgroundColor(
+                Color.argb(
+                    70,
+                    100,
+                    180,
+                    255
+                )
+            )
+
+            layoutParams =
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(1)
+                ).apply {
+
+                    setMargins(
+                        0,
+                        dp(8),
+                        0,
+                        dp(10)
+                    )
+                }
+        }
+    }
+
+
+    private fun closeSideDrawer() {
+
+        val drawer =
+            drawerView
+                ?: return
+
+
+        drawer.animate()
+            .translationX(
+                -dp(350).toFloat()
+            )
+            .setDuration(220)
+            .setInterpolator(
+                android.view.animation.AccelerateInterpolator()
+            )
+            .withEndAction {
+
+                try {
+                    (
+                        drawer.parent
+                            as? ViewGroup
+                    )?.removeView(drawer)
+                } catch (_: Exception) {
+                }
+
+
+                try {
+                    (
+                        drawerOverlay?.parent
+                            as? ViewGroup
+                    )?.removeView(
+                        drawerOverlay
+                    )
+                } catch (_: Exception) {
+                }
+
+
+                drawerView = null
+                drawerOverlay = null
+            }
+            .start()
+    }
+
+
+    // =================================================
+    // GOOGLE SIGN OUT
+    // =================================================
+
+    private fun signOutGoogle() {
+
+        val firebaseAuth =
+            FirebaseAuth.getInstance()
+
+
+        // Firebase session clear
+
+        firebaseAuth.signOut()
+
+
+        try {
+
+            val credentialManager =
+                CredentialManager.create(
+                    this
+                )
+
+
+            lifecycleScope.launch {
+
+                try {
+
+                    credentialManager
+                        .clearCredentialState(
+                            ClearCredentialStateRequest()
+                        )
+
+                } catch (_: Exception) {
+                }
+
+
+                goToAuthActivity()
+            }
+
+        } catch (_: Exception) {
+
+            goToAuthActivity()
+        }
+    }
+
+
+    private fun goToAuthActivity() {
+
+        closeSideDrawer()
+
+
+        val intent =
+            Intent(
+                this,
+                AuthActivity::class.java
+            ).apply {
+
+                flags =
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+
+
+        startActivity(intent)
+
+        finish()
+    }
+
+
+    // =================================================
+    // VOICE
+    // =================================================
+
+    private fun activateVoice() {
+
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.RECORD_AUDIO
+                ),
+                REQUEST_AUDIO
+            )
+
+            return
+        }
+
+
+        listening = true
+
+        voiceButton.text = "●"
+
+        voiceButton.background =
+            createVoiceBackground(true)
+
+        voiceStatus.text =
+            "VOICE  •  LISTENING"
+
+        statusText.text =
+            "Listening for your command..."
+
+
+        val intent =
+            Intent(
+                this,
+                AurixService::class.java
+            ).apply {
+
+                action =
+                    AurixService.ACTION_LISTEN_ONCE
+            }
+
+
+        ContextCompat.startForegroundService(
+            this,
+            intent
+        )
+    }
+
 
     private fun checkMicrophonePermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_AUDIO)
+
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.RECORD_AUDIO
+                ),
+                REQUEST_AUDIO
+            )
+
         } else {
+
             setReadyState()
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode != REQUEST_AUDIO) return
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
 
-        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        )
+
+
+        if (
+            requestCode != REQUEST_AUDIO
+        ) {
+            return
+        }
+
+
+        if (
+            grantResults.isNotEmpty() &&
+            grantResults[0] ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+
             setReadyState()
+
         } else {
+
             listening = false
-            voiceStatus.text = "VOICE  •  MIC REQUIRED"
-            statusText.text = "Microphone permission is required"
-            voiceButton.text = "◉"
-            voiceButton.background = createVoiceBackground(false)
+
+            voiceStatus.text =
+                "VOICE  •  MIC REQUIRED"
+
+            statusText.text =
+                "Microphone permission is required"
+
+            voiceButton.text =
+                "◉"
+
+            voiceButton.background =
+                createVoiceBackground(false)
         }
     }
+
+
+    // =================================================
+    // VOICE STATES
+    // =================================================
 
     private fun setListeningState() {
+
         listening = true
+
         voiceButton.text = "●"
-        voiceButton.background = createVoiceBackground(true)
-        voiceStatus.text = "VOICE  •  LISTENING"
-        statusText.text = "Listening for your command..."
+
+        voiceButton.background =
+            createVoiceBackground(true)
+
+        voiceStatus.text =
+            "VOICE  •  LISTENING"
+
+        statusText.text =
+            "Listening for your command..."
     }
+
 
     private fun setThinkingState() {
+
         listening = true
+
         voiceButton.text = "●"
-        voiceButton.background = createVoiceBackground(true)
-        voiceStatus.text = "VOICE  •  THINKING"
-        statusText.text = "Processing your command..."
+
+        voiceButton.background =
+            createVoiceBackground(true)
+
+        voiceStatus.text =
+            "VOICE  •  THINKING"
+
+        statusText.text =
+            "Processing your command..."
     }
+
 
     private fun setReadyState() {
+
         listening = false
+
         voiceButton.text = "◉"
-        voiceButton.background = createVoiceBackground(false)
-        voiceStatus.text = "VOICE  •  READY"
-        statusText.text = "Tap the AURIX voice icon to speak"
+
+        voiceButton.background =
+            createVoiceBackground(false)
+
+        voiceStatus.text =
+            "VOICE  •  READY"
+
+        statusText.text =
+            "Tap the AURIX voice icon to speak"
     }
 
-    private fun createVoiceBackground(active: Boolean): GradientDrawable {
+
+    private fun createVoiceBackground(
+        active: Boolean
+    ): GradientDrawable {
+
         return GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
+
+            shape =
+                GradientDrawable.OVAL
+
+
             if (active) {
-                setColor(Color.rgb(45, 90, 145))
-                setStroke(dp(2), Color.rgb(80, 220, 255))
+
+                setColor(
+                    Color.rgb(
+                        45,
+                        90,
+                        145
+                    )
+                )
+
+                setStroke(
+                    dp(2),
+                    Color.rgb(
+                        80,
+                        220,
+                        255
+                    )
+                )
+
             } else {
-                setColor(Color.rgb(25, 35, 70))
-                setStroke(dp(1), Color.rgb(80, 150, 240))
+
+                setColor(
+                    Color.rgb(
+                        25,
+                        35,
+                        70
+                    )
+                )
+
+                setStroke(
+                    dp(1),
+                    Color.rgb(
+                        80,
+                        150,
+                        240
+                    )
+                )
             }
         }
     }
+
+
+    // =================================================
+    // QUICK ACTION TARGETS
+    // =================================================
 
     private fun openYouTube() {
+
         try {
-            startActivity(packageIntent("com.google.android.youtube"))
+
+            startActivity(
+                packageIntent(
+                    "com.google.android.youtube"
+                )
+            )
+
         } catch (_: Exception) {
-            openUrl("https://www.youtube.com")
+
+            openUrl(
+                "https://www.youtube.com"
+            )
         }
     }
 
-    private fun openSearch() = openUrl("https://www.google.com/search?q=")
+
+    private fun openSearch() {
+
+        openUrl(
+            "https://www.google.com/search?q="
+        )
+    }
+
 
     private fun openMusic() {
+
         try {
-            startActivity(Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC))
+
+            startActivity(
+                Intent.makeMainSelectorActivity(
+                    Intent.ACTION_MAIN,
+                    Intent.CATEGORY_APP_MUSIC
+                )
+            )
+
         } catch (_: Exception) {
-            openUrl("https://music.youtube.com")
+
+            openUrl(
+                "https://music.youtube.com"
+            )
         }
     }
 
-    private fun openWeather() = openUrl("https://www.google.com/search?q=weather")
 
-    private fun openDialer() = startActivity(Intent(Intent.ACTION_DIAL))
+    private fun openWeather() {
+
+        openUrl(
+            "https://www.google.com/search?q=weather"
+        )
+    }
+
+
+    private fun openDialer() {
+
+        startActivity(
+            Intent(
+                Intent.ACTION_DIAL
+            )
+        )
+    }
+
 
     private fun openMessages() {
-        startActivity(Intent(Intent.ACTION_SENDTO).apply { data = Uri.parse("smsto:") })
+
+        startActivity(
+            Intent(
+                Intent.ACTION_SENDTO
+            ).apply {
+
+                data =
+                    Uri.parse(
+                        "smsto:"
+                    )
+            }
+        )
     }
 
-    private fun openApps() = startActivity(Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS))
 
-    private fun openMore() = startActivity(Intent(Settings.ACTION_SETTINGS))
+    private fun openApps() {
 
-    private fun packageIntent(packageName: String): Intent {
-        return packageManager.getLaunchIntentForPackage(packageName)
-            ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com"))
+        startActivity(
+            Intent(
+                Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS
+            )
+        )
     }
 
-    private fun openUrl(url: String) {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+
+    private fun openMore() {
+
+        startActivity(
+            Intent(
+                Settings.ACTION_SETTINGS
+            )
+        )
     }
 
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    class AurixOrbView(context: Context) : View(context) {
+    private fun packageIntent(
+        packageName: String
+    ): Intent {
 
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        return packageManager
+            .getLaunchIntentForPackage(
+                packageName
+            )
+            ?: Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(
+                    "https://www.youtube.com"
+                )
+            )
+    }
+
+
+    private fun openUrl(
+        url: String
+    ) {
+
+        startActivity(
+            Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(url)
+            )
+        )
+    }
+
+
+    // =================================================
+    // DP
+    // =================================================
+
+    private fun dp(
+        value: Int
+    ): Int {
+
+        return (
+            value *
+                resources.displayMetrics.density
+            ).toInt()
+    }
+
+
+    // =================================================
+    // AURIX ORB
+    // =================================================
+
+    class AurixOrbView(
+        context: Context
+    ) : View(context) {
+
+        private val paint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            )
+
         private var rotation = 0f
 
-        private val animator = ValueAnimator.ofFloat(0f, 360f).apply {
-            duration = 5000
-            repeatCount = ValueAnimator.INFINITE
-            addUpdateListener {
-                rotation = it.animatedValue as Float
-                invalidate()
+
+        private val animator =
+            ValueAnimator.ofFloat(
+                0f,
+                360f
+            ).apply {
+
+                duration = 5000
+
+                repeatCount =
+                    ValueAnimator.INFINITE
+
+                addUpdateListener {
+
+                    rotation =
+                        it.animatedValue
+                            as Float
+
+                    invalidate()
+                }
             }
-        }
+
 
         init {
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+
+            setLayerType(
+                View.LAYER_TYPE_SOFTWARE,
+                null
+            )
+
             animator.start()
         }
 
+
         override fun onDetachedFromWindow() {
+
             animator.cancel()
+
             super.onDetachedFromWindow()
         }
 
-        override fun onDraw(canvas: Canvas) {
+
+        override fun onDraw(
+            canvas: Canvas
+        ) {
+
             super.onDraw(canvas)
 
-            val cx = width / 2f
-            val cy = height / 2f
-            val radius = min(width, height) * 0.30f
 
-            // Transparent canvas: no square panel behind the orb.
+            val cx =
+                width / 2f
+
+            val cy =
+                height / 2f
+
+            val radius =
+                min(
+                    width,
+                    height
+                ) * 0.30f
+
+
+            // -------------------------------------------------
+            // TRANSPARENT CANVAS
+            // -------------------------------------------------
+
             paint.shader = null
-            paint.style = Paint.Style.FILL
-            paint.color = Color.TRANSPARENT
-            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
-            for (i in 5 downTo 1) {
-                paint.shader = RadialGradient(
+            paint.style =
+                Paint.Style.FILL
+
+            paint.color =
+                Color.TRANSPARENT
+
+            canvas.drawColor(
+                Color.TRANSPARENT,
+                PorterDuff.Mode.CLEAR
+            )
+
+
+            // -------------------------------------------------
+            // OUTER GLOW
+            // -------------------------------------------------
+
+            for (
+                i in 5 downTo 1
+            ) {
+
+                paint.shader =
+                    RadialGradient(
+                        cx,
+                        cy,
+                        radius * i,
+                        intArrayOf(
+                            Color.argb(
+                                35,
+                                70,
+                                180,
+                                255
+                            ),
+                            Color.TRANSPARENT
+                        ),
+                        null,
+                        Shader.TileMode.CLAMP
+                    )
+
+
+                canvas.drawCircle(
                     cx,
                     cy,
                     radius * i,
+                    paint
+                )
+            }
+
+
+            // -------------------------------------------------
+            // CORE
+            // -------------------------------------------------
+
+            paint.shader =
+                RadialGradient(
+                    cx -
+                        radius * 0.3f,
+                    cy -
+                        radius * 0.3f,
+                    radius * 1.4f,
                     intArrayOf(
-                        Color.argb(35, 70, 180, 255),
-                        Color.TRANSPARENT
+                        Color.rgb(
+                            130,
+                            230,
+                            255
+                        ),
+                        Color.rgb(
+                            70,
+                            90,
+                            230
+                        ),
+                        Color.rgb(
+                            30,
+                            20,
+                            90
+                        )
                     ),
                     null,
                     Shader.TileMode.CLAMP
                 )
-                canvas.drawCircle(cx, cy, radius * i, paint)
-            }
 
-            paint.shader = RadialGradient(
-                cx - radius * 0.3f,
-                cy - radius * 0.3f,
-                radius * 1.4f,
-                intArrayOf(
-                    Color.rgb(130, 230, 255),
-                    Color.rgb(70, 90, 230),
-                    Color.rgb(30, 20, 90)
-                ),
-                null,
-                Shader.TileMode.CLAMP
+
+            canvas.drawCircle(
+                cx,
+                cy,
+                radius,
+                paint
             )
 
-            canvas.drawCircle(cx, cy, radius, paint)
+
+            // -------------------------------------------------
+            // RINGS
+            // -------------------------------------------------
 
             paint.shader = null
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 3f
-            paint.color = Color.rgb(90, 210, 255)
+
+            paint.style =
+                Paint.Style.STROKE
+
+            paint.strokeWidth =
+                3f
+
+            paint.color =
+                Color.rgb(
+                    90,
+                    210,
+                    255
+                )
+
 
             canvas.save()
-            canvas.rotate(rotation, cx, cy)
+
+
+            canvas.rotate(
+                rotation,
+                cx,
+                cy
+            )
+
 
             canvas.drawArc(
-                cx - radius * 1.18f,
-                cy - radius * 1.18f,
-                cx + radius * 1.18f,
-                cy + radius * 1.18f,
+                cx -
+                    radius * 1.18f,
+                cy -
+                    radius * 1.18f,
+                cx +
+                    radius * 1.18f,
+                cy +
+                    radius * 1.18f,
                 20f,
                 100f,
                 false,
                 paint
             )
 
+
             canvas.drawArc(
-                cx - radius * 1.32f,
-                cy - radius * 1.32f,
-                cx + radius * 1.32f,
-                cy + radius * 1.32f,
+                cx -
+                    radius * 1.32f,
+                cy -
+                    radius * 1.32f,
+                cx +
+                    radius * 1.32f,
+                cy +
+                    radius * 1.32f,
                 190f,
                 70f,
                 false,
                 paint
             )
 
+
             canvas.restore()
 
-            paint.style = Paint.Style.FILL
+
+            // -------------------------------------------------
+            // AURIX TEXT
+            // -------------------------------------------------
+
+            paint.style =
+                Paint.Style.FILL
+
             paint.shader = null
-            paint.textAlign = Paint.Align.CENTER
-            paint.typeface = Typeface.DEFAULT_BOLD
-            paint.textSize = radius * 0.27f
-            paint.color = Color.WHITE
 
-            canvas.drawText("AURIX", cx, cy + radius * 0.08f, paint)
+            paint.textAlign =
+                Paint.Align.CENTER
 
-            paint.textSize = radius * 0.09f
-            paint.color = Color.rgb(160, 220, 255)
-            canvas.drawText("CORE", cx, cy + radius * 0.32f, paint)
+            paint.typeface =
+                Typeface.DEFAULT_BOLD
+
+            paint.textSize =
+                radius * 0.27f
+
+            paint.color =
+                Color.WHITE
+
+
+            canvas.drawText(
+                "AURIX",
+                cx,
+                cy +
+                    radius * 0.08f,
+                paint
+            )
+
+
+            // -------------------------------------------------
+            // CORE TEXT
+            // -------------------------------------------------
+
+            paint.textSize =
+                radius * 0.09f
+
+            paint.color =
+                Color.rgb(
+                    160,
+                    220,
+                    255
+                )
+
+
+            canvas.drawText(
+                "CORE",
+                cx,
+                cy +
+                    radius * 0.32f,
+                paint
+            )
         }
     }
 }
