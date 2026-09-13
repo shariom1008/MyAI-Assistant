@@ -19,8 +19,7 @@ import android.widget.Toast
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -36,7 +35,6 @@ class AuthActivity : Activity() {
     private lateinit var auth: FirebaseAuth
     private lateinit var credentialManager: CredentialManager
 
-
     // -------------------------------------------------
     // SECURE NONCE
     // -------------------------------------------------
@@ -45,12 +43,9 @@ class AuthActivity : Activity() {
         byteLength: Int = 32
     ): String {
 
-        val randomBytes =
-            ByteArray(byteLength)
+        val randomBytes = ByteArray(byteLength)
 
-        SecureRandom().nextBytes(
-            randomBytes
-        )
+        SecureRandom().nextBytes(randomBytes)
 
         return Base64.encodeToString(
             randomBytes,
@@ -60,7 +55,6 @@ class AuthActivity : Activity() {
         )
     }
 
-
     // -------------------------------------------------
     // GOOGLE CONFIG DIAGNOSTIC
     // -------------------------------------------------
@@ -69,13 +63,10 @@ class AuthActivity : Activity() {
 
         try {
 
-            val packageNameValue =
-                packageName
+            val packageNameValue = packageName
 
             val webClientId =
-                getString(
-                    R.string.default_web_client_id
-                )
+                getString(R.string.default_web_client_id)
 
             Log.d(
                 "AURIX_AUTH",
@@ -97,11 +88,7 @@ class AuthActivity : Activity() {
                 "WEB CLIENT = $webClientId"
             )
 
-
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.P
-            ) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 
                 val packageInfo =
                     packageManager.getPackageInfo(
@@ -113,11 +100,12 @@ class AuthActivity : Activity() {
                     packageInfo.signingInfo
 
                 val signatures =
-                    if (
-                        signingInfo.hasMultipleSigners()
-                    ) {
+                    if (signingInfo.hasMultipleSigners()) {
+
                         signingInfo.apkContentsSigners
+
                     } else {
+
                         signingInfo.signingCertificateHistory
                     }
 
@@ -190,32 +178,26 @@ class AuthActivity : Activity() {
         }
     }
 
-
     // -------------------------------------------------
-    // ON CREATE
+    // ACTIVITY CREATE
     // -------------------------------------------------
 
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
 
-        super.onCreate(
-            savedInstanceState
-        )
+        super.onCreate(savedInstanceState)
 
         auth =
             FirebaseAuth.getInstance()
 
         credentialManager =
-            CredentialManager.create(
-                this
-            )
+            CredentialManager.create(this)
 
         logAurixGoogleConfig()
 
-        if (
-            auth.currentUser != null
-        ) {
+        // Already logged in
+        if (auth.currentUser != null) {
 
             openAurix()
 
@@ -224,7 +206,6 @@ class AuthActivity : Activity() {
 
         createAuthInterface()
     }
-
 
     // -------------------------------------------------
     // LOGIN UI
@@ -253,7 +234,6 @@ class AuthActivity : Activity() {
                 )
             }
 
-
         val title =
             TextView(this).apply {
 
@@ -274,7 +254,6 @@ class AuthActivity : Activity() {
                 )
             }
 
-
         val subtitle =
             TextView(this).apply {
 
@@ -291,7 +270,6 @@ class AuthActivity : Activity() {
                     Color.LTGRAY
                 )
             }
-
 
         val loginTitle =
             TextView(this).apply {
@@ -313,7 +291,6 @@ class AuthActivity : Activity() {
                 )
             }
 
-
         val googleButton =
             Button(this).apply {
 
@@ -325,7 +302,6 @@ class AuthActivity : Activity() {
                     signInWithGoogle()
                 }
             }
-
 
         val emailButton =
             Button(this).apply {
@@ -343,7 +319,6 @@ class AuthActivity : Activity() {
                 }
             }
 
-
         root.addView(
             title,
             LinearLayout.LayoutParams(
@@ -351,7 +326,6 @@ class AuthActivity : Activity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         )
-
 
         root.addView(
             subtitle,
@@ -368,7 +342,6 @@ class AuthActivity : Activity() {
             }
         )
 
-
         root.addView(
             loginTitle,
             LinearLayout.LayoutParams(
@@ -380,7 +353,6 @@ class AuthActivity : Activity() {
                     24
             }
         )
-
 
         root.addView(
             googleButton,
@@ -394,7 +366,6 @@ class AuthActivity : Activity() {
             }
         )
 
-
         root.addView(
             emailButton,
             LinearLayout.LayoutParams(
@@ -403,15 +374,11 @@ class AuthActivity : Activity() {
             )
         )
 
-
-        setContentView(
-            root
-        )
+        setContentView(root)
     }
 
-
     // -------------------------------------------------
-    // GOOGLE SIGN IN
+    // GOOGLE BUTTON SIGN-IN
     // -------------------------------------------------
 
     private fun signInWithGoogle() {
@@ -427,136 +394,90 @@ class AuthActivity : Activity() {
                         R.string.default_web_client_id
                     )
 
-
                 Log.d(
                     "AURIX_AUTH",
-                    "Starting GetGoogleIdOption flow"
+                    "========================================"
                 )
 
                 Log.d(
                     "AURIX_AUTH",
-                    "Web client ID: $webClientId"
+                    "Starting Sign in with Google button flow"
                 )
 
+                Log.d(
+                    "AURIX_AUTH",
+                    "Web Client ID = $webClientId"
+                )
 
-                // -------------------------------------
-                // GOOGLE ID OPTION
-                //
-                // IMPORTANT:
-                // false = show accounts even if they
-                // have not previously authorized AURIX.
-                // -------------------------------------
-
-                val googleIdOption =
-                    GetGoogleIdOption.Builder()
-                        .setServerClientId(
-                            webClientId
-                        )
-                        .setFilterByAuthorizedAccounts(
-                            false
-                        )
-                        .setAutoSelectEnabled(
-                            false
-                        )
+                // Official explicit Google button flow
+                val signInWithGoogleOption =
+                    GetSignInWithGoogleOption.Builder(
+                        serverClientId = webClientId
+                    )
                         .setNonce(
                             generateSecureRandomNonce()
                         )
                         .build()
 
-
-                // -------------------------------------
-                // CREDENTIAL REQUEST
-                // -------------------------------------
-
                 val request =
                     GetCredentialRequest.Builder()
                         .addCredentialOption(
-                            googleIdOption
+                            signInWithGoogleOption
                         )
                         .build()
-
-
-                // -------------------------------------
-                // FOREGROUND ACTIVITY CONTEXT
-                // -------------------------------------
 
                 val mutableContext =
                     MutableContextWrapper(
                         this@AuthActivity
                     )
 
-
-                // -------------------------------------
-                // GET CREDENTIAL
-                // -------------------------------------
+                Log.d(
+                    "AURIX_AUTH",
+                    "Calling CredentialManager..."
+                )
 
                 val result =
                     credentialManager.getCredential(
-                        context =
-                            mutableContext,
-                        request =
-                            request
+                        context = mutableContext,
+                        request = request
                     )
-
 
                 Log.d(
                     "AURIX_AUTH",
                     "Credential received successfully"
                 )
 
-
-                // -------------------------------------
-                // GOOGLE CREDENTIAL
-                // -------------------------------------
-
                 val credential =
                     result.credential
 
+                Log.d(
+                    "AURIX_AUTH",
+                    "Credential type = ${credential.type}"
+                )
 
                 val googleCredential =
                     GoogleIdTokenCredential.createFrom(
                         credential.data
                     )
 
-
                 val idToken =
                     googleCredential.idToken
-
 
                 Log.d(
                     "AURIX_AUTH",
                     "Google ID token received successfully"
                 )
 
-
-                // -------------------------------------
-                // FIREBASE
-                // -------------------------------------
+                Log.d(
+                    "AURIX_AUTH",
+                    "Sending Google token to Firebase..."
+                )
 
                 firebaseAuthWithGoogle(
                     idToken
                 )
 
-            } catch (
-                e: NoCredentialException
-            ) {
-
-                Log.e(
-                    "AURIX_AUTH",
-                    "No Google credential available",
-                    e
-                )
-
-
-                showError(
-                    "GOOGLE ACCOUNT NOT AVAILABLE",
-                    "${e.javaClass.name}\n\n" +
-                        "${e.message ?: "No Google credential available"}"
-                )
-
-            } catch (
-                e: GetCredentialException
-            ) {
+            } catch (e: GetCredentialException) {
 
                 Log.e(
                     "AURIX_AUTH",
@@ -564,23 +485,19 @@ class AuthActivity : Activity() {
                     e
                 )
 
-
                 showError(
                     "GOOGLE LOGIN FAILED",
                     "${e.javaClass.name}\n\n" +
                         "${e.message ?: "No error message"}"
                 )
 
-            } catch (
-                e: Exception
-            ) {
+            } catch (e: Exception) {
 
                 Log.e(
                     "AURIX_AUTH",
                     "Unexpected Google error",
                     e
                 )
-
 
                 showError(
                     "GOOGLE LOGIN ERROR",
@@ -590,7 +507,6 @@ class AuthActivity : Activity() {
             }
         }
     }
-
 
     // -------------------------------------------------
     // ERROR DIALOG
@@ -604,19 +520,14 @@ class AuthActivity : Activity() {
         android.app.AlertDialog.Builder(
             this
         )
-            .setTitle(
-                title
-            )
-            .setMessage(
-                message
-            )
+            .setTitle(title)
+            .setMessage(message)
             .setPositiveButton(
                 "OK",
                 null
             )
             .show()
     }
-
 
     // -------------------------------------------------
     // FIREBASE GOOGLE AUTH
@@ -632,7 +543,6 @@ class AuthActivity : Activity() {
                 null
             )
 
-
         auth.signInWithCredential(
             credential
         )
@@ -640,24 +550,23 @@ class AuthActivity : Activity() {
                 this
             ) { task ->
 
-                if (
-                    task.isSuccessful
-                ) {
+                if (task.isSuccessful) {
 
                     val user:
                         FirebaseUser? =
                         auth.currentUser
-
 
                     Log.d(
                         "AURIX_AUTH",
                         "Firebase Google login successful"
                     )
 
+                    if (user != null) {
 
-                    if (
-                        user != null
-                    ) {
+                        Log.d(
+                            "AURIX_AUTH",
+                            "Logged in user = ${user.email}"
+                        )
 
                         openAurix()
                     }
@@ -670,16 +579,14 @@ class AuthActivity : Activity() {
                         task.exception
                     )
 
-
-                    Toast.makeText(
-                        this,
-                        "Firebase Google Login failed.",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    showError(
+                        "FIREBASE LOGIN FAILED",
+                        task.exception?.message
+                            ?: "Firebase Google Login failed."
+                    )
                 }
             }
     }
-
 
     // -------------------------------------------------
     // OPEN AURIX
