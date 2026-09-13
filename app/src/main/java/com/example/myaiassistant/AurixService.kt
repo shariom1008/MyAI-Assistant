@@ -31,6 +31,7 @@ import java.util.Locale
 import java.util.regex.Pattern
 import java.net.HttpURLConnection
 import java.net.URL
+import android.content.pm.ServiceInfo
 
 class AurixService :
     Service(),
@@ -307,11 +308,11 @@ class AurixService :
                     .setOngoing(true)
                     .build()
             }
-
-        startForeground(
+            startForeground(
             NOTIFICATION_ID,
-            notification
-        )
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+)
     }
 
     // =========================================================
