@@ -1,33 +1,25 @@
 package com.example.myaiassistant
 
 import android.app.Activity
-import android.content.ClipboardManager
-import android.content.ClipData
 import android.content.Intent
-import android.content.MutableContextWrapper
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
-import android.os.Build
 import android.os.Bundle
 import android.util.Base64
-import android.util.Log
 import android.view.Gravity
-import android.view.ViewGroup
-import android.widget.Button
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
+import android.graphics.drawable.GradientDrawable
+import android.view.ViewGroup
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
-import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +30,565 @@ class AuthActivity : Activity() {
     private lateinit var auth: FirebaseAuth
     private lateinit var credentialManager: CredentialManager
 
-    private lateinit var diagnosticText: TextView
+    private lateinit var statusText: TextView
+    private lateinit var googleButton: TextView
+    private lateinit var root: LinearLayout
+
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
+        super.onCreate(savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
+
+        credentialManager =
+            CredentialManager.create(this)
+
+        if (auth.currentUser != null) {
+            openAurix()
+            return
+        }
+
+        createInterface()
+    }
+
+    // -------------------------------------------------
+    // UI
+    // -------------------------------------------------
+
+    private fun createInterface() {
+
+        root =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                gravity =
+                    Gravity.CENTER_HORIZONTAL
+
+                setPadding(
+                    dp(24),
+                    dp(30),
+                    dp(24),
+                    dp(24)
+                )
+
+                background =
+                    GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(
+                            Color.rgb(3, 6, 22),
+                            Color.rgb(9, 7, 35),
+                            Color.rgb(4, 14, 34)
+                        )
+                    )
+            }
+
+        setContentView(root)
+
+        addTopSpacer()
+
+        addAurixLogo()
+
+        addSubtitle()
+
+        addWelcome()
+
+        addGoogleButton()
+
+        addSecurityInfo()
+
+        addStatus()
+
+        addFooter()
+    }
+
+    private fun addTopSpacer() {
+
+        root.addView(
+            View(this),
+            LinearLayout.LayoutParams(
+                1,
+                dp(18)
+            )
+        )
+    }
+
+    private fun addAurixLogo() {
+
+        val logo =
+            TextView(this).apply {
+
+                text =
+                    "A U R I X"
+
+                textSize =
+                    38f
+
+                gravity =
+                    Gravity.CENTER
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                letterSpacing =
+                    0.12f
+            }
+
+        root.addView(
+            logo,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val line =
+            TextView(this).apply {
+
+                text =
+                    "━━━━━━━━━━━━"
+
+                textSize =
+                    10f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.rgb(
+                        70,
+                        190,
+                        255
+                    )
+                )
+            }
+
+        root.addView(
+            line,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(30)
+            )
+        )
+    }
+
+    private fun addSubtitle() {
+
+        val subtitle =
+            TextView(this).apply {
+
+                text =
+                    "INTELLIGENCE CORE"
+
+                textSize =
+                    10f
+
+                gravity =
+                    Gravity.CENTER
+
+                letterSpacing =
+                    0.28f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.rgb(
+                        90,
+                        205,
+                        255
+                    )
+                )
+            }
+
+        root.addView(
+            subtitle,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(30)
+            )
+        )
+    }
+
+    private fun addWelcome() {
+
+        val welcome =
+            TextView(this).apply {
+
+                text =
+                    "Welcome, Boss"
+
+                textSize =
+                    25f
+
+                gravity =
+                    Gravity.CENTER
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                setPadding(
+                    0,
+                    dp(28),
+                    0,
+                    dp(8)
+                )
+            }
+
+        root.addView(
+            welcome,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val description =
+            TextView(this).apply {
+
+                text =
+                    "Sign in to activate your personal AURIX assistant."
+
+                textSize =
+                    12f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.rgb(
+                        150,
+                        160,
+                        190
+                    )
+                )
+
+                setPadding(
+                    dp(10),
+                    0,
+                    dp(10),
+                    dp(24)
+                )
+            }
+
+        root.addView(
+            description,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+    }
+
+    private fun addGoogleButton() {
+
+        googleButton =
+            TextView(this).apply {
+
+                text =
+                    "Continue with Google"
+
+                textSize =
+                    14f
+
+                gravity =
+                    Gravity.CENTER
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                background =
+                    createGoogleButtonBackground()
+
+                elevation =
+                    dp(8).toFloat()
+
+                setPadding(
+                    dp(12),
+                    0,
+                    dp(12),
+                    0
+                )
+
+                setOnClickListener {
+
+                    signInWithGoogle()
+                }
+            }
+
+        val params =
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(56)
+            )
+
+        params.setMargins(
+            dp(4),
+            dp(4),
+            dp(4),
+            dp(12)
+        )
+
+        root.addView(
+            googleButton,
+            params
+        )
+    }
+
+    private fun addSecurityInfo() {
+
+        val card =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    dp(18),
+                    dp(14),
+                    dp(18),
+                    dp(14)
+                )
+
+                background =
+                    GradientDrawable().apply {
+
+                        cornerRadius =
+                            dp(18).toFloat()
+
+                        setColor(
+                            Color.argb(
+                                55,
+                                30,
+                                45,
+                                85
+                            )
+                        )
+
+                        setStroke(
+                            dp(1),
+                            Color.argb(
+                                90,
+                                70,
+                                180,
+                                255
+                            )
+                        )
+                    }
+            }
+
+        val secure =
+            TextView(this).apply {
+
+                text =
+                    "●  SECURE AURIX CORE"
+
+                textSize =
+                    10f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.rgb(
+                        80,
+                        220,
+                        180
+                    )
+                )
+            }
+
+        card.addView(
+            secure
+        )
+
+        val info =
+            TextView(this).apply {
+
+                text =
+                    "Google authentication • Firebase protected"
+
+                textSize =
+                    9f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.rgb(
+                        135,
+                        150,
+                        185
+                    )
+                )
+
+                setPadding(
+                    0,
+                    dp(7),
+                    0,
+                    0
+                )
+            }
+
+        card.addView(
+            info
+        )
+
+        val params =
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+
+        params.setMargins(
+            dp(4),
+            dp(8),
+            dp(4),
+            dp(12)
+        )
+
+        root.addView(
+            card,
+            params
+        )
+    }
+
+    private fun addStatus() {
+
+        statusText =
+            TextView(this).apply {
+
+                text =
+                    "AURIX authentication ready."
+
+                textSize =
+                    10f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    Color.rgb(
+                        120,
+                        135,
+                        170
+                    )
+                )
+
+                setPadding(
+                    dp(8),
+                    dp(8),
+                    dp(8),
+                    dp(8)
+                )
+            }
+
+        root.addView(
+            statusText,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(50)
+            )
+        )
+    }
+
+    private fun addFooter() {
+
+        val footerSpace =
+            View(this)
+
+        root.addView(
+            footerSpace,
+            LinearLayout.LayoutParams(
+                1,
+                0,
+                1f
+            )
+        )
+
+        val footer =
+            TextView(this).apply {
+
+                text =
+                    "AURIX  •  PERSONAL AI ASSISTANT"
+
+                textSize =
+                    8f
+
+                gravity =
+                    Gravity.CENTER
+
+                letterSpacing =
+                    0.14f
+
+                setTextColor(
+                    Color.rgb(
+                        80,
+                        100,
+                        140
+                    )
+                )
+            }
+
+        root.addView(
+            footer,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(30)
+            )
+        )
+    }
+
+    // -------------------------------------------------
+    // GOOGLE BUTTON BACKGROUND
+    // -------------------------------------------------
+
+    private fun createGoogleButtonBackground():
+        GradientDrawable {
+
+        return GradientDrawable().apply {
+
+            cornerRadius =
+                dp(18).toFloat()
+
+            setColor(
+                Color.rgb(
+                    25,
+                    35,
+                    70
+                )
+            )
+
+            setStroke(
+                dp(1),
+                Color.rgb(
+                    85,
+                    175,
+                    255
+                )
+            )
+        }
+    }
 
     // -------------------------------------------------
     // SECURE NONCE
@@ -64,588 +614,19 @@ class AuthActivity : Activity() {
     }
 
     // -------------------------------------------------
-    // GET APK SHA-1
-    // -------------------------------------------------
-
-    private fun getApkSha1(): String {
-
-        return try {
-
-            val packageNameValue =
-                packageName
-
-            val sha1List =
-                mutableListOf<String>()
-
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.P
-            ) {
-
-                val packageInfo =
-                    packageManager.getPackageInfo(
-                        packageNameValue,
-                        PackageManager.GET_SIGNING_CERTIFICATES
-                    )
-
-                val signingInfo =
-                    packageInfo.signingInfo
-
-                val signatures =
-                    if (
-                        signingInfo.hasMultipleSigners()
-                    ) {
-
-                        signingInfo.apkContentsSigners
-
-                    } else {
-
-                        signingInfo.signingCertificateHistory
-                    }
-
-                for (
-                    signature in signatures
-                ) {
-
-                    val sha1Bytes =
-                        MessageDigest
-                            .getInstance("SHA-1")
-                            .digest(
-                                signature.toByteArray()
-                            )
-
-                    val sha1 =
-                        sha1Bytes.joinToString(":") {
-                            "%02X".format(it)
-                        }
-
-                    sha1List.add(
-                        sha1
-                    )
-                }
-
-            } else {
-
-                @Suppress("DEPRECATION")
-                val packageInfo =
-                    packageManager.getPackageInfo(
-                        packageNameValue,
-                        PackageManager.GET_SIGNATURES
-                    )
-
-                @Suppress("DEPRECATION")
-                val signatures =
-                    packageInfo.signatures
-
-                for (
-                    signature in signatures
-                ) {
-
-                    val sha1Bytes =
-                        MessageDigest
-                            .getInstance("SHA-1")
-                            .digest(
-                                signature.toByteArray()
-                            )
-
-                    val sha1 =
-                        sha1Bytes.joinToString(":") {
-                            "%02X".format(it)
-                        }
-
-                    sha1List.add(
-                        sha1
-                    )
-                }
-            }
-
-            if (
-                sha1List.isEmpty()
-            ) {
-
-                "SHA-1 NOT FOUND"
-
-            } else {
-
-                sha1List.joinToString(
-                    separator = "\n"
-                )
-            }
-
-        } catch (
-            e: Exception
-        ) {
-
-            "SHA-1 ERROR:\n${e.javaClass.name}\n${e.message}"
-        }
-    }
-
-    // -------------------------------------------------
-    // GOOGLE CONFIG
-    // -------------------------------------------------
-
-    private fun getGoogleConfigText(): String {
-
-        val packageNameValue =
-            packageName
-
-        val webClientId =
-            try {
-
-                getString(
-                    R.string.default_web_client_id
-                )
-
-            } catch (
-                e: Exception
-            ) {
-
-                "WEB CLIENT ID NOT FOUND"
-            }
-
-        val apkSha1 =
-            getApkSha1()
-
-        return """
-AURIX GOOGLE CONFIG
-
---------------------------------
-
-PACKAGE
-
-$packageNameValue
-
---------------------------------
-
-APK SHA-1
-
-$apkSha1
-
---------------------------------
-
-WEB CLIENT ID
-
-$webClientId
-
---------------------------------
-
-EXPECTED CI DEBUG SHA-1
-
-F7:1D:CD:61:9E:22:23:95:B6:97:96:B5:B2:CF:B1:3C:86:C1:58:2E
-
---------------------------------
-        """.trimIndent()
-    }
-
-    // -------------------------------------------------
-    // LOG CONFIG
-    // -------------------------------------------------
-
-    private fun logAurixGoogleConfig() {
-
-        try {
-
-            val config =
-                getGoogleConfigText()
-
-            Log.d(
-                "AURIX_AUTH",
-                "========================================"
-            )
-
-            Log.d(
-                "AURIX_AUTH",
-                config
-            )
-
-            Log.d(
-                "AURIX_AUTH",
-                "========================================"
-            )
-
-        } catch (
-            e: Exception
-        ) {
-
-            Log.e(
-                "AURIX_AUTH",
-                "Could not read Google config",
-                e
-            )
-        }
-    }
-
-    // -------------------------------------------------
-    // ACTIVITY CREATE
-    // -------------------------------------------------
-
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-
-        super.onCreate(
-            savedInstanceState
-        )
-
-        auth =
-            FirebaseAuth.getInstance()
-
-        credentialManager =
-            CredentialManager.create(
-                this
-            )
-
-        logAurixGoogleConfig()
-
-        // -----------------------------------------
-        // ALREADY LOGGED IN
-        // -----------------------------------------
-
-        if (
-            auth.currentUser != null
-        ) {
-
-            openAurix()
-
-            return
-        }
-
-        createAuthInterface()
-    }
-
-    // -------------------------------------------------
-    // LOGIN UI
-    // -------------------------------------------------
-
-    private fun createAuthInterface() {
-
-        val root =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                gravity =
-                    Gravity.CENTER_HORIZONTAL
-
-                setPadding(
-                    40,
-                    40,
-                    40,
-                    40
-                )
-
-                setBackgroundColor(
-                    Color.BLACK
-                )
-            }
-
-        // -----------------------------------------
-        // TITLE
-        // -----------------------------------------
-
-        val title =
-            TextView(this).apply {
-
-                text =
-                    "A U R I X"
-
-                textSize =
-                    36f
-
-                typeface =
-                    Typeface.DEFAULT_BOLD
-
-                gravity =
-                    Gravity.CENTER
-
-                setTextColor(
-                    Color.WHITE
-                )
-            }
-
-        // -----------------------------------------
-        // SUBTITLE
-        // -----------------------------------------
-
-        val subtitle =
-            TextView(this).apply {
-
-                text =
-                    "GOOGLE LOGIN DIAGNOSTIC"
-
-                textSize =
-                    14f
-
-                gravity =
-                    Gravity.CENTER
-
-                setTextColor(
-                    Color.LTGRAY
-                )
-            }
-
-        // -----------------------------------------
-        // CONFIG BUTTON
-        // -----------------------------------------
-
-        val configButton =
-            Button(this).apply {
-
-                text =
-                    "GOOGLE CONFIG CHECK"
-
-                setOnClickListener {
-
-                    showGoogleConfig()
-                }
-            }
-
-        // -----------------------------------------
-        // COPY CONFIG BUTTON
-        // -----------------------------------------
-
-        val copyButton =
-            Button(this).apply {
-
-                text =
-                    "COPY CONFIG"
-
-                setOnClickListener {
-
-                    copyGoogleConfig()
-                }
-            }
-
-        // -----------------------------------------
-        // GOOGLE BUTTON
-        // -----------------------------------------
-
-        val googleButton =
-            Button(this).apply {
-
-                text =
-                    "Continue with Google"
-
-                setOnClickListener {
-
-                    signInWithGoogle()
-                }
-            }
-
-        // -----------------------------------------
-        // EMAIL BUTTON
-        // -----------------------------------------
-
-        val emailButton =
-            Button(this).apply {
-
-                text =
-                    "Login / Sign Up with Email"
-
-                setOnClickListener {
-
-                    Toast.makeText(
-                        this@AuthActivity,
-                        "Email Login next step mein add karenge.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-
-        // -----------------------------------------
-        // DIAGNOSTIC OUTPUT
-        // -----------------------------------------
-
-        diagnosticText =
-            TextView(this).apply {
-
-                text =
-                    "Diagnostic ready."
-
-                textSize =
-                    12f
-
-                setTextColor(
-                    Color.LTGRAY
-                )
-
-                setPadding(
-                    16,
-                    16,
-                    16,
-                    16
-                )
-            }
-
-        // -----------------------------------------
-        // ADD VIEWS
-        // -----------------------------------------
-
-        root.addView(
-            title,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        root.addView(
-            subtitle,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-
-                topMargin =
-                    8
-
-                bottomMargin =
-                    24
-            }
-        )
-
-        root.addView(
-            configButton,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-
-                bottomMargin =
-                    8
-            }
-        )
-
-        root.addView(
-            copyButton,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-
-                bottomMargin =
-                    8
-            }
-        )
-
-        root.addView(
-            googleButton,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-
-                bottomMargin =
-                    8
-            }
-        )
-
-        root.addView(
-            emailButton,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-
-                bottomMargin =
-                    16
-            }
-        )
-
-        val scrollView =
-            ScrollView(this).apply {
-
-                addView(
-                    diagnosticText,
-                    ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                )
-            }
-
-        root.addView(
-            scrollView,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0
-            ).apply {
-
-                weight =
-                    1f
-            }
-        )
-
-        setContentView(
-            root
-        )
-    }
-
-    // -------------------------------------------------
-    // SHOW GOOGLE CONFIG
-    // -------------------------------------------------
-
-    private fun showGoogleConfig() {
-
-        val config =
-            getGoogleConfigText()
-
-        diagnosticText.text =
-            config
-
-        android.app.AlertDialog.Builder(
-            this
-        )
-            .setTitle(
-                "AURIX GOOGLE CONFIG"
-            )
-            .setMessage(
-                config
-            )
-            .setPositiveButton(
-                "OK",
-                null
-            )
-            .show()
-    }
-
-    // -------------------------------------------------
-    // COPY GOOGLE CONFIG
-    // -------------------------------------------------
-
-    private fun copyGoogleConfig() {
-
-        val config =
-            getGoogleConfigText()
-
-        val clipboard =
-            getSystemService(
-                CLIPBOARD_SERVICE
-            ) as ClipboardManager
-
-        val clip =
-            ClipData.newPlainText(
-                "AURIX Google Config",
-                config
-            )
-
-        clipboard.setPrimaryClip(
-            clip
-        )
-
-        Toast.makeText(
-            this,
-            "Google config copied.",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
-    // -------------------------------------------------
-    // GOOGLE SIGN-IN
+    // GOOGLE LOGIN
     // -------------------------------------------------
 
     private fun signInWithGoogle() {
+
+        googleButton.isEnabled =
+            false
+
+        googleButton.text =
+            "Connecting to Google..."
+
+        statusText.text =
+            "Secure Google authentication in progress..."
 
         CoroutineScope(
             Dispatchers.Main
@@ -657,31 +638,6 @@ F7:1D:CD:61:9E:22:23:95:B6:97:96:B5:B2:CF:B1:3C:86:C1:58:2E
                     getString(
                         R.string.default_web_client_id
                     )
-
-                diagnosticText.text =
-                    """
-Starting Google login...
-
-PACKAGE:
-$packageName
-
-WEB CLIENT:
-$webClientId
-
-APK SHA-1:
-${getApkSha1()}
-
-Calling CredentialManager...
-                    """.trimIndent()
-
-                Log.d(
-                    "AURIX_AUTH",
-                    "Starting GetGoogleIdOption flow"
-                )
-
-                // -------------------------------------
-                // GOOGLE ID OPTION
-                // -------------------------------------
 
                 val googleIdOption =
                     GetGoogleIdOption.Builder()
@@ -696,10 +652,6 @@ Calling CredentialManager...
                         )
                         .build()
 
-                // -------------------------------------
-                // REQUEST
-                // -------------------------------------
-
                 val request =
                     GetCredentialRequest.Builder()
                         .addCredentialOption(
@@ -707,63 +659,17 @@ Calling CredentialManager...
                         )
                         .build()
 
-                // -------------------------------------
-                // ACTIVITY CONTEXT
-                //
-                // MutableContextWrapper is intentionally
-                // used here according to Android guidance.
-                // -------------------------------------
-
-                val mutableContext =
-                    MutableContextWrapper(
-                        this@AuthActivity
-                    )
-
-                Log.d(
-                    "AURIX_AUTH",
-                    "Calling CredentialManager..."
-                )
-
-                // -------------------------------------
-                // GET CREDENTIAL
-                // -------------------------------------
+                statusText.text =
+                    "Choose your Google account..."
 
                 val result =
                     credentialManager.getCredential(
-                        context =
-                            mutableContext,
-                        request =
-                            request
+                        this@AuthActivity,
+                        request
                     )
-
-                Log.d(
-                    "AURIX_AUTH",
-                    "Credential received successfully"
-                )
-
-                diagnosticText.text =
-                    diagnosticText.text.toString() +
-                        "\n\nCredential received successfully."
-
-                // -------------------------------------
-                // CREDENTIAL
-                // -------------------------------------
 
                 val credential =
                     result.credential
-
-                Log.d(
-                    "AURIX_AUTH",
-                    "Credential type = ${credential.type}"
-                )
-
-                diagnosticText.text =
-                    diagnosticText.text.toString() +
-                        "\nCredential type = ${credential.type}"
-
-                // -------------------------------------
-                // GOOGLE ID TOKEN
-                // -------------------------------------
 
                 val googleCredential =
                     GoogleIdTokenCredential.createFrom(
@@ -773,18 +679,8 @@ Calling CredentialManager...
                 val idToken =
                     googleCredential.idToken
 
-                Log.d(
-                    "AURIX_AUTH",
-                    "Google ID token received successfully"
-                )
-
-                diagnosticText.text =
-                    diagnosticText.text.toString() +
-                        "\n\nGoogle ID token received."
-
-                // -------------------------------------
-                // FIREBASE
-                // -------------------------------------
+                statusText.text =
+                    "Authenticating with AURIX..."
 
                 firebaseAuthWithGoogle(
                     idToken
@@ -794,105 +690,96 @@ Calling CredentialManager...
                 e: GetCredentialException
             ) {
 
-                Log.e(
-                    "AURIX_AUTH",
-                    "CredentialManager failed",
-                    e
-                )
+                resetGoogleButton()
 
-                val errorText =
-                    """
-GOOGLE LOGIN FAILED
-
-Exception:
-${e.javaClass.name}
-
-Message:
-${e.message ?: "No error message"}
-
---------------------------------
-
-PACKAGE:
-$packageName
-
-APK SHA-1:
-${getApkSha1()}
-
-WEB CLIENT:
-${try {
-                        getString(
-                            R.string.default_web_client_id
-                        )
-                    } catch (
-                        _: Exception
-                    ) {
-                        "NOT FOUND"
-                    }}
-                    """.trimIndent()
-
-                diagnosticText.text =
-                    errorText
+                statusText.text =
+                    "Google login cancelled or unavailable."
 
                 showError(
-                    "GOOGLE LOGIN FAILED",
-                    "${e.javaClass.name}\n\n" +
-                        "${e.message ?: "No error message"}"
+                    "Google Login",
+                    e.message
+                        ?: "Google authentication failed."
                 )
 
             } catch (
                 e: Exception
             ) {
 
-                Log.e(
-                    "AURIX_AUTH",
-                    "Unexpected Google error",
-                    e
-                )
+                resetGoogleButton()
 
-                val errorText =
-                    """
-GOOGLE LOGIN ERROR
-
-Exception:
-${e.javaClass.name}
-
-Message:
-${e.message ?: "No error message"}
-
---------------------------------
-
-PACKAGE:
-$packageName
-
-APK SHA-1:
-${getApkSha1()}
-
-WEB CLIENT:
-${try {
-                        getString(
-                            R.string.default_web_client_id
-                        )
-                    } catch (
-                        _: Exception
-                    ) {
-                        "NOT FOUND"
-                    }}
-                    """.trimIndent()
-
-                diagnosticText.text =
-                    errorText
+                statusText.text =
+                    "Authentication failed."
 
                 showError(
-                    "GOOGLE LOGIN ERROR",
-                    "${e.javaClass.name}\n\n" +
-                        "${e.message ?: "No error message"}"
+                    "Authentication Error",
+                    e.message
+                        ?: "Unable to sign in."
                 )
             }
         }
     }
 
     // -------------------------------------------------
-    // ERROR DIALOG
+    // FIREBASE
+    // -------------------------------------------------
+
+    private fun firebaseAuthWithGoogle(
+        idToken: String
+    ) {
+
+        val credential =
+            GoogleAuthProvider.getCredential(
+                idToken,
+                null
+            )
+
+        auth.signInWithCredential(
+            credential
+        )
+            .addOnCompleteListener(
+                this
+            ) { task ->
+
+                if (
+                    task.isSuccessful
+                ) {
+
+                    statusText.text =
+                        "Authentication successful. Starting AURIX..."
+
+                    openAurix()
+
+                } else {
+
+                    resetGoogleButton()
+
+                    statusText.text =
+                        "Firebase authentication failed."
+
+                    showError(
+                        "Firebase Login",
+                        task.exception?.message
+                            ?: "Firebase authentication failed."
+                    )
+                }
+            }
+    }
+
+    // -------------------------------------------------
+    // RESET BUTTON
+    // -------------------------------------------------
+
+    private fun resetGoogleButton() {
+
+        googleButton.isEnabled =
+            true
+
+        googleButton.text =
+            "Continue with Google"
+    }
+
+    // -------------------------------------------------
+    // ERROR
     // -------------------------------------------------
 
     private fun showError(
@@ -917,83 +804,6 @@ ${try {
     }
 
     // -------------------------------------------------
-    // FIREBASE GOOGLE AUTH
-    // -------------------------------------------------
-
-    private fun firebaseAuthWithGoogle(
-        idToken: String
-    ) {
-
-        diagnosticText.text =
-            diagnosticText.text.toString() +
-                "\n\nSending Google token to Firebase..."
-
-        val credential =
-            GoogleAuthProvider.getCredential(
-                idToken,
-                null
-            )
-
-        auth.signInWithCredential(
-            credential
-        )
-            .addOnCompleteListener(
-                this
-            ) { task ->
-
-                if (
-                    task.isSuccessful
-                ) {
-
-                    val user:
-                        FirebaseUser? =
-                        auth.currentUser
-
-                    Log.d(
-                        "AURIX_AUTH",
-                        "Firebase Google login successful"
-                    )
-
-                    diagnosticText.text =
-                        diagnosticText.text.toString() +
-                            "\nFirebase login SUCCESS."
-
-                    if (
-                        user != null
-                    ) {
-
-                        diagnosticText.text =
-                            diagnosticText.text.toString() +
-                                "\nUser = ${user.email}"
-
-                        openAurix()
-                    }
-
-                } else {
-
-                    Log.e(
-                        "AURIX_AUTH",
-                        "Firebase Google login failed",
-                        task.exception
-                    )
-
-                    val message =
-                        task.exception?.message
-                            ?: "Firebase Google Login failed."
-
-                    diagnosticText.text =
-                        diagnosticText.text.toString() +
-                            "\n\nFIREBASE LOGIN FAILED\n$message"
-
-                    showError(
-                        "FIREBASE LOGIN FAILED",
-                        message
-                    )
-                }
-            }
-    }
-
-    // -------------------------------------------------
     // OPEN AURIX
     // -------------------------------------------------
 
@@ -1007,5 +817,19 @@ ${try {
         )
 
         finish()
+    }
+
+    // -------------------------------------------------
+    // DP
+    // -------------------------------------------------
+
+    private fun dp(
+        value: Int
+    ): Int {
+
+        return (
+            value *
+                resources.displayMetrics.density
+            ).toInt()
     }
 }
