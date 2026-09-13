@@ -2,98 +2,69 @@
 
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android">
-    
+
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- ===================================================== -->
     <!-- MICROPHONE -->
-    <!-- ===================================================== -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <uses-permission
-        android:name="android.permission.RECORD_AUDIO" />
-
-    <!-- ===================================================== -->
     <!-- FOREGROUND SERVICE -->
-    <!-- ===================================================== -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
-    <uses-permission
-        android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- NOTIFICATIONS -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <uses-permission
-        android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-
-    <!-- ===================================================== -->
-    <!-- NOTIFICATION -->
-    <!-- ===================================================== -->
-
-    <uses-permission
-        android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- ===================================================== -->
     <!-- CAMERA -->
-    <!-- ===================================================== -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
-    <uses-permission
-        android:name="android.permission.CAMERA" />
-
-    <!-- ===================================================== -->
     <!-- LOCATION -->
-    <!-- ===================================================== -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <uses-permission
-        android:name="android.permission.ACCESS_FINE_LOCATION" />
-
-    <uses-permission
-        android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    
-    <!-- ===================================================== -->
     <!-- BLUETOOTH -->
-    <!-- ===================================================== -->
-
-    <uses-permission
-        android:name="android.permission.BLUETOOTH" />
-
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_ADMIN" />
-
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_CONNECT" />
-
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
-    
-    <!-- ===================================================== -->
-    <!-- EXACT ALARM -->
-    <!-- ===================================================== -->
 
-    <uses-permission
-        android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- ALARM -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
 
     <!-- ===================================================== -->
-    <!-- APPLICATION -->
+    <!-- APP / SYSTEM QUERIES -->
     <!-- ===================================================== -->
 
     <queries>
 
-    <intent>
-        <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
-    </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
 
-    <package android:name="com.whatsapp" />
-    <package android:name="com.whatsapp.w4b" />
-    <package android:name="com.instagram.android" />
-    <package android:name="com.google.android.gm" />
-    <package android:name="com.google.android.youtube" />
-    <package android:name="com.android.chrome" />
-    <package android:name="com.google.android.apps.maps" />
-    <package android:name="com.facebook.katana" />
-    <package android:name="org.telegram.messenger" />
-    <package android:name="com.snapchat.android" />
-    <package android:name="com.spotify.music" />
+        <!-- Speech recognition -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
 
-</queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.google.android.gm" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.android.chrome" />
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.snapchat.android" />
+        <package android:name="com.spotify.music" />
+
+    </queries>
+
+
     <application
         android:theme="@style/Theme.MyAI"
         android:label="AURIX"
@@ -102,16 +73,13 @@
         android:usesCleartextTraffic="true"
         android:icon="@drawable/aurix_logo">
 
-        <activity
-            android:name=".AuthActivity"
-            android:exported="false" />
- 
+
         <!-- ================================================= -->
-        <!-- MAIN ACTIVITY -->
+        <!-- AUTH ACTIVITY — REAL LAUNCHER -->
         <!-- ================================================= -->
 
         <activity
-            android:name=".MainActivity"
+            android:name=".AuthActivity"
             android:exported="true">
 
             <intent-filter>
@@ -126,8 +94,18 @@
 
         </activity>
 
+
         <!-- ================================================= -->
-        <!-- AURIX VOICE SERVICE -->
+        <!-- MAIN AURIX -->
+        <!-- ================================================= -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+
+
+        <!-- ================================================= -->
+        <!-- AURIX SERVICE -->
         <!-- ================================================= -->
 
         <service
@@ -135,14 +113,15 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+
         <!-- ================================================= -->
-        <!-- AURIX TIMER / ALARM RECEIVER -->
+        <!-- ALARM -->
         <!-- ================================================= -->
 
         <receiver
             android:name=".AlarmReceiver"
             android:exported="false" />
-     
+
     </application>
 
 </manifest>
