@@ -829,50 +829,96 @@ class MainActivity : ComponentActivity() {
 
 
     private fun addAction(
-        row: LinearLayout,
-        label: String,
-        action: () -> Unit
-    ) {
+    row: LinearLayout,
+    label: String,
+    action: () -> Unit
+) {
+    val button = LinearLayout(this).apply {
 
-        val button =
-            TextView(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER
 
-                text = label
+        setPadding(
+            dp(10),
+            0,
+            dp(12),
+            0
+        )
 
-                textSize = 9f
+        background = GradientDrawable().apply {
+            setColor(Color.parseColor("#111827"))
+            cornerRadius = dp(14).toFloat()
+            setStroke(
+                dp(1),
+                Color.parseColor("#263244")
+            )
+        }
 
-                gravity =
-                    Gravity.CENTER
+        elevation = dp(4).toFloat()
 
-                setTextColor(
-                    Color.WHITE
-                )
+        setOnClickListener {
+            action()
+        }
+    }
 
-                background =
-                    GradientDrawable().apply {
+    val icon = QuickActionIcon(
+        this@MainActivity,
+        label
+    )
 
-                        cornerRadius =
-                            dp(12).toFloat()
+    button.addView(
+        icon,
+        LinearLayout.LayoutParams(
+            dp(25),
+            dp(25)
+        )
+    )
 
-                        setColor(
-                            Color.argb(
-                                65,
-                                35,
-                                45,
-                                85
-                            )
-                        )
+    val text = TextView(this).apply {
 
-                        setStroke(
-                            dp(1),
-                            Color.argb(
-                                80,
-                                90,
-                                160,
-                                255
-                            )
-                        )
-                    }
+        this.text = label
+
+        setTextColor(
+            Color.parseColor("#E5E7EB")
+        )
+
+        textSize = 12f
+
+        gravity = Gravity.CENTER_VERTICAL
+
+        setPadding(
+            dp(7),
+            0,
+            0,
+            0
+        )
+    }
+
+    button.addView(
+        text,
+        LinearLayout.LayoutParams(
+            0,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            1f
+        )
+    )
+
+    row.addView(
+        button,
+        LinearLayout.LayoutParams(
+            0,
+            dp(44),
+            1f
+        ).apply {
+            setMargins(
+                dp(4),
+                dp(4),
+                dp(4),
+                dp(4)
+            )
+        }
+    )
+}
 
                 setOnClickListener {
                     action()
@@ -2392,4 +2438,395 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+    private class QuickActionIcon(
+    context: Context,
+    private val label: String
+) : View(context) {
+
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val path = Path()
+
+    override fun onDraw(canvas: Canvas) {
+
+        super.onDraw(canvas)
+
+        val w = width.toFloat()
+        val h = height.toFloat()
+
+        paint.style = Paint.Style.FILL
+        paint.strokeWidth = dp(2.2f)
+
+        when (label.lowercase()) {
+
+            // ------------------------------------------------
+            // YOUTUBE
+            // ------------------------------------------------
+
+            "youtube" -> {
+
+                paint.color =
+                    Color.parseColor("#FF0033")
+
+                val rect = RectF(
+                    w * 0.08f,
+                    h * 0.20f,
+                    w * 0.92f,
+                    h * 0.80f
+                )
+
+                canvas.drawRoundRect(
+                    rect,
+                    dp(5f),
+                    dp(5f),
+                    paint
+                )
+
+                paint.color = Color.WHITE
+
+                path.reset()
+
+                path.moveTo(
+                    w * 0.43f,
+                    h * 0.35f
+                )
+
+                path.lineTo(
+                    w * 0.43f,
+                    h * 0.65f
+                )
+
+                path.lineTo(
+                    w * 0.70f,
+                    h * 0.50f
+                )
+
+                path.close()
+
+                canvas.drawPath(
+                    path,
+                    paint
+                )
+            }
+
+
+            // ------------------------------------------------
+            // SEARCH
+            // ------------------------------------------------
+
+            "search" -> {
+
+                paint.color =
+                    Color.parseColor("#22D3EE")
+
+                paint.style =
+                    Paint.Style.STROKE
+
+                paint.strokeWidth =
+                    dp(2.5f)
+
+                canvas.drawCircle(
+                    w * 0.43f,
+                    h * 0.42f,
+                    w * 0.25f,
+                    paint
+                )
+
+                canvas.drawLine(
+                    w * 0.61f,
+                    h * 0.61f,
+                    w * 0.84f,
+                    h * 0.84f,
+                    paint
+                )
+
+                paint.style =
+                    Paint.Style.FILL
+            }
+
+
+            // ------------------------------------------------
+            // MUSIC
+            // ------------------------------------------------
+
+            "music" -> {
+
+                paint.color =
+                    Color.parseColor("#D946EF")
+
+                paint.style =
+                    Paint.Style.STROKE
+
+                paint.strokeWidth =
+                    dp(2.8f)
+
+                canvas.drawLine(
+                    w * 0.65f,
+                    h * 0.20f,
+                    w * 0.65f,
+                    h * 0.67f,
+                    paint
+                )
+
+                canvas.drawLine(
+                    w * 0.65f,
+                    h * 0.20f,
+                    w * 0.86f,
+                    h * 0.14f,
+                    paint
+                )
+
+                paint.style =
+                    Paint.Style.FILL
+
+                canvas.drawCircle(
+                    w * 0.48f,
+                    h * 0.70f,
+                    dp(4f),
+                    paint
+                )
+
+                canvas.drawCircle(
+                    w * 0.76f,
+                    h * 0.64f,
+                    dp(4f),
+                    paint
+                )
+            }
+
+
+            // ------------------------------------------------
+            // WEATHER
+            // ------------------------------------------------
+
+            "weather" -> {
+
+                paint.color =
+                    Color.parseColor("#FACC15")
+
+                canvas.drawCircle(
+                    w * 0.38f,
+                    h * 0.38f,
+                    dp(6f),
+                    paint
+                )
+
+                paint.color =
+                    Color.parseColor("#38BDF8")
+
+                canvas.drawCircle(
+                    w * 0.43f,
+                    h * 0.62f,
+                    dp(7f),
+                    paint
+                )
+
+                canvas.drawCircle(
+                    w * 0.62f,
+                    h * 0.57f,
+                    dp(6f),
+                    paint
+                )
+
+                canvas.drawRoundRect(
+                    RectF(
+                        w * 0.28f,
+                        h * 0.57f,
+                        w * 0.78f,
+                        h * 0.78f
+                    ),
+                    dp(7f),
+                    dp(7f),
+                    paint
+                )
+            }
+
+
+            // ------------------------------------------------
+            // CALL
+            // ------------------------------------------------
+
+            "call" -> {
+
+                paint.color =
+                    Color.parseColor("#22C55E")
+
+                paint.style =
+                    Paint.Style.STROKE
+
+                paint.strokeWidth =
+                    dp(3.5f)
+
+                path.reset()
+
+                path.moveTo(
+                    w * 0.30f,
+                    h * 0.25f
+                )
+
+                path.cubicTo(
+                    w * 0.22f,
+                    h * 0.42f,
+                    w * 0.45f,
+                    h * 0.73f,
+                    w * 0.70f,
+                    h * 0.72f
+                )
+
+                path.lineTo(
+                    w * 0.82f,
+                    h * 0.58f
+                )
+
+                canvas.drawPath(
+                    path,
+                    paint
+                )
+
+                paint.style =
+                    Paint.Style.FILL
+            }
+
+
+            // ------------------------------------------------
+            // MESSAGES
+            // ------------------------------------------------
+
+            "messages" -> {
+
+                paint.color =
+                    Color.parseColor("#3B82F6")
+
+                canvas.drawRoundRect(
+                    RectF(
+                        w * 0.12f,
+                        h * 0.20f,
+                        w * 0.88f,
+                        h * 0.70f
+                    ),
+                    dp(7f),
+                    dp(7f),
+                    paint
+                )
+
+                path.reset()
+
+                path.moveTo(
+                    w * 0.28f,
+                    h * 0.68f
+                )
+
+                path.lineTo(
+                    w * 0.23f,
+                    h * 0.86f
+                )
+
+                path.lineTo(
+                    w * 0.45f,
+                    h * 0.70f
+                )
+
+                path.close()
+
+                canvas.drawPath(
+                    path,
+                    paint
+                )
+
+                paint.color = Color.WHITE
+
+                canvas.drawCircle(
+                    w * 0.36f,
+                    h * 0.45f,
+                    dp(2f),
+                    paint
+                )
+
+                canvas.drawCircle(
+                    w * 0.50f,
+                    h * 0.45f,
+                    dp(2f),
+                    paint
+                )
+
+                canvas.drawCircle(
+                    w * 0.64f,
+                    h * 0.45f,
+                    dp(2f),
+                    paint
+                )
+            }
+
+
+            // ------------------------------------------------
+            // APPS
+            // ------------------------------------------------
+
+            "apps" -> {
+
+                val colors = intArrayOf(
+                    Color.parseColor("#22D3EE"),
+                    Color.parseColor("#A855F7"),
+                    Color.parseColor("#F43F5E"),
+                    Color.parseColor("#FACC15")
+                )
+
+                val positions = arrayOf(
+                    floatArrayOf(0.30f, 0.30f),
+                    floatArrayOf(0.70f, 0.30f),
+                    floatArrayOf(0.30f, 0.70f),
+                    floatArrayOf(0.70f, 0.70f)
+                )
+
+                for (i in 0..3) {
+
+                    paint.color = colors[i]
+
+                    canvas.drawRoundRect(
+                        RectF(
+                            w * (positions[i][0] - 0.13f),
+                            h * (positions[i][1] - 0.13f),
+                            w * (positions[i][0] + 0.13f),
+                            h * (positions[i][1] + 0.13f)
+                        ),
+                        dp(3f),
+                        dp(3f),
+                        paint
+                    )
+                }
+            }
+
+
+            // ------------------------------------------------
+            // DEFAULT
+            // ------------------------------------------------
+
+            else -> {
+
+                paint.color =
+                    Color.parseColor("#8B5CF6")
+
+                canvas.drawCircle(
+                    w / 2f,
+                    h / 2f,
+                    dp(8f),
+                    paint
+                )
+
+                paint.color = Color.WHITE
+
+                canvas.drawCircle(
+                    w / 2f,
+                    h / 2f,
+                    dp(3f),
+                    paint
+                )
+            }
+        }
+    }
+
+    private fun dp(value: Float): Float {
+        return value *
+                resources.displayMetrics.density
+    }
+}
 }
