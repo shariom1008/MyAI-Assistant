@@ -12,6 +12,7 @@
 
     <!-- Foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!-- Package visibility -->
     <queries>
@@ -53,9 +54,10 @@
 
         <!-- AURIX voice service -->
         <service
-            android:name=".AurixService"
-            android:enabled="true"
-            android:exported="false" />
+    android:name=".AurixService"
+    android:enabled="true"
+    android:exported="false"
+    android:foregroundServiceType="microphone" />
 
     </application>
 
