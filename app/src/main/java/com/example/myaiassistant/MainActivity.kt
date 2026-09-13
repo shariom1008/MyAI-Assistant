@@ -12,6 +12,7 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Base64
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -41,6 +42,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private var listening = false
+
+    // -------------------------------------------------
+    // CONVERSATION HISTORY
+    // -------------------------------------------------
+
+    private val historyPrefsName = "aurix_history"
+    private val historyKey = "messages"
 
     // -------------------------------------------------
     // SIDE DRAWER
@@ -223,8 +231,6 @@ class MainActivity : ComponentActivity() {
                     Gravity.CENTER_VERTICAL
             }
 
-        // MENU BUTTON
-
         val menu =
             TextView(this).apply {
 
@@ -251,8 +257,6 @@ class MainActivity : ComponentActivity() {
                 dp(48)
             )
         )
-
-        // BRAND
 
         val brandBox =
             LinearLayout(this).apply {
@@ -307,8 +311,6 @@ class MainActivity : ComponentActivity() {
             )
         )
 
-        // ONLINE
-
         val online =
             TextView(this).apply {
 
@@ -338,8 +340,6 @@ class MainActivity : ComponentActivity() {
                 dp(40)
             )
         )
-
-        // VOICE BUTTON
 
         voiceButton =
             TextView(this).apply {
@@ -530,8 +530,10 @@ class MainActivity : ComponentActivity() {
                     LinearLayout.VERTICAL
             }
 
+        // Welcome message is NOT saved into history.
         addAurixMessage(
-            "AURIX ready. Tap the voice icon to speak."
+            "AURIX ready. Tap the voice icon to speak.",
+            false
         )
 
         val scroll =
@@ -570,10 +572,16 @@ class MainActivity : ComponentActivity() {
                 )
             )
         )
+
+        saveHistory(
+            "YOU",
+            message
+        )
     }
 
     private fun addAurixMessage(
-        message: String
+        message: String,
+        save: Boolean = true
     ) {
 
         conversationBox.addView(
@@ -587,6 +595,307 @@ class MainActivity : ComponentActivity() {
                 )
             )
         )
+
+        if (save) {
+            saveHistory(
+                "AURIX",
+                message
+            )
+        }
+    }
+
+    // =================================================
+    // HISTORY STORAGE
+    // =================================================
+
+    private fun saveHistory(
+        speaker: String,
+        message: String
+    ) {
+
+        try {
+
+            val prefs =
+                getSharedPreferences(
+                    historyPrefsName,
+                    Context.MODE_PRIVATE
+                )
+
+            val encodedSpeaker =
+                Base64.encodeToString(
+                    speaker.toByteArray(
+                        Charsets.UTF_8
+                    ),
+                    Base64.NO_WRAP
+                )
+
+            val encodedMessage =
+                Base64.encodeToString(
+                    message.toByteArray(
+                        Charsets.UTF_8
+                    ),
+                    Base64.NO_WRAP
+                )
+
+            val entry =
+                "$encodedSpeaker|$encodedMessage"
+
+            val existing =
+                prefs.getString(
+                    historyKey,
+                    ""
+                )
+                    .orEmpty()
+
+            val updated =
+                if (existing.isBlank()) {
+                    entry
+                } else {
+                    "$existing\n$entry"
+                }
+
+            prefs.edit()
+                .putString(
+                    historyKey,
+                    updated
+                )
+                .apply()
+
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun getHistory():
+        List<Pair<String, String>> {
+
+        val result =
+            mutableListOf<Pair<String, String>>()
+
+        try {
+
+            val prefs =
+                getSharedPreferences(
+                    historyPrefsName,
+                    Context.MODE_PRIVATE
+                )
+
+            val raw =
+                prefs.getString(
+                    historyKey,
+                    ""
+                )
+                    .orEmpty()
+
+            if (raw.isBlank()) {
+                return result
+            }
+
+            raw.split("\n")
+                .forEach { entry ->
+
+                    val separator =
+                        entry.indexOf("|")
+
+                    if (separator <= 0) {
+                        return@forEach
+                    }
+
+                    try {
+
+                        val speaker =
+                            String(
+                                Base64.decode(
+                                    entry.substring(
+                                        0,
+                                        separator
+                                    ),
+                                    Base64.NO_WRAP
+                                ),
+                                Charsets.UTF_8
+                            )
+
+                        val message =
+                            String(
+                                Base64.decode(
+                                    entry.substring(
+                                        separator + 1
+                                    ),
+                                    Base64.NO_WRAP
+                                ),
+                                Charsets.UTF_8
+                            )
+
+                        if (
+                            speaker.isNotBlank() &&
+                            message.isNotBlank()
+                        ) {
+
+                            result.add(
+                                speaker to message
+                            )
+                        }
+
+                    } catch (_: Exception) {
+                    }
+                }
+
+        } catch (_: Exception) {
+        }
+
+        return result
+    }
+
+    private fun showHistory() {
+
+        val history =
+            getHistory()
+
+        conversationBox.removeAllViews()
+
+        statusText.text =
+            "Conversation history"
+
+        if (history.isEmpty()) {
+
+            addHistoryHeader(
+                "NO HISTORY"
+            )
+
+            addHistoryInfo(
+                "No conversations saved yet."
+            )
+
+            return
+        }
+
+        addHistoryHeader(
+            "CONVERSATION HISTORY"
+        )
+
+        addHistoryInfo(
+            "${history.size} messages saved"
+        )
+
+        history.forEach { item ->
+
+            val speaker =
+                item.first
+
+            val message =
+                item.second
+
+            val accent =
+                if (
+                    speaker.equals(
+                        "YOU",
+                        ignoreCase = true
+                    )
+                ) {
+                    Color.rgb(
+                        125,
+                        95,
+                        255
+                    )
+                } else {
+                    Color.rgb(
+                        60,
+                        205,
+                        255
+                    )
+                }
+
+            conversationBox.addView(
+                messageCard(
+                    speaker,
+                    message,
+                    accent
+                )
+            )
+        }
+    }
+
+    private fun addHistoryHeader(
+        text: String
+    ) {
+
+        conversationBox.addView(
+            TextView(this).apply {
+
+                this.text = text
+
+                textSize = 9f
+
+                letterSpacing = 0.20f
+
+                typeface =
+                    Typeface.DEFAULT_BOLD
+
+                setTextColor(
+                    Color.rgb(
+                        100,
+                        190,
+                        255
+                    )
+                )
+
+                setPadding(
+                    dp(2),
+                    dp(8),
+                    dp(2),
+                    dp(4)
+                )
+            }
+        )
+    }
+
+    private fun addHistoryInfo(
+        text: String
+    ) {
+
+        conversationBox.addView(
+            TextView(this).apply {
+
+                this.text = text
+
+                textSize = 10f
+
+                setTextColor(
+                    Color.rgb(
+                        145,
+                        155,
+                        190
+                    )
+                )
+
+                setPadding(
+                    dp(2),
+                    dp(2),
+                    dp(2),
+                    dp(8)
+                )
+            }
+        )
+    }
+
+    private fun clearHistory() {
+
+        getSharedPreferences(
+            historyPrefsName,
+            Context.MODE_PRIVATE
+        )
+            .edit()
+            .remove(historyKey)
+            .apply()
+
+        conversationBox.removeAllViews()
+
+        addAurixMessage(
+            "Conversation history cleared.",
+            false
+        )
+
+        statusText.text =
+            "Conversation history cleared"
     }
 
     private fun messageCard(
@@ -947,8 +1256,7 @@ class MainActivity : ComponentActivity() {
             nav,
             "History"
         ) {
-            statusText.text =
-                "Conversation history"
+            showHistory()
         }
 
         addNavItem(
@@ -1278,7 +1586,8 @@ class MainActivity : ComponentActivity() {
             conversationBox.removeAllViews()
 
             addAurixMessage(
-                "AURIX ready. Tap the voice icon to speak."
+                "AURIX ready. Tap the voice icon to speak.",
+                false
             )
 
             statusText.text =
@@ -1293,8 +1602,18 @@ class MainActivity : ComponentActivity() {
             "History"
         ) {
 
-            statusText.text =
-                "Conversation history"
+            showHistory()
+
+            closeSideDrawer()
+        }
+
+        addDrawerItem(
+            drawer,
+            "⌫",
+            "Clear History"
+        ) {
+
+            clearHistory()
 
             closeSideDrawer()
         }
@@ -2207,18 +2526,10 @@ class MainActivity : ComponentActivity() {
                             }
                     )
 
-            // =================================================
-            // CLEAR
-            // =================================================
-
             canvas.drawColor(
                 Color.TRANSPARENT,
                 PorterDuff.Mode.CLEAR
             )
-
-            // =================================================
-            // ATMOSPHERIC GLOW
-            // =================================================
 
             paint.style =
                 Paint.Style.FILL
@@ -2240,14 +2551,12 @@ class MainActivity : ComponentActivity() {
                             190,
                             255
                         ),
-
                         Color.argb(
                             18,
                             70,
                             90,
                             255
                         ),
-
                         Color.TRANSPARENT
                     ),
                     floatArrayOf(
@@ -2265,10 +2574,6 @@ class MainActivity : ComponentActivity() {
                 paint
             )
 
-            // =================================================
-            // OUTER HUD RINGS
-            // =================================================
-
             paint.shader = null
 
             paint.style =
@@ -2284,8 +2589,6 @@ class MainActivity : ComponentActivity() {
                 cx,
                 cy
             )
-
-            // Outer ring
 
             paint.strokeWidth =
                 dp(1.4f)
@@ -2304,8 +2607,6 @@ class MainActivity : ComponentActivity() {
                 baseRadius * 1.52f,
                 paint
             )
-
-            // Segmented cyan ring
 
             paint.strokeWidth =
                 dp(2.2f)
@@ -2339,8 +2640,6 @@ class MainActivity : ComponentActivity() {
                 paint
             )
 
-            // Inner rotating ring
-
             paint.strokeWidth =
                 dp(2.8f)
 
@@ -2363,10 +2662,6 @@ class MainActivity : ComponentActivity() {
             )
 
             canvas.restore()
-
-            // =================================================
-            // ORBIT RING
-            // =================================================
 
             canvas.save()
 
@@ -2401,10 +2696,6 @@ class MainActivity : ComponentActivity() {
 
             canvas.restore()
 
-            // =================================================
-            // CORE OUTER GLOW
-            // =================================================
-
             paint.style =
                 Paint.Style.FILL
 
@@ -2419,19 +2710,16 @@ class MainActivity : ComponentActivity() {
                             250,
                             255
                         ),
-
                         Color.rgb(
                             40,
                             190,
                             255
                         ),
-
                         Color.rgb(
                             50,
                             70,
                             220
                         ),
-
                         Color.rgb(
                             15,
                             12,
@@ -2454,10 +2742,6 @@ class MainActivity : ComponentActivity() {
                 paint
             )
 
-            // =================================================
-            // INNER GLASS
-            // =================================================
-
             paint.shader =
                 RadialGradient(
                     cx - baseRadius * 0.25f,
@@ -2470,14 +2754,12 @@ class MainActivity : ComponentActivity() {
                             130,
                             255
                         ),
-
                         Color.argb(
                             130,
                             30,
                             55,
                             190
                         ),
-
                         Color.argb(
                             180,
                             5,
@@ -2495,10 +2777,6 @@ class MainActivity : ComponentActivity() {
                 baseRadius * 0.90f,
                 paint
             )
-
-            // =================================================
-            // CORE BORDER
-            // =================================================
 
             paint.shader = null
 
@@ -2549,10 +2827,6 @@ class MainActivity : ComponentActivity() {
                 baseRadius * 0.90f,
                 paint
             )
-
-            // =================================================
-            // PROCESSING LIGHT
-            // =================================================
 
             canvas.save()
 
@@ -2608,10 +2882,6 @@ class MainActivity : ComponentActivity() {
             )
 
             canvas.restore()
-
-            // =================================================
-            // LISTENING WAVEFORM
-            // =================================================
 
             if (
                 mode ==
@@ -2675,10 +2945,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
-
-            // =================================================
-            // THINKING PROCESSING DOTS
-            // =================================================
 
             if (
                 mode ==
@@ -2744,10 +3010,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // =================================================
-            // CORE HIGHLIGHT
-            // =================================================
-
             paint.shader = null
 
             paint.style =
@@ -2768,10 +3030,6 @@ class MainActivity : ComponentActivity() {
                 paint
             )
 
-            // =================================================
-            // AURIX TEXT
-            // =================================================
-
             paint.textAlign =
                 Paint.Align.CENTER
 
@@ -2790,10 +3048,6 @@ class MainActivity : ComponentActivity() {
                 cy + baseRadius * 0.08f,
                 paint
             )
-
-            // =================================================
-            // CORE TEXT
-            // =================================================
 
             paint.textSize =
                 baseRadius * 0.085f
@@ -2875,10 +3129,6 @@ class MainActivity : ComponentActivity() {
 
             when (label.lowercase()) {
 
-                // ------------------------------------------------
-                // YOUTUBE
-                // ------------------------------------------------
-
                 "youtube" -> {
 
                     paint.color =
@@ -2929,10 +3179,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                // ------------------------------------------------
-                // SEARCH
-                // ------------------------------------------------
-
                 "search" -> {
 
                     paint.color =
@@ -2964,10 +3210,6 @@ class MainActivity : ComponentActivity() {
                     paint.style =
                         Paint.Style.FILL
                 }
-
-                // ------------------------------------------------
-                // MUSIC
-                // ------------------------------------------------
 
                 "music" -> {
 
@@ -3016,10 +3258,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                // ------------------------------------------------
-                // WEATHER
-                // ------------------------------------------------
-
                 "weather" -> {
 
                     paint.color =
@@ -3066,10 +3304,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                // ------------------------------------------------
-                // CALL
-                // ------------------------------------------------
-
                 "call" -> {
 
                     paint.color =
@@ -3112,10 +3346,6 @@ class MainActivity : ComponentActivity() {
                     paint.style =
                         Paint.Style.FILL
                 }
-
-                // ------------------------------------------------
-                // MESSAGES
-                // ------------------------------------------------
 
                 "messages" -> {
 
@@ -3184,10 +3414,6 @@ class MainActivity : ComponentActivity() {
                         paint
                     )
                 }
-
-                // ------------------------------------------------
-                // APPS
-                // ------------------------------------------------
 
                 "apps" -> {
 
@@ -3261,10 +3487,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-
-                // ------------------------------------------------
-                // DEFAULT
-                // ------------------------------------------------
 
                 else -> {
 
@@ -3366,10 +3588,6 @@ class MainActivity : ComponentActivity() {
 
             when (label.lowercase()) {
 
-                // -----------------------------------------
-                // HOME
-                // -----------------------------------------
-
                 "home" -> {
 
                     path.reset()
@@ -3414,10 +3632,6 @@ class MainActivity : ComponentActivity() {
                         paint
                     )
                 }
-
-                // -----------------------------------------
-                // HISTORY
-                // -----------------------------------------
 
                 "history" -> {
 
@@ -3467,10 +3681,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                // -----------------------------------------
-                // AURIX
-                // -----------------------------------------
-
                 "aurix" -> {
 
                     paint.style =
@@ -3506,10 +3716,6 @@ class MainActivity : ComponentActivity() {
                         paint
                     )
                 }
-
-                // -----------------------------------------
-                // SHORTCUTS
-                // -----------------------------------------
 
                 "shortcuts" -> {
 
@@ -3555,10 +3761,6 @@ class MainActivity : ComponentActivity() {
                         paint
                     )
                 }
-
-                // -----------------------------------------
-                // SETTINGS
-                // -----------------------------------------
 
                 "settings" -> {
 
