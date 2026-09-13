@@ -1,222 +1,722 @@
 package com.example.myaiassistant
 
 import android.Manifest
-import android.app.Activity
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.animation.ValueAnimator
+import android.content.*
 import android.content.pm.PackageManager
-import android.graphics.Color
-import android.graphics.Typeface
+import android.graphics.*
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import android.view.*
+import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.google.firebase.auth.FirebaseAuth
-import java.util.Locale
+import kotlin.math.sin
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
 
-    private lateinit var root: FrameLayout
+    private lateinit var root: LinearLayout
     private lateinit var statusText: TextView
-    private lateinit var coreText: TextView
-    private lateinit var systemText: TextView
-    private lateinit var waveform: WaveformView
     private lateinit var voiceButton: TextView
+    private lateinit var voiceStatus: TextView
+    private lateinit var waveform: WaveformView
 
-    private var active = false
+    private var listening = false
 
-    private lateinit var auth: FirebaseAuth
+    companion object {
+        private const val REQUEST_AUDIO = 1001
+    }
 
-    // =========================================================
-    // COLORS
-    // =========================================================
+    private val serviceReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
 
-    private val bgTop = Color.rgb(2, 12, 28)
-    private val bgBottom = Color.rgb(9, 2, 25)
+            when (intent?.action) {
 
-    private val cyan = Color.rgb(80, 220, 255)
-    private val blue = Color.rgb(45, 120, 255)
-    private val purple = Color.rgb(145, 55, 240)
+                AurixService.ACTION_STATUS -> {
+                    val status =
+                        intent.getStringExtra("status") ?: "READY"
 
-    private val white = Color.WHITE
-    private val muted = Color.rgb(105, 155, 190)
-
-    // =========================================================
-    // AURIX EVENT RECEIVER
-    // =========================================================
-
-    private val aurixReceiver =
-        object : BroadcastReceiver() {
-
-            override fun onReceive(
-                context: Context?,
-                intent: Intent?
-            ) {
-
-                if (
-                    intent?.action !=
-                    AurixService.ACTION_EVENT
-                ) {
-                    return
+                    updateFromService(status)
                 }
 
-                val type =
-                    intent.getStringExtra(
-                        AurixService.EXTRA_TYPE
-                    )
+                AurixService.ACTION_RESPONSE -> {
+                    val response =
+                        intent.getStringExtra("response") ?: ""
 
-                val text =
-                    intent.getStringExtra(
-                        AurixService.EXTRA_TEXT
-                    ) ?: ""
-
-                when (type) {
-
-                    AurixService.TYPE_STATUS -> {
-                        updateStatus(text)
-                    }
-
-                    AurixService.TYPE_COMMAND -> {
-                        updateStatus("THINKING")
-                    }
-
-                    AurixService.TYPE_SPEAK -> {
-                        updateStatus("RESPONDING")
+                    if (response.isNotBlank()) {
+                        addAurixMessage(response)
                     }
                 }
             }
         }
+    }
 
-    // =========================================================
-    // GO HOME RECEIVER
-    // =========================================================
-
-    private val homeReceiver =
-        object : BroadcastReceiver() {
-
-            override fun onReceive(
-                context: Context?,
-                intent: Intent?
-            ) {
-
-                if (
-                    intent?.action !=
-                    "com.example.myaiassistant.GO_HOME"
-                ) {
-                    return
-                }
-
-                goToHomeScreen()
-            }
-        }
-
-    // =========================================================
-    // CREATE
-    // =========================================================
-
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        auth =
-            FirebaseAuth.getInstance()
-
-        if (
-            auth.currentUser == null
-        ) {
-
-            startActivity(
-                Intent(
-                    this,
-                    AuthActivity::class.java
-                )
-            )
-
-            finish()
-
-            return
+        if (AurixService.isRunning) {
+            AurixService.stop(this)
         }
 
-        window.statusBarColor =
-            Color.TRANSPARENT
+        buildInterface()
 
-        window.navigationBarColor =
-            Color.BLACK
+        val filter = IntentFilter().apply {
+            addAction(AurixService.ACTION_STATUS)
+            addAction(AurixService.ACTION_RESPONSE)
+        }
 
-        createInterface()
-
-        registerAurixReceiver()
-
-        registerReceiver(
-            homeReceiver,
-            IntentFilter(
-                "com.example.myaiassistant.GO_HOME"
-            ),
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.TIRAMISU
-            ) {
-                Context.RECEIVER_NOT_EXPORTED
-            } else {
-                0
-            }
+        ContextCompat.registerReceiver(
+            this,
+            serviceReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        requestMicrophonePermission()
+        checkMicrophonePermission()
+    }
 
-        updateInterface()
+    override fun onDestroy() {
+        try {
+            unregisterReceiver(serviceReceiver)
+        } catch (_: Exception) {
+        }
+
+        super.onDestroy()
     }
 
     // =========================================================
-    // MICROPHONE PERMISSION
+    // UI
     // =========================================================
 
-    private fun requestMicrophonePermission() {
+    private fun buildInterface() {
+
+        root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(10))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(
+                    Color.rgb(5, 8, 28),
+                    Color.rgb(9, 8, 35),
+                    Color.rgb(4, 12, 30)
+                )
+            )
+        }
+
+        setContentView(root)
+
+        buildHeader()
+        buildTitle()
+        buildCore()
+        buildConversation()
+        buildQuickActions()
+        buildBottomNavigation()
+    }
+
+    // =========================================================
+    // HEADER
+    // =========================================================
+
+    private fun buildHeader() {
+
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val menu = TextView(this).apply {
+            text = "☰"
+            textSize = 25f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+        }
+
+        header.addView(
+            menu,
+            LinearLayout.LayoutParams(dp(42), dp(48))
+        )
+
+        val brandBox = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        val brand = TextView(this).apply {
+            text = "A U R I X"
+            textSize = 21f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+        }
+
+        val tagline = TextView(this).apply {
+            text = "INTELLIGENCE CORE"
+            textSize = 8f
+            letterSpacing = 0.18f
+            setTextColor(Color.rgb(120, 190, 255))
+        }
+
+        brandBox.addView(brand)
+        brandBox.addView(tagline)
+
+        header.addView(
+            brandBox,
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        )
+
+        val online = TextView(this).apply {
+            text = "● ONLINE"
+            textSize = 10f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.rgb(80, 220, 255))
+            gravity = Gravity.CENTER
+        }
+
+        header.addView(
+            online,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(40)
+            )
+        )
+
+        // -----------------------------------------------------
+        // SMALL SMART VOICE BUTTON
+        // -----------------------------------------------------
+
+        voiceButton = TextView(this).apply {
+
+            text = "◉"
+
+            textSize = 23f
+
+            gravity = Gravity.CENTER
+
+            setTextColor(Color.WHITE)
+
+            background = createVoiceBackground(false)
+
+            elevation = dp(8).toFloat()
+
+            setOnClickListener {
+                activateVoice()
+            }
+        }
+
+        val micParams = LinearLayout.LayoutParams(
+            dp(48),
+            dp(48)
+        )
+
+        micParams.marginStart = dp(10)
+
+        header.addView(
+            voiceButton,
+            micParams
+        )
+
+        root.addView(
+            header,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(54)
+            )
+        )
+    }
+
+    // =========================================================
+    // TITLE
+    // =========================================================
+
+    private fun buildTitle() {
+
+        val title = TextView(this).apply {
+            text = "A U R I X  |  INTELLIGENCE CORE"
+            textSize = 10f
+            letterSpacing = 0.22f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(100, 190, 255))
+            setPadding(0, dp(14), 0, dp(4))
+        }
+
+        root.addView(title)
+    }
+
+    // =========================================================
+    // CORE
+    // =========================================================
+
+    private fun buildCore() {
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+
+        val orb = AurixOrbView(this)
+
+        container.addView(
+            orb,
+            LinearLayout.LayoutParams(
+                dp(230),
+                dp(230)
+            )
+        )
+
+        voiceStatus = TextView(this).apply {
+            text = "VOICE  •  READY"
+            textSize = 10f
+            letterSpacing = 0.20f
+            gravity = Gravity.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.rgb(90, 210, 255))
+        }
+
+        container.addView(
+            voiceStatus,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(35)
+            )
+        )
+
+        statusText = TextView(this).apply {
+            text = "Tap the AURIX voice icon to speak"
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(145, 155, 190))
+        }
+
+        container.addView(statusText)
+
+        root.addView(
+            container,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(300)
+            )
+        )
+    }
+
+    // =========================================================
+    // CONVERSATION
+    // =========================================================
+
+    private lateinit var conversationBox: LinearLayout
+
+    private fun buildConversation() {
+
+        conversationBox = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        addUserMessage(
+            "Hey Aurix, Man Bharrya song chalao."
+        )
+
+        addAurixMessage(
+            "Ready. Tap the voice icon and give me a command."
+        )
+
+        val scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            addView(conversationBox)
+        }
+
+        root.addView(
+            scroll,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
+    }
+
+    private fun addUserMessage(text: String) {
+
+        val card = messageCard(
+            "YOU",
+            text,
+            Color.rgb(120, 90, 255)
+        )
+
+        conversationBox.addView(card)
+    }
+
+    private fun addAurixMessage(text: String) {
+
+        val card = messageCard(
+            "AURIX",
+            text,
+            Color.rgb(60, 200, 255)
+        )
+
+        conversationBox.addView(card)
+    }
+
+    private fun messageCard(
+        title: String,
+        message: String,
+        accent: Int
+    ): LinearLayout {
+
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                dp(14),
+                dp(10),
+                dp(14),
+                dp(10)
+            )
+
+            background = GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                setColor(Color.argb(80, 20, 28, 60))
+                setStroke(dp(1), Color.argb(90, accent))
+            }
+        }
+
+        val label = TextView(this).apply {
+            text = title
+            textSize = 8f
+            letterSpacing = 0.18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(accent)
+        }
+
+        val text = TextView(this).apply {
+            this.text = message
+            textSize = 12f
+            setTextColor(Color.WHITE)
+            setPadding(0, dp(4), 0, 0)
+        }
+
+        box.addView(label)
+        box.addView(text)
+
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+
+        params.setMargins(0, dp(5), 0, dp(5))
+
+        box.layoutParams = params
+
+        return box
+    }
+
+    // =========================================================
+    // QUICK ACTIONS
+    // =========================================================
+
+    private fun buildQuickActions() {
+
+        val title = TextView(this).apply {
+            text = "QUICK ACTIONS"
+            textSize = 9f
+            letterSpacing = 0.18f
+            setTextColor(Color.rgb(110, 170, 230))
+            setPadding(0, dp(8), 0, dp(8))
+        }
+
+        root.addView(title)
+
+        val row1 = LinearLayout(this)
+
+        addAction(row1, "YouTube")
+        addAction(row1, "Search")
+        addAction(row1, "Music")
+        addAction(row1, "Weather")
+
+        root.addView(row1)
+
+        val row2 = LinearLayout(this)
+
+        addAction(row2, "Call")
+        addAction(row2, "Messages")
+        addAction(row2, "Apps")
+        addAction(row2, "More")
+
+        root.addView(row2)
+    }
+
+    private fun addAction(
+        row: LinearLayout,
+        text: String
+    ) {
+
+        val button = TextView(this).apply {
+
+            this.text = text
+
+            textSize = 9f
+
+            gravity = Gravity.CENTER
+
+            setTextColor(Color.WHITE)
+
+            background = GradientDrawable().apply {
+                cornerRadius = dp(12).toFloat()
+                setColor(Color.argb(65, 35, 45, 85))
+                setStroke(
+                    dp(1),
+                    Color.argb(70, 90, 160, 255)
+                )
+            }
+
+            setOnClickListener {
+
+                when (text) {
+
+                    "YouTube" ->
+                        sendCommand("YouTube kholo")
+
+                    "Search" ->
+                        sendCommand("search kholo")
+
+                    "Music" ->
+                        sendCommand("music kholo")
+
+                    "Weather" ->
+                        sendCommand("weather batao")
+
+                    "Call" ->
+                        sendCommand("phone kholo")
+
+                    "Messages" ->
+                        sendCommand("messages kholo")
+
+                    "Apps" ->
+                        sendCommand("apps kholo")
+
+                    "More" ->
+                        sendCommand("settings kholo")
+                }
+            }
+        }
+
+        val params = LinearLayout.LayoutParams(
+            0,
+            dp(42),
+            1f
+        )
+
+        params.setMargins(
+            dp(3),
+            dp(3),
+            dp(3),
+            dp(3)
+        )
+
+        row.addView(button, params)
+    }
+
+    // =========================================================
+    // BOTTOM NAVIGATION
+    // =========================================================
+
+    private fun buildBottomNavigation() {
+
+        val nav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(0, dp(10), 0, 0)
+        }
+
+        addNavItem(nav, "Home")
+        addNavItem(nav, "History")
+        addNavItem(nav, "AURIX")
+        addNavItem(nav, "Shortcuts")
+        addNavItem(nav, "Settings")
+
+        root.addView(
+            nav,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(55)
+            )
+        )
+    }
+
+    private fun addNavItem(
+        nav: LinearLayout,
+        text: String
+    ) {
+
+        val item = TextView(this).apply {
+            this.text = text
+            textSize = 8f
+            gravity = Gravity.CENTER
+            setTextColor(
+                if (text == "AURIX")
+                    Color.rgb(90, 210, 255)
+                else
+                    Color.rgb(130, 140, 175)
+            )
+        }
+
+        nav.addView(
+            item,
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                1f
+            )
+        )
+    }
+
+    // =========================================================
+    // VOICE ACTIVATION
+    // =========================================================
+
+    private fun activateVoice() {
+
+        if (listening) {
+            return
+        }
 
         if (
             ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.RECORD_AUDIO
-            ) !=
-            PackageManager.PERMISSION_GRANTED
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                REQUEST_AUDIO
+            )
+            return
+        }
+
+        listening = true
+
+        voiceButton.background =
+            createVoiceBackground(true)
+
+        voiceButton.text = "●"
+
+        voiceStatus.text =
+            "VOICE  •  LISTENING"
+
+        statusText.text =
+            "Listening for your command..."
+
+        startAurixListening()
+    }
+
+    private fun startAurixListening() {
+
+        val intent = Intent(
+            this,
+            AurixService::class.java
+        ).apply {
+            action = AurixService.ACTION_LISTEN_ONCE
+        }
+
+        ContextCompat.startForegroundService(
+            this,
+            intent
+        )
+    }
+
+    // =========================================================
+    // SERVICE STATUS
+    // =========================================================
+
+    private fun updateFromService(status: String) {
+
+        when (status.uppercase()) {
+
+            "LISTENING" -> {
+
+                listening = true
+
+                voiceButton.text = "●"
+
+                voiceButton.background =
+                    createVoiceBackground(true)
+
+                voiceStatus.text =
+                    "VOICE  •  LISTENING"
+
+                statusText.text =
+                    "Listening..."
+            }
+
+            "PROCESSING" -> {
+
+                voiceStatus.text =
+                    "VOICE  •  PROCESSING"
+
+                statusText.text =
+                    "AURIX is processing..."
+            }
+
+            "READY",
+            "IDLE",
+            "STOPPED",
+            "COMPLETED" -> {
+
+                listening = false
+
+                voiceButton.text = "◉"
+
+                voiceButton.background =
+                    createVoiceBackground(false)
+
+                voiceStatus.text =
+                    "VOICE  •  READY"
+
+                statusText.text =
+                    "Tap the AURIX voice icon to speak"
+            }
+
+            else -> {
+
+                statusText.text = status
+
+            }
+        }
+    }
+
+    // =========================================================
+    // PERMISSION
+    // =========================================================
+
+    private fun checkMicrophonePermission() {
+
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
 
             requestPermissions(
-                arrayOf(
-                    Manifest.permission.RECORD_AUDIO
-                ),
-                500
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                REQUEST_AUDIO
             )
 
         } else {
 
             // IMPORTANT:
-            // Permission milne ke baad AURIX
-            // automatically listening start nahi karega.
+            // Permission milne ke baad service start nahi hogi.
+            // User ko manually small voice icon tap karna hoga.
 
-            active = false
+            listening = false
 
-            updateStatus("READY")
+            voiceStatus.text =
+                "VOICE  •  READY"
 
-            updateInterface()
+            statusText.text =
+                "Tap the AURIX voice icon to speak"
         }
     }
-
-    // =========================================================
-    // PERMISSION RESULT
-    // =========================================================
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -230,9 +730,7 @@ class MainActivity : Activity() {
             grantResults
         )
 
-        if (
-            requestCode == 500
-        ) {
+        if (requestCode == REQUEST_AUDIO) {
 
             if (
                 grantResults.isNotEmpty() &&
@@ -240,1905 +738,89 @@ class MainActivity : Activity() {
                 PackageManager.PERMISSION_GRANTED
             ) {
 
-                active = false
+                listening = false
 
-                updateStatus("READY")
+                voiceButton.background =
+                    createVoiceBackground(false)
 
-                updateInterface()
+                voiceStatus.text =
+                    "VOICE  •  READY"
+
+                statusText.text =
+                    "Tap the AURIX voice icon to speak"
 
             } else {
 
-                active = false
-
-                updateStatus(
-                    "MIC PERMISSION REQUIRED"
-                )
-
-                updateInterface()
+                statusText.text =
+                    "Microphone permission required"
             }
         }
     }
 
     // =========================================================
-    // MAIN UI
+    // QUICK COMMAND
     // =========================================================
 
-    private fun createInterface() {
-
-        root =
-            FrameLayout(this)
-
-        root.background =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    bgTop,
-                    Color.rgb(1, 5, 16),
-                    bgBottom
-                )
-            )
-
-        setContentView(root)
-
-        // =====================================================
-        // SCROLL
-        // =====================================================
-
-        val scroll =
-            ScrollView(this)
-
-        scroll.isFillViewport =
-            true
-
-        scroll.overScrollMode =
-            View.OVER_SCROLL_NEVER
-
-        root.addView(
-            scroll,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        val content =
-            LinearLayout(this)
-
-        content.orientation =
-            LinearLayout.VERTICAL
-
-        content.gravity =
-            Gravity.CENTER_HORIZONTAL
-
-        content.setPadding(
-            dp(18),
-            dp(24),
-            dp(18),
-            dp(28)
-        )
-
-        scroll.addView(
-            content,
-            ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        // =====================================================
-        // HEADER
-        // =====================================================
-
-        val header =
-            LinearLayout(this)
-
-        header.orientation =
-            LinearLayout.HORIZONTAL
-
-        header.gravity =
-            Gravity.CENTER_VERTICAL
-
-        content.addView(
-            header,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(58)
-            )
-        )
-
-        val menu =
-            TextView(this)
-
-        menu.text =
-            "☰"
-
-        menu.textSize =
-            25f
-
-        menu.setTextColor(
-            white
-        )
-
-        menu.gravity =
-            Gravity.CENTER
-
-        header.addView(
-            menu,
-            LinearLayout.LayoutParams(
-                dp(45),
-                dp(50)
-            )
-        )
-
-        val brand =
-            LinearLayout(this)
-
-        brand.orientation =
-            LinearLayout.VERTICAL
-
-        header.addView(
-            brand,
-            LinearLayout.LayoutParams(
-                0,
-                dp(54),
-                1f
-            )
-        )
-
-        val title =
-            TextView(this)
-
-        title.text =
-            "AURIX"
-
-        title.textSize =
-            25f
-
-        title.setTextColor(
-            white
-        )
-
-        title.typeface =
-            Typeface.create(
-                "sans-serif",
-                Typeface.BOLD
-            )
-
-        title.letterSpacing =
-            0.16f
-
-        brand.addView(
-            title,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(31)
-            )
-        )
-
-        val tagline =
-            TextView(this)
-
-        tagline.text =
-            "YOUR VOICE  |  YOUR AI"
-
-        tagline.textSize =
-            8f
-
-        tagline.setTextColor(
-            muted
-        )
-
-        tagline.letterSpacing =
-            0.16f
-
-        brand.addView(
-            tagline,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(20)
-            )
-        )
-
-        val online =
-            TextView(this)
-
-        online.text =
-            "● ONLINE"
-
-        online.textSize =
-            10f
-
-        online.setTextColor(
-            Color.rgb(
-                90,
-                235,
-                145
-            )
-        )
-
-        online.gravity =
-            Gravity.CENTER
-
-        header.addView(
-            online,
-            LinearLayout.LayoutParams(
-                dp(82),
-                dp(40)
-            )
-        )
-
-        // =====================================================
-        // CORE LABEL
-        // =====================================================
-
-        val coreLabel =
-            TextView(this)
-
-        coreLabel.text =
-            "A U R I X   |   INTELLIGENCE CORE"
-
-        coreLabel.textSize =
-            9f
-
-        coreLabel.setTextColor(
-            Color.rgb(
-                100,
-                175,
-                225
-            )
-        )
-
-        coreLabel.gravity =
-            Gravity.CENTER
-
-        coreLabel.letterSpacing =
-            0.18f
-
-        val labelParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(42)
-            )
-
-        labelParams.topMargin =
-            dp(5)
-
-        content.addView(
-            coreLabel,
-            labelParams
-        )
-
-        // =====================================================
-        // CORE AREA
-        // =====================================================
-
-        val coreArea =
-            FrameLayout(this)
-
-        content.addView(
-            coreArea,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(300)
-            )
-        )
-
-        // =====================================================
-        // OUTER GLOW
-        // =====================================================
-
-        val glow =
-            View(this)
-
-        glow.background =
-            ovalGradient(
-                intArrayOf(
-                    Color.rgb(
-                        15,
-                        65,
-                        170
-                    ),
-                    Color.rgb(
-                        125,
-                        35,
-                        215
-                    ),
-                    Color.rgb(
-                        20,
-                        150,
-                        215
-                    )
-                )
-            )
-
-        val glowSize =
-            dp(235)
-
-        val glowLayout =
-            FrameLayout.LayoutParams(
-                glowSize,
-                glowSize
-            )
-
-        glowLayout.gravity =
-            Gravity.CENTER
-
-        coreArea.addView(
-            glow,
-            glowLayout
-        )
-
-        // =====================================================
-        // DARK RING
-        // =====================================================
-
-        val darkRing =
-            View(this)
-
-        darkRing.background =
-            ovalGradient(
-                intArrayOf(
-                    Color.rgb(
-                        3,
-                        18,
-                        48
-                    ),
-                    Color.rgb(
-                        13,
-                        5,
-                        38
-                    ),
-                    Color.rgb(
-                        3,
-                        34,
-                        52
-                    )
-                )
-            )
-
-        val darkSize =
-            dp(210)
-
-        val darkLayout =
-            FrameLayout.LayoutParams(
-                darkSize,
-                darkSize
-            )
-
-        darkLayout.gravity =
-            Gravity.CENTER
-
-        coreArea.addView(
-            darkRing,
-            darkLayout
-        )
-
-        // =====================================================
-        // CORE ORB
-        // =====================================================
-
-        val orb =
-            View(this)
-
-        orb.background =
-            createOrb()
-
-        val orbSize =
-            dp(168)
-
-        val orbLayout =
-            FrameLayout.LayoutParams(
-                orbSize,
-                orbSize
-            )
-
-        orbLayout.gravity =
-            Gravity.CENTER
-
-        coreArea.addView(
-            orb,
-            orbLayout
-        )
-
-        // =====================================================
-        // CORE TEXT
-        // =====================================================
-
-        coreText =
-            TextView(this)
-
-        coreText.text =
-            "AURIX"
-
-        coreText.textSize =
-            23f
-
-        coreText.setTextColor(
-            white
-        )
-
-        coreText.gravity =
-            Gravity.CENTER
-
-        coreText.typeface =
-            Typeface.DEFAULT_BOLD
-
-        coreText.letterSpacing =
-            0.18f
-
-        val coreTextLayout =
-            FrameLayout.LayoutParams(
-                orbSize,
-                orbSize
-            )
-
-        coreTextLayout.gravity =
-            Gravity.CENTER
-
-        coreArea.addView(
-            coreText,
-            coreTextLayout
-        )
-
-        // =====================================================
-        // CORE ANIMATION
-        // =====================================================
-
-        glow.animate()
-            .rotationBy(360f)
-            .setDuration(9000)
-            .withEndAction {
-                rotateCore(glow)
-            }
-            .start()
-
-        pulseCore(orb)
-
-        // =====================================================
-        // VOICE READY BADGE
-        // =====================================================
-
-        val listening =
-            TextView(this)
-
-        listening.text =
-            "  ●  VOICE  |  READY  "
-
-        listening.textSize =
-            11f
-
-        listening.setTextColor(
-            cyan
-        )
-
-        listening.gravity =
-            Gravity.CENTER
-
-        listening.letterSpacing =
-            0.08f
-
-        listening.background =
-            roundedBackground(
-                Color.argb(
-                    45,
-                    60,
-                    190,
-                    255
-                ),
-                cyan
-            )
-
-        val listeningParams =
-            LinearLayout.LayoutParams(
-                dp(210),
-                dp(38)
-            )
-
-        listeningParams.topMargin =
-            dp(-12)
-
-        content.addView(
-            listening,
-            listeningParams
-        )
-
-        // =====================================================
-        // SYSTEM
-        // =====================================================
-
-        systemText =
-            TextView(this)
-
-        systemText.text =
-            "SYSTEM ONLINE"
-
-        systemText.textSize =
-            9f
-
-        systemText.setTextColor(
-            muted
-        )
-
-        systemText.gravity =
-            Gravity.CENTER
-
-        systemText.letterSpacing =
-            0.20f
-
-        content.addView(
-            systemText,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(26)
-            )
-        )
-
-        // =====================================================
-        // STATUS
-        // =====================================================
-
-        statusText =
-            TextView(this)
-
-        statusText.text =
-            "READY"
-
-        statusText.textSize =
-            14f
-
-        statusText.setTextColor(
-            cyan
-        )
-
-        statusText.gravity =
-            Gravity.CENTER
-
-        statusText.typeface =
-            Typeface.DEFAULT_BOLD
-
-        statusText.letterSpacing =
-            0.20f
-
-        content.addView(
-            statusText,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(34)
-            )
-        )
-
-        // =====================================================
-        // WAVEFORM
-        // =====================================================
-
-        waveform =
-            WaveformView(this)
-
-        val waveformParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(42)
-            )
-
-        waveformParams.topMargin =
-            dp(2)
-
-        content.addView(
-            waveform,
-            waveformParams
-        )
-
-        // =====================================================
-        // CONVERSATION
-        // =====================================================
-
-        addSectionTitle(
-            content,
-            "CONVERSATION"
-        )
-
-        val emptyConversation =
-            createMessageCard(
-                "AURIX",
-                "Ready when you are. Tap the voice bar to speak.",
-                true
-            )
-
-        content.addView(
-            emptyConversation,
-            cardParams()
-        )
-
-        // =====================================================
-        // QUICK ACTIONS
-        // =====================================================
-
-        addSectionTitle(
-            content,
-            "QUICK ACTIONS"
-        )
-
-        val actions =
-            LinearLayout(this)
-
-        actions.orientation =
-            LinearLayout.VERTICAL
-
-        content.addView(
-            actions,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        // -----------------------------------------------------
-        // ROW 1
-        // -----------------------------------------------------
-
-        val row1 =
-            LinearLayout(this)
-
-        row1.orientation =
-            LinearLayout.HORIZONTAL
-
-        actions.addView(
-            row1,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(76)
-            )
-        )
-
-        addAction(
-            row1,
-            "▶",
-            "YouTube"
-        ) {
-
-            openUrl(
-                "https://www.youtube.com"
-            )
+    private fun sendCommand(command: String) {
+
+        addUserMessage(command)
+
+        val intent = Intent(
+            this,
+            AurixService::class.java
+        ).apply {
+            action = AurixService.ACTION_COMMAND
+            putExtra("command", command)
         }
 
-        addAction(
-            row1,
-            "⌕",
-            "Search"
-        ) {
-
-            openUrl(
-                "https://www.google.com"
-            )
-        }
-
-        addAction(
-            row1,
-            "♪",
-            "Music"
-        ) {
-
-            openUrl(
-                "https://music.youtube.com"
-            )
-        }
-
-        addAction(
-            row1,
-            "☁",
-            "Weather"
-        ) {
-
-            openUrl(
-                "https://www.google.com/search?q=weather"
-            )
-        }
-
-        // -----------------------------------------------------
-        // ROW 2
-        // -----------------------------------------------------
-
-        val row2 =
-            LinearLayout(this)
-
-        row2.orientation =
-            LinearLayout.HORIZONTAL
-
-        actions.addView(
-            row2,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(76)
-            )
-        )
-
-        addAction(
-            row2,
-            "☎",
-            "Call"
-        ) {
-
-            startActivity(
-                Intent(
-                    Intent.ACTION_DIAL
-                )
-            )
-        }
-
-        addAction(
-            row2,
-            "✉",
-            "Messages"
-        ) {
-
-            val intent =
-                Intent(
-                    Intent.ACTION_SENDTO
-                )
-
-            intent.data =
-                Uri.parse(
-                    "smsto:"
-                )
-
-            startActivity(intent)
-        }
-
-        addAction(
-            row2,
-            "▦",
-            "Apps"
-        ) {
-
-            try {
-
-                startActivity(
-                    Intent(
-                        android.provider.Settings
-                            .ACTION_SETTINGS
-                    )
-                )
-
-            } catch (_: Exception) {
-            }
-        }
-
-        addAction(
-            row2,
-            "•••",
-            "More"
-        ) {
-
-            updateStatus(
-                "READY"
-            )
-        }
-
-        // =====================================================
-        // VOICE INPUT
-        // =====================================================
-
-        voiceButton =
-            TextView(this)
-
-        voiceButton.tag =
-            "AURIX_VOICE_BUTTON"
-
-        voiceButton.text =
-            "  🎙   Tap to activate AURIX"
-
-        voiceButton.textSize =
-            13f
-
-        voiceButton.typeface =
-            Typeface.create(
-                "sans-serif",
-                Typeface.BOLD
-            )
-
-        voiceButton.setTextColor(
-            white
-        )
-
-        voiceButton.gravity =
-            Gravity.CENTER
-
-        voiceButton.background =
-            roundedBackground(
-                Color.argb(
-                    35,
-                    70,
-                    190,
-                    255
-                ),
-                Color.rgb(
-                    55,
-                    130,
-                    210
-                )
-            )
-
-        voiceButton.setOnClickListener {
-
-            activateVoice()
-        }
-
-        val inputParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(58)
-            )
-
-        inputParams.topMargin =
-            dp(18)
-
-        content.addView(
-            voiceButton,
-            inputParams
-        )
-
-        // =====================================================
-        // BOTTOM NAV
-        // =====================================================
-
-        val nav =
-            LinearLayout(this)
-
-        nav.orientation =
-            LinearLayout.HORIZONTAL
-
-        nav.gravity =
-            Gravity.CENTER
-
-        nav.background =
-            roundedBackground(
-                Color.argb(
-                    35,
-                    10,
-                    40,
-                    75
-                ),
-                Color.rgb(
-                    35,
-                    80,
-                    125
-                )
-            )
-
-        val navParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(68)
-            )
-
-        navParams.topMargin =
-            dp(18)
-
-        content.addView(
-            nav,
-            navParams
-        )
-
-        addNavItem(
-            nav,
-            "⌂",
-            "Home"
-        )
-
-        addNavItem(
-            nav,
-            "↶",
-            "History"
-        )
-
-        addNavItem(
-            nav,
-            "A",
-            "AURIX"
-        )
-
-        addNavItem(
-            nav,
-            "★",
-            "Shortcuts"
-        )
-
-        addNavItem(
-            nav,
-            "⚙",
-            "Settings"
+        ContextCompat.startForegroundService(
+            this,
+            intent
         )
     }
 
     // =========================================================
-    // ACTIVATE VOICE
+    // VOICE BUTTON DESIGN
     // =========================================================
 
-    private fun activateVoice() {
+    private fun createVoiceBackground(
+        active: Boolean
+    ): GradientDrawable {
 
-        if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
+        return GradientDrawable().apply {
 
-            requestMicrophonePermission()
+            shape = GradientDrawable.OVAL
 
-            return
-        }
+            if (active) {
 
-        val intent =
-            Intent(
-                this,
-                AurixService::class.java
-            ).apply {
+                setColor(
+                    Color.rgb(45, 90, 145)
+                )
 
-                action =
-                    AurixService.ACTION_LISTEN_ONCE
-            }
-
-        try {
-
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.O
-            ) {
-
-                ContextCompat.startForegroundService(
-                    this,
-                    intent
+                setStroke(
+                    dp(2),
+                    Color.rgb(80, 220, 255)
                 )
 
             } else {
 
-                startService(intent)
-            }
-
-            active = true
-
-            updateStatus(
-                "LISTENING"
-            )
-
-        } catch (_: Exception) {
-
-            active = false
-
-            updateStatus(
-                "START FAILED"
-            )
-        }
-    }
-
-    // =========================================================
-    // MESSAGE CARD
-    // =========================================================
-
-    private fun createMessageCard(
-        name: String,
-        message: String,
-        aurix: Boolean
-    ): View {
-
-        val box =
-            LinearLayout(this)
-
-        box.orientation =
-            LinearLayout.VERTICAL
-
-        box.setPadding(
-            dp(16),
-            dp(12),
-            dp(16),
-            dp(12)
-        )
-
-        box.background =
-            roundedBackground(
-                if (aurix)
-                    Color.argb(
-                        35,
-                        75,
-                        150,
-                        255
-                    )
-                else
-                    Color.argb(
-                        25,
-                        150,
-                        70,
-                        240
-                    ),
-                if (aurix)
-                    Color.rgb(
-                        45,
-                        145,
-                        230
-                    )
-                else
-                    Color.rgb(
-                        110,
-                        70,
-                        200
-                    )
-            )
-
-        val label =
-            TextView(this)
-
-        label.text =
-            name
-
-        label.textSize =
-            9f
-
-        label.setTextColor(
-            if (aurix)
-                cyan
-            else
-                purple
-        )
-
-        label.typeface =
-            Typeface.DEFAULT_BOLD
-
-        label.letterSpacing =
-            0.18f
-
-        box.addView(
-            label,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(22)
-            )
-        )
-
-        val text =
-            TextView(this)
-
-        text.text =
-            message
-
-        text.textSize =
-            14f
-
-        text.setTextColor(
-            white
-        )
-
-        box.addView(
-            text,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        return box
-    }
-
-    // =========================================================
-    // ACTION TILE
-    // =========================================================
-
-    private fun addAction(
-        row: LinearLayout,
-        icon: String,
-        label: String,
-        action: () -> Unit
-    ) {
-
-        val tile =
-            LinearLayout(this)
-
-        tile.orientation =
-            LinearLayout.VERTICAL
-
-        tile.gravity =
-            Gravity.CENTER
-
-        tile.background =
-            roundedBackground(
-                Color.argb(
-                    28,
-                    60,
-                    110,
-                    170
-                ),
-                Color.rgb(
-                    35,
-                    85,
-                    125
-                )
-            )
-
-        tile.setOnClickListener {
-            action()
-        }
-
-        val params =
-            LinearLayout.LayoutParams(
-                0,
-                dp(66),
-                1f
-            )
-
-        params.setMargins(
-            dp(3),
-            dp(4),
-            dp(3),
-            dp(4)
-        )
-
-        row.addView(
-            tile,
-            params
-        )
-
-        val iconText =
-            TextView(this)
-
-        iconText.text =
-            icon
-
-        iconText.textSize =
-            19f
-
-        iconText.setTextColor(
-            cyan
-        )
-
-        iconText.gravity =
-            Gravity.CENTER
-
-        tile.addView(
-            iconText,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(30)
-            )
-        )
-
-        val labelText =
-            TextView(this)
-
-        labelText.text =
-            label
-
-        labelText.textSize =
-            8f
-
-        labelText.setTextColor(
-            white
-        )
-
-        labelText.gravity =
-            Gravity.CENTER
-
-        tile.addView(
-            labelText,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(25)
-            )
-        )
-    }
-
-    // =========================================================
-    // NAV ITEM
-    // =========================================================
-
-    private fun addNavItem(
-        nav: LinearLayout,
-        icon: String,
-        label: String
-    ) {
-
-        val item =
-            LinearLayout(this)
-
-        item.orientation =
-            LinearLayout.VERTICAL
-
-        item.gravity =
-            Gravity.CENTER
-
-        val params =
-            LinearLayout.LayoutParams(
-                0,
-                dp(64),
-                1f
-            )
-
-        nav.addView(
-            item,
-            params
-        )
-
-        val iconText =
-            TextView(this)
-
-        iconText.text =
-            icon
-
-        iconText.textSize =
-            if (
-                label == "AURIX"
-            )
-                20f
-            else
-                17f
-
-        iconText.setTextColor(
-            if (
-                label == "AURIX"
-            )
-                cyan
-            else
-                muted
-        )
-
-        iconText.gravity =
-            Gravity.CENTER
-
-        item.addView(
-            iconText,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(34)
-            )
-        )
-
-        val labelText =
-            TextView(this)
-
-        labelText.text =
-            label
-
-        labelText.textSize =
-            7f
-
-        labelText.setTextColor(
-            if (
-                label == "AURIX"
-            )
-                cyan
-            else
-                muted
-        )
-
-        labelText.gravity =
-            Gravity.CENTER
-
-        item.addView(
-            labelText,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(20)
-            )
-        )
-    }
-
-    // =========================================================
-    // SECTION TITLE
-    // =========================================================
-
-    private fun addSectionTitle(
-        parent: LinearLayout,
-        text: String
-    ) {
-
-        val title =
-            TextView(this)
-
-        title.text =
-            text
-
-        title.textSize =
-            9f
-
-        title.setTextColor(
-            muted
-        )
-
-        title.typeface =
-            Typeface.DEFAULT_BOLD
-
-        title.letterSpacing =
-            0.18f
-
-        val params =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(30)
-            )
-
-        params.topMargin =
-            dp(15)
-
-        parent.addView(
-            title,
-            params
-        )
-    }
-
-    // =========================================================
-    // CARD PARAMS
-    // =========================================================
-
-    private fun cardParams():
-        LinearLayout.LayoutParams {
-
-        val params =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-
-        params.setMargins(
-            0,
-            dp(4),
-            0,
-            dp(4)
-        )
-
-        return params
-    }
-
-    // =========================================================
-    // OVAL GRADIENT
-    // =========================================================
-
-    private fun ovalGradient(
-        colors: IntArray
-    ): GradientDrawable {
-
-        val drawable =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                colors
-            )
-
-        drawable.shape =
-            GradientDrawable.OVAL
-
-        return drawable
-    }
-
-    // =========================================================
-    // ORB
-    // =========================================================
-
-    private fun createOrb():
-        GradientDrawable {
-
-        val drawable =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(
-                        25,
-                        95,
-                        220
-                    ),
-                    Color.rgb(
-                        100,
-                        35,
-                        190
-                    ),
-                    Color.rgb(
-                        10,
-                        170,
-                        215
-                    )
-                )
-            )
-
-        drawable.shape =
-            GradientDrawable.OVAL
-
-        drawable.setStroke(
-            dp(2),
-            Color.rgb(
-                170,
-                235,
-                255
-            )
-        )
-
-        return drawable
-    }
-
-    // =========================================================
-    // ROUNDED BACKGROUND
-    // =========================================================
-
-    private fun roundedBackground(
-        fill: Int,
-        stroke: Int
-    ): GradientDrawable {
-
-        val drawable =
-            GradientDrawable()
-
-        drawable.cornerRadius =
-            dp(18).toFloat()
-
-        drawable.setColor(
-            fill
-        )
-
-        drawable.setStroke(
-            dp(1),
-            stroke
-        )
-
-        return drawable
-    }
-
-    // =========================================================
-    // ROTATE CORE
-    // =========================================================
-
-    private fun rotateCore(
-        view: View
-    ) {
-
-        if (
-            isFinishing
-        ) {
-            return
-        }
-
-        view.animate()
-            .rotationBy(360f)
-            .setDuration(9000)
-            .withEndAction {
-                rotateCore(view)
-            }
-            .start()
-    }
-
-    // =========================================================
-    // PULSE CORE
-    // =========================================================
-
-    private fun pulseCore(
-        view: View
-    ) {
-
-        view.animate()
-            .scaleX(1.045f)
-            .scaleY(1.045f)
-            .setDuration(1500)
-            .withEndAction {
-
-                view.animate()
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(1500)
-                    .withEndAction {
-
-                        if (
-                            !isFinishing
-                        ) {
-
-                            pulseCore(
-                                view
-                            )
-                        }
-                    }
-                    .start()
-            }
-            .start()
-    }
-
-    // =========================================================
-    // STATUS
-    // =========================================================
-
-    private fun updateStatus(
-        status: String
-    ) {
-
-        runOnUiThread {
-
-            val clean =
-                status.uppercase(
-                    Locale.getDefault()
+                setColor(
+                    Color.rgb(25, 35, 70)
                 )
 
-            when {
-
-                clean.contains(
-                    "LISTEN"
-                ) -> {
-
-                    active = true
-
-                    statusText.text =
-                        "LISTENING"
-
-                    coreText.text =
-                        "LISTEN"
-
-                    statusText.setTextColor(
-                        cyan
-                    )
-
-                    waveform.running =
-                        true
-
-                    updateVoiceButton(
-                        "  🎙   Listening... Speak now",
-                        true
-                    )
-                }
-
-                clean.contains(
-                    "THINK"
-                ) ||
-                        clean.contains(
-                            "PROCESS"
-                        ) -> {
-
-                    statusText.text =
-                        "THINKING"
-
-                    coreText.text =
-                        "THINK"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            210,
-                            145,
-                            255
-                        )
-                    )
-
-                    waveform.running =
-                        true
-
-                    updateVoiceButton(
-                        "  ✦   Processing...",
-                        true
-                    )
-                }
-
-                clean.contains(
-                    "EXECUT"
-                ) -> {
-
-                    statusText.text =
-                        "EXECUTING"
-
-                    coreText.text =
-                        "EXEC"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            110,
-                            175,
-                            255
-                        )
-                    )
-
-                    waveform.running =
-                        true
-
-                    updateVoiceButton(
-                        "  ✦   Executing...",
-                        true
-                    )
-                }
-
-                clean.contains(
-                    "RESPOND"
-                ) ||
-                        clean.contains(
-                            "SPEAK"
-                        ) -> {
-
-                    statusText.text =
-                        "RESPONDING"
-
-                    coreText.text =
-                        "VOICE"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            180,
-                            110,
-                            255
-                        )
-                    )
-
-                    waveform.running =
-                        true
-
-                    updateVoiceButton(
-                        "  ◉   AURIX is responding...",
-                        true
-                    )
-                }
-
-                else -> {
-
-                    active = false
-
-                    statusText.text =
-                        "READY"
-
-                    coreText.text =
-                        "AURIX"
-
-                    statusText.setTextColor(
-                        cyan
-                    )
-
-                    waveform.running =
-                        false
-
-                    updateVoiceButton(
-                        "  🎙   Tap to activate AURIX",
-                        false
-                    )
-                }
-            }
-
-            updateSystemState()
-        }
-    }
-
-    // =========================================================
-    // VOICE BUTTON
-    // =========================================================
-
-    private fun updateVoiceButton(
-        text: String,
-        activeState: Boolean
-    ) {
-
-        if (
-            !::voiceButton.isInitialized
-        ) {
-            return
-        }
-
-        voiceButton.text =
-            text
-
-        voiceButton.setTextColor(
-            if (activeState)
-                cyan
-            else
-                white
-        )
-
-        voiceButton.background =
-            roundedBackground(
-                if (activeState)
-                    Color.argb(
-                        65,
-                        40,
-                        150,
-                        255
-                    )
-                else
-                    Color.argb(
-                        35,
-                        70,
-                        190,
-                        255
-                    ),
-                if (activeState)
-                    cyan
-                else
-                    Color.rgb(
-                        55,
-                        130,
-                        210
-                    )
-            )
-    }
-
-    // =========================================================
-    // INTERFACE STATE
-    // =========================================================
-
-    private fun updateInterface() {
-
-        if (
-            active
-        ) {
-
-            systemText.text =
-                "SYSTEM ONLINE  |  ACTIVE"
-
-        } else {
-
-            systemText.text =
-                "SYSTEM ONLINE"
-        }
-
-        statusText.text =
-            "READY"
-
-        coreText.text =
-            "AURIX"
-
-        waveform.running =
-            false
-
-        updateVoiceButton(
-            "  🎙   Tap to activate AURIX",
-            false
-        )
-    }
-
-    // =========================================================
-    // SYSTEM STATE
-    // =========================================================
-
-    private fun updateSystemState() {
-
-        if (
-            !::systemText.isInitialized
-        ) {
-            return
-        }
-
-        systemText.text =
-            if (active)
-                "SYSTEM ONLINE  |  ACTIVE"
-            else
-                "SYSTEM ONLINE"
-    }
-
-    // =========================================================
-    // OPEN URL
-    // =========================================================
-
-    private fun openUrl(
-        url: String
-    ) {
-
-        try {
-
-            startActivity(
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse(url)
-                )
-            )
-
-        } catch (_: Exception) {
-        }
-    }
-
-    // =========================================================
-    // HOME
-    // =========================================================
-
-    fun goToHomeScreen() {
-
-        try {
-
-            val intent =
-                Intent(
-                    Intent.ACTION_MAIN
-                ).apply {
-
-                    addCategory(
-                        Intent.CATEGORY_HOME
-                    )
-
-                    addCategory(
-                        Intent.CATEGORY_DEFAULT
-                    )
-                }
-
-            startActivity(
-                intent
-            )
-
-        } catch (_: Exception) {
-        }
-    }
-
-    // =========================================================
-    // REGISTER RECEIVER
-    // =========================================================
-
-    private fun registerAurixReceiver() {
-
-        val filter =
-            IntentFilter(
-                AurixService.ACTION_EVENT
-            )
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.TIRAMISU
-        ) {
-
-            registerReceiver(
-                aurixReceiver,
-                filter,
-                Context.RECEIVER_NOT_EXPORTED
-            )
-
-        } else {
-
-            @Suppress("DEPRECATION")
-            registerReceiver(
-                aurixReceiver,
-                filter
-            )
-        }
-    }
-
-    // =========================================================
-    // RESUME
-    // =========================================================
-
-    override fun onResume() {
-
-        super.onResume()
-
-        if (
-            ::statusText.isInitialized
-        ) {
-
-            if (
-                !AurixService.isRunning
-            ) {
-
-                active = false
-
-                updateStatus(
-                    "READY"
+                setStroke(
+                    dp(1),
+                    Color.rgb(80, 150, 240)
                 )
             }
         }
     }
 
     // =========================================================
-    // DESTROY
+    // HELPERS
     // =========================================================
 
-    override fun onDestroy() {
-
-        try {
-
-            unregisterReceiver(
-                aurixReceiver
-            )
-
-        } catch (_: Exception) {
-        }
-
-        try {
-
-            unregisterReceiver(
-                homeReceiver
-            )
-
-        } catch (_: Exception) {
-        }
-
-        super.onDestroy()
-    }
-
-    // =========================================================
-    // DP
-    // =========================================================
-
-    private fun dp(
-        value: Int
-    ): Int {
+    private fun dp(value: Int): Int {
 
         return (
             value *
@@ -2150,141 +832,251 @@ class MainActivity : Activity() {
     // WAVEFORM
     // =========================================================
 
-    private class WaveformView(
+    class WaveformView(
         context: Context
     ) : View(context) {
 
-        private val paint =
-            android.graphics.Paint(
-                android.graphics.Paint.ANTI_ALIAS_FLAG
-            )
+        private val paint = Paint(
+            Paint.ANTI_ALIAS_FLAG
+        )
 
-        private var phase =
-            0f
-
-        var running =
-            false
-            set(value) {
-
-                field =
-                    value
-
-                invalidate()
-            }
-
-        private val handler =
-            android.os.Handler(
-                android.os.Looper.getMainLooper()
-            )
+        private var phase = 0f
 
         private val animator =
-            object : Runnable {
+            ValueAnimator.ofFloat(0f, 6.28f).apply {
 
-                override fun run() {
+                duration = 1200
 
-                    if (
-                        running
-                    ) {
+                repeatCount =
+                    ValueAnimator.INFINITE
 
-                        phase +=
-                            0.22f
+                addUpdateListener {
 
-                        invalidate()
-                    }
+                    phase =
+                        it.animatedValue as Float
 
-                    handler.postDelayed(
-                        this,
-                        40
-                    )
+                    invalidate()
                 }
             }
 
         init {
 
-            paint.strokeWidth =
-                3f
+            paint.strokeWidth = 3f
+            paint.style = Paint.Style.STROKE
 
-            paint.strokeCap =
-                android.graphics.Paint.Cap.ROUND
-
-            handler.post(
-                animator
-            )
+            animator.start()
         }
 
-        override fun onDraw(
-            canvas: android.graphics.Canvas
-        ) {
+        override fun onDraw(canvas: Canvas) {
 
-            super.onDraw(
-                canvas
-            )
+            super.onDraw(canvas)
 
-            val width =
-                width.toFloat()
+            val width = width.toFloat()
+            val height = height.toFloat()
 
-            val center =
+            val centerY =
                 height / 2f
 
-            val count =
-                25
+            val path = Path()
 
-            val gap =
-                width / count
+            for (x in 0..width.toInt()) {
 
-            paint.color =
-                Color.rgb(
-                    75,
-                    200,
-                    255
-                )
+                val normalized =
+                    x / width
 
-            for (
-                i in 0 until count
-            ) {
+                val y =
+                    centerY +
+                        sin(
+                            normalized * 14 +
+                                phase
+                        ) * 10
 
-                val x =
-                    gap *
-                        i +
-                        gap / 2f
+                if (x == 0) {
+                    path.moveTo(
+                        x.toFloat(),
+                        y.toFloat()
+                    )
+                } else {
+                    path.lineTo(
+                        x.toFloat(),
+                        y.toFloat()
+                    )
+                }
+            }
 
-                val wave =
-                    kotlin.math.sin(
-                        (
-                            phase +
-                                i *
-                                0.55f
-                        ).toDouble()
-                    ).toFloat()
+            canvas.drawPath(
+                path,
+                paint
+            )
+        }
+    }
 
-                val heightValue =
-                    if (
-                        running
-                    ) {
+    // =========================================================
+    // AURIX ORB
+    // =========================================================
 
-                        7f +
-                            (
-                                kotlin.math.abs(
-                                    wave
-                                ) *
-                                    17f
-                            )
+    class AurixOrbView(
+        context: Context
+    ) : View(context) {
 
-                    } else {
+        private val paint =
+            Paint(Paint.ANTI_ALIAS_FLAG)
 
-                        5f
-                    }
+        private var rotation = 0f
 
-                canvas.drawLine(
-                    x,
-                    center -
-                        heightValue,
-                    x,
-                    center +
-                        heightValue,
+        private val animator =
+            ValueAnimator.ofFloat(0f, 360f).apply {
+
+                duration = 5000
+
+                repeatCount =
+                    ValueAnimator.INFINITE
+
+                addUpdateListener {
+
+                    rotation =
+                        it.animatedValue as Float
+
+                    invalidate()
+                }
+            }
+
+        init {
+            animator.start()
+        }
+
+        override fun onDraw(canvas: Canvas) {
+
+            super.onDraw(canvas)
+
+            val cx = width / 2f
+            val cy = height / 2f
+
+            val radius =
+                minOf(width, height) * 0.30f
+
+            // Outer glow
+            paint.style = Paint.Style.FILL
+
+            for (i in 5 downTo 1) {
+
+                paint.shader =
+                    RadialGradient(
+                        cx,
+                        cy,
+                        radius * i,
+                        intArrayOf(
+                            Color.argb(
+                                35,
+                                70,
+                                180,
+                                255
+                            ),
+                            Color.TRANSPARENT
+                        ),
+                        null,
+                        Shader.TileMode.CLAMP
+                    )
+
+                canvas.drawCircle(
+                    cx,
+                    cy,
+                    radius * i,
                     paint
                 )
             }
+
+            // Main orb
+            paint.shader =
+                RadialGradient(
+                    cx - radius * 0.3f,
+                    cy - radius * 0.3f,
+                    radius * 1.4f,
+                    intArrayOf(
+                        Color.rgb(130, 230, 255),
+                        Color.rgb(70, 90, 230),
+                        Color.rgb(30, 20, 90)
+                    ),
+                    null,
+                    Shader.TileMode.CLAMP
+                )
+
+            canvas.drawCircle(
+                cx,
+                cy,
+                radius,
+                paint
+            )
+
+            // Rotating ring
+            paint.shader = null
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 3f
+            paint.setColor(
+                Color.rgb(90, 210, 255)
+            )
+
+            canvas.save()
+
+            canvas.rotate(
+                rotation,
+                cx,
+                cy
+            )
+
+            canvas.drawArc(
+                cx - radius * 1.18f,
+                cy - radius * 1.18f,
+                cx + radius * 1.18f,
+                cy + radius * 1.18f,
+                20f,
+                100f,
+                false,
+                paint
+            )
+
+            canvas.drawArc(
+                cx - radius * 1.32f,
+                cy - radius * 1.32f,
+                cx + radius * 1.32f,
+                cy + radius * 1.32f,
+                190f,
+                70f,
+                false,
+                paint
+            )
+
+            canvas.restore()
+
+            // AURIX text
+            paint.style = Paint.Style.FILL
+            paint.shader = null
+            paint.textAlign = Paint.Align.CENTER
+            paint.typeface =
+                Typeface.DEFAULT_BOLD
+            paint.textSize = radius * 0.27f
+            paint.setColor(Color.WHITE)
+
+            canvas.drawText(
+                "AURIX",
+                cx,
+                cy + radius * 0.08f,
+                paint
+            )
+
+            paint.textSize =
+                radius * 0.09f
+
+            paint.setColor(
+                Color.rgb(160, 220, 255)
+            )
+
+            canvas.drawText(
+                "CORE",
+                cx,
+                cy + radius * 0.32f,
+                paint
+            )
         }
     }
 }
