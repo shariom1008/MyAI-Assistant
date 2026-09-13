@@ -18,7 +18,6 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -169,86 +168,54 @@ private fun signInWithGoogle() {
 
         try {
 
+            val webClientId =
+                getString(R.string.default_web_client_id)
+
+            Log.d(
+                "AURIX_AUTH",
+                "Starting Sign in with Google button flow"
+            )
+
+            Log.d(
+                "AURIX_AUTH",
+                "Web client ID: $webClientId"
+            )
+
             // ---------------------------------------------
-            // STEP 1: Previously authorized Google accounts
+            // GOOGLE BUTTON FLOW
             // ---------------------------------------------
 
-            val authorizedOption =
-                GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(true)
-                    .setServerClientId(
-                        getString(R.string.default_web_client_id)
-                    )
-                    .setAutoSelectEnabled(false)
+            val googleOption =
+                GetSignInWithGoogleOption.Builder(
+                    serverClientId = webClientId
+                )
                     .setNonce(
                         generateSecureRandomNonce()
                     )
                     .build()
 
-            val authorizedRequest =
+            val request =
                 GetCredentialRequest.Builder()
                     .addCredentialOption(
-                        authorizedOption
+                        googleOption
                     )
                     .build()
 
+            // Android recommends MutableContextWrapper
+            // with the foreground Activity.
             val mutableContext =
                 MutableContextWrapper(
                     this@AuthActivity
                 )
 
-            Log.d(
-                "AURIX_AUTH",
-                "Trying authorized Google accounts..."
-            )
-
-            val result = try {
-
+            val result =
                 credentialManager.getCredential(
                     context = mutableContext,
-                    request = authorizedRequest
+                    request = request
                 )
-
-            } catch (e: androidx.credentials.exceptions.NoCredentialException) {
-
-                // -----------------------------------------
-                // STEP 2: No authorized account -> all users
-                // -----------------------------------------
-
-                Log.d(
-                    "AURIX_AUTH",
-                    "No authorized account. Trying all accounts..."
-                )
-
-                val allAccountsOption =
-                    GetGoogleIdOption.Builder()
-                        .setFilterByAuthorizedAccounts(false)
-                        .setServerClientId(
-                            getString(
-                                R.string.default_web_client_id
-                            )
-                        )
-                        .setAutoSelectEnabled(false)
-                        .setNonce(
-                            generateSecureRandomNonce()
-                        )
-                        .build()
-
-                val allAccountsRequest =
-                    GetCredentialRequest.Builder()
-                        .addCredentialOption(
-                            allAccountsOption
-                        )
-                        .build()
-
-                credentialManager.getCredential(
-                    context = mutableContext,
-                    request = allAccountsRequest
-                )
-            }
 
             // ---------------------------------------------
-            // TOKEN TEST
+            // GOOGLE CREDENTIAL
             // ---------------------------------------------
 
             val credential =
@@ -267,20 +234,11 @@ private fun signInWithGoogle() {
                 "Google ID token received successfully"
             )
 
-            android.app.AlertDialog.Builder(
-                this@AuthActivity
-            )
-                .setTitle("AURIX TEST")
-                .setMessage(
-                    "TOKEN RECEIVED\n\n" +
-                        "Google CredentialManager is working.\n\n" +
-                        "Firebase is still bypassed for this test."
-                )
-                .setPositiveButton(
-                    "OK",
-                    null
-                )
-                .show()
+            // ---------------------------------------------
+            // FIREBASE
+            // ---------------------------------------------
+
+            firebaseAuthWithGoogle(idToken)
 
         } catch (e: GetCredentialException) {
 
@@ -293,7 +251,7 @@ private fun signInWithGoogle() {
             android.app.AlertDialog.Builder(
                 this@AuthActivity
             )
-                .setTitle("GOOGLE TEST FAILED")
+                .setTitle("GOOGLE LOGIN FAILED")
                 .setMessage(
                     "${e.javaClass.name}\n\n" +
                         "${e.message ?: "No error message"}"
@@ -315,7 +273,7 @@ private fun signInWithGoogle() {
             android.app.AlertDialog.Builder(
                 this@AuthActivity
             )
-                .setTitle("AURIX TEST ERROR")
+                .setTitle("GOOGLE LOGIN ERROR")
                 .setMessage(
                     "${e.javaClass.name}\n\n" +
                         "${e.message ?: "No error message"}"
