@@ -102,10 +102,6 @@ class AurixService :
     @Volatile
     private var aiRequestInProgress = false
 
-    @Volatile
-    private var waitingForAIConfirmation = false
-
-    private var pendingAICommand = ""
         
     // =========================================================
     // CREATE
@@ -137,6 +133,8 @@ class AurixService :
                 this,
                 this
             )
+
+        startListening()
     }
 
     // =========================================================
@@ -175,30 +173,22 @@ class AurixService :
                 restarting = false
                 wakeWordMode = false
 
-                handler.removeCallbacksAndMessages(null)
-
                 try {
                     speechRecognizer?.cancel()
-                    speechRecognizer?.destroy()
                 } catch (_: Exception) {
                 }
 
-                speechRecognizer = null
                 listening = false
+                startListening()
+            }
 
-                // Give Android time to fully release the previous
-                // SpeechRecognizer session before creating a new one.
-                handler.postDelayed({
+            else -> {
 
-                    if (
-                        isRunning &&
-                        !serviceDestroyed &&
-                        !listening
-                    ) {
-                        startListening()
-                    }
+                wakeWordMode = true
 
-                }, 600)
+                if (!listening) {
+                    startListening()
+                }
             }
         }
 
@@ -324,323 +314,181 @@ class AurixService :
         )
     }
 
-// =========================================================
-// SPEECH RECOGNITION
-// =========================================================
+    // =========================================================
+    // SPEECH RECOGNITION
+    // =========================================================
 
-private fun startListening() {
+    private fun startListening() {
 
-    if (serviceDestroyed || !isRunning) {
-        return
-    }
-
-    if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-        sendStatus("Speech recognition unavailable")
-        return
-    }
-
-    try {
-
-        // Make sure previous recognition session is not running.
-        try {
-            speechRecognizer?.cancel()
-        } catch (_: Exception) {
+        if (
+            serviceDestroyed ||
+            !isRunning
+        ) {
+            return
         }
 
-        if (speechRecognizer == null) {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            sendStatus("Speech recognition unavailable")
+            return
+        }
 
-            speechRecognizer =
-                SpeechRecognizer.createSpeechRecognizer(this)
+        try {
+            if (speechRecognizer == null) {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
 
-            speechRecognizer?.setRecognitionListener(
-                object : RecognitionListener {
+                speechRecognizer?.setRecognitionListener(
+                    object : RecognitionListener {
 
-                    override fun onReadyForSpeech(params: Bundle?) {
-                        listening = true
-
-                        sendStatus(
-                            if (wakeWordMode)
-                                "HEY AURIX READY"
-                            else
-                                "LISTENING"
-                        )
-                    }
-
-                    override fun onBeginningOfSpeech() {
-                        sendStatus("THINKING")
-                    }
-
-                    override fun onRmsChanged(rmsdB: Float) {
-                    }
-
-                    override fun onBufferReceived(buffer: ByteArray?) {
-                    }
-
-                    override fun onEndOfSpeech() {
-                    }
-
-                    override fun onError(error: Int) {
-
-                        listening = false
-
-                        if (!isRunning || serviceDestroyed) {
-                            return
+                        override fun onReadyForSpeech(params: Bundle?) {
+                            listening = true
+                            sendStatus(if (wakeWordMode) "HEY AURIX READY" else "LISTENING")
                         }
 
-                        /*
-                         * Important:
-                         * Manual tap mode should also recover from
-                         * temporary SpeechRecognizer errors.
-                         */
-
-                        if (!wakeWordMode) {
-                            sendStatus("READY")
-                            return
+                        override fun onBeginningOfSpeech() {
+                            sendStatus("THINKING")
                         }
 
-                        restartListening()
-                    }
+                        override fun onRmsChanged(rmsdB: Float) {}
+                        override fun onBufferReceived(buffer: ByteArray?) {}
+                        override fun onEndOfSpeech() {}
 
-                    override fun onResults(results: Bundle?) {
+                        override fun onError(error: Int) {
+                            listening = false
 
-                        listening = false
+                            // One-shot mode must end after one recognition attempt.
+                            if (!wakeWordMode) {
+                                sendStatus("READY")
+                                return
+                            }
 
-                        if (!isRunning || serviceDestroyed) {
-                            return
+                            if (isRunning && !serviceDestroyed) {
+                                restartListening()
+                            }
                         }
 
-                        val text =
-                            results
-                                ?.getStringArrayList(
-                                    SpeechRecognizer.RESULTS_RECOGNITION
-                                )
+                        override fun onResults(results: Bundle?) {
+                            listening = false
+
+                            val text = results
+                                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                                 ?.firstOrNull()
                                 ?.trim()
                                 ?.lowercase(Locale.getDefault())
                                 .orEmpty()
 
-                        if (text.isBlank()) {
+                            if (text.isBlank()) {
+                                if (wakeWordMode && isRunning && !serviceDestroyed) {
+                                    restartListening()
+                                }
+                                return
+                            }
+
+                            // Never interpret YouTube/music audio as a command.
+                            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                            if (audioManager.isMusicActive) {
+                                if (wakeWordMode && isRunning && !serviceDestroyed) {
+                                    restartListening()
+                                }
+                                return
+                            }
 
                             if (wakeWordMode) {
-                                restartListening()
-                            } else {
-                                sendStatus("READY")
-                            }
+                                val wake = Regex("\\b(hey|hi|hello)\\s+aurix\\b")
+                                val match = wake.find(text)
 
-                            return
-                        }
-
-                        /*
-                         * DO NOT reject recognition just because
-                         * music is currently playing.
-                         *
-                         * SpeechRecognizer itself decides what was heard.
-                         * The old isMusicActive check could throw away
-                         * perfectly valid commands.
-                         */
-
-                        if (wakeWordMode) {
-
-                            val wake =
-                                Regex(
-                                    "\\b(hey|hi|hello)\\s+aurix\\b",
-                                    RegexOption.IGNORE_CASE
-                                )
-
-                            val match = wake.find(text)
-
-                            if (match == null) {
-                                restartListening()
-                                return
-                            }
-
-                            val command =
-                                text
-                                    .substring(match.range.last + 1)
-                                    .trim(
-                                        ' ',
-                                        ',',
-                                        '.',
-                                        ':',
-                                        '-'
-                                    )
-
-                            if (command.isBlank()) {
-
-                                wakeWordMode = false
-
-                                sendStatus("LISTENING")
-
-                                handler.postDelayed({
-
-                                    if (
-                                        isRunning &&
-                                        !serviceDestroyed &&
-                                        !listening
-                                    ) {
-                                        startListening()
-                                    }
-
-                                }, 500)
-
-                                return
-                            }
-
-                            // Wake word + command in one sentence.
-                            sendCommand(command)
-
-                            handler.postDelayed({
-
-                                if (
-                                    isRunning &&
-                                    !serviceDestroyed
-                                ) {
-
-                                    processCommand(command)
-
-                                    wakeWordMode = true
-
-                                    handler.postDelayed({
-
-                                        if (
-                                            isRunning &&
-                                            !serviceDestroyed &&
-                                            !listening
-                                        ) {
-                                            startListening()
-                                        }
-
-                                    }, 1800)
+                                if (match == null) {
+                                    restartListening()
+                                    return
                                 }
 
-                            }, 300)
+                                val command = text.substring(match.range.last + 1).trim(' ', ',', '.', ':', '-')
 
-                            return
-                        }
+                                if (command.isBlank()) {
+                                    wakeWordMode = false
+                                    sendStatus("LISTENING")
+                                    handler.postDelayed({
+                                        if (isRunning && !serviceDestroyed && !listening) {
+                                            startListening()
+                                        }
+                                    }, 1200)
+                                    return
+                                }
 
-                        // =================================================
-                        // MANUAL TAP MODE
-                        // =================================================
-
-                        sendCommand(text)
-
-                        handler.postDelayed({
-
-                            if (
-                                isRunning &&
-                                !serviceDestroyed
-                            ) {
-                                processCommand(text)
-                                sendStatus("READY")
+                                sendCommand(command)
+                                handler.postDelayed({
+                                    if (isRunning && !serviceDestroyed) {
+                                        processCommand(command)
+                                        wakeWordMode = true
+                                        handler.postDelayed({
+                                            if (isRunning && !serviceDestroyed && !listening) {
+                                                startListening()
+                                            }
+                                        }, 1800)
+                                    }
+                                }, 300)
+                                return
                             }
 
-                        }, 300)
+                            // Manual tap mode: exactly one command, then return to wake mode.
+                            sendCommand(text)
+                            handler.postDelayed({
+                                if (isRunning && !serviceDestroyed) {
+                                    processCommand(text)
+                                    // One-shot mode ends here. The next tap explicitly starts listening again.
+                                    wakeWordMode = false
+                                    sendStatus("READY")
+                                }
+                            }, 300)
+                        }
+
+                        override fun onPartialResults(partialResults: Bundle?) {}
+                        override fun onEvent(eventType: Int, params: Bundle?) {}
                     }
-
-                    override fun onPartialResults(
-                        partialResults: Bundle?
-                    ) {
-                    }
-
-                    override fun onEvent(
-                        eventType: Int,
-                        params: Bundle?
-                    ) {
-                    }
-                }
-            )
-        }
-
-        val intent =
-            Intent(
-                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
-            ).apply {
-
-                putExtra(
-                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-                )
-
-                /*
-                 * Device default language.
-                 * This keeps Hindi/English/Hinglish recognition
-                 * dependent on the phone's configured speech language.
-                 */
-                putExtra(
-                    RecognizerIntent.EXTRA_LANGUAGE,
-                    Locale.getDefault()
-                )
-
-                putExtra(
-                    RecognizerIntent.EXTRA_PARTIAL_RESULTS,
-                    false
-                )
-
-                putExtra(
-                    RecognizerIntent.EXTRA_MAX_RESULTS,
-                    3
                 )
             }
 
-        speechRecognizer?.startListening(intent)
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            }
 
-    } catch (_: Exception) {
+            speechRecognizer?.startListening(intent)
 
+        } catch (_: Exception) {
+            listening = false
+            if (wakeWordMode) {
+                restartListening()
+            }
+        }
+    }
+
+    // =========================================================
+    // SAFE RESTART
+    // =========================================================
+
+    private fun restartListening() {
+
+        if (
+            restarting ||
+            !isRunning ||
+            serviceDestroyed ||
+            !wakeWordMode
+        ) {
+            return
+        }
+
+        restarting = true
         listening = false
 
-        if (
-            isRunning &&
-            !serviceDestroyed
-        ) {
-
-            handler.postDelayed({
-
-                if (
-                    isRunning &&
-                    !serviceDestroyed &&
-                    !listening
-                ) {
-                    startListening()
-                }
-
-            }, 1000)
-        }
+        handler.postDelayed({
+            restarting = false
+            if (isRunning && !serviceDestroyed && wakeWordMode) {
+                startListening()
+            }
+        }, 1200)
     }
-}
-
-
-// =========================================================
-// SAFE RESTART
-// =========================================================
-
-private fun restartListening() {
-
-    if (
-        restarting ||
-        !isRunning ||
-        serviceDestroyed
-    ) {
-        return
-    }
-
-    restarting = true
-    listening = false
-
-    handler.postDelayed({
-
-        restarting = false
-
-        if (
-            isRunning &&
-            !serviceDestroyed &&
-            !listening
-        ) {
-            startListening()
-        }
-
-    }, 1000)
-}
-
 
     // =========================================================
     // MAIN COMMAND ENGINE
@@ -664,56 +512,6 @@ private fun restartListening() {
             return
         }
 
-        // =====================================================
-// AI SEARCH PERMISSION RESPONSE
-// =====================================================
-
-if (waitingForAIConfirmation) {
-
-    when (command) {
-
-        "yes",
-        "haan",
-        "ha",
-        "han" -> {
-
-            waitingForAIConfirmation = false
-
-            val aiCommand =
-                pendingAICommand
-
-            pendingAICommand = ""
-
-            if (aiCommand.isNotBlank()) {
-                askFinalAI(aiCommand)
-            }
-
-            return
-        }
-
-        "no",
-        "nahi",
-        "nahin",
-        "naa",
-        "na" -> {
-
-            waitingForAIConfirmation = false
-            pendingAICommand = ""
-
-            speakOnce(
-                "Theek hai Boss."
-            )
-
-            return
-        }
-
-        else -> {
-            return
-        }
-    }
-}
-
-        
         // =========================================================
 // AURIX LOCAL PRIORITY COMMANDS
 // OWNER + DATE + DAY + TIME
@@ -2130,19 +1928,17 @@ if (
 
 
 // =========================================================
-// FINAL AI FALLBACK - PERMISSION FIRST
+// FINAL AI FALLBACK - DIRECT INTELLIGENCE
 // =========================================================
 
 if (aiRequestInProgress) {
     return
 }
 
-pendingAICommand = command
-waitingForAIConfirmation = true
-
-speakOnce(
-    "Boss, ultra search karu?"
-)
+// AURIX should feel like an assistant, not a search gate.
+// Local/device/action handlers above get first priority.
+// Anything still unresolved is sent directly to the AI brain.
+askFinalAI(command)
 
 return
 }
@@ -3593,55 +3389,40 @@ private fun askFinalAI(
 
     private fun openCamera() {
 
-        val intents =
-            listOf(
+        try {
+
+            val cameraIntent =
                 Intent(
-                    MediaStore
-                        .ACTION_IMAGE_CAPTURE
-                ),
-                Intent(
-                    "android.media.action.IMAGE_CAPTURE"
-                )
-            )
-
-        for (
-            intent in intents
-        ) {
-
-            try {
-
-                intent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-
-                if (
-                    packageManager
-                        .queryIntentActivities(
-                            intent,
-                            PackageManager
-                                .MATCH_DEFAULT_ONLY
-                        )
-                        .isNotEmpty()
-                ) {
-
-                    startActivity(
-                        intent
+                    MediaStore.ACTION_IMAGE_CAPTURE
+                ).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
                     )
-
-                    speakOnce(
-                        "Opening camera."
-                    )
-
-                    return
                 }
 
-            } catch (_: Exception) {
-            }
-        }
+            // Do not depend on package names or queryIntentActivities().
+            // Android 11+ package visibility can make a valid camera app
+            // appear invisible to package queries. Let Android resolve the
+            // camera intent directly and only report unavailable when the
+            // actual activity launch fails.
+            startActivity(cameraIntent)
 
-        speakOnce(
-            "Camera is not available."
-        )
+            speakOnce(
+                "Opening camera."
+            )
+
+        } catch (_: android.content.ActivityNotFoundException) {
+
+            speakOnce(
+                "Camera is not available."
+            )
+
+        } catch (_: Exception) {
+
+            speakOnce(
+                "I could not open the camera."
+            )
+        }
     }
 
     // =========================================================
@@ -4569,592 +4350,147 @@ override fun onInit(
     }
 }
 
-// =// =========================================================
+// =========================================================
 // AURIX RESPONSE LOCALIZATION
 // =========================================================
 
-private fun aurixResponse(text: String): String {
+private fun aurixResponse(
+    text: String
+): String {
+
     val t = text.trim()
 
+    if (t.isBlank()) return t
+
     return when {
+        t == "Opening YouTube." -> "Boss, YouTube khol raha hoon."
+        t == "Opening camera." -> "Boss, camera khol raha hoon."
+        t == "Opening gallery." -> "Boss, gallery khol raha hoon."
+        t == "Opening music." -> "Boss, music khol raha hoon."
+        t == "Opening notes." -> "Boss, notes khol raha hoon."
+        t == "Opening calculator." -> "Boss, calculator khol raha hoon."
+        t == "Opening Chrome." -> "Boss, Chrome khol raha hoon."
+        t == "Opening Maps." -> "Boss, Maps khol raha hoon."
+        t == "Opening phone." -> "Boss, phone khol raha hoon."
+        t == "Opening settings." -> "Boss, settings khol raha hoon."
+        t == "Opening Wi-Fi settings." -> "Boss, Wi-Fi settings khol raha hoon."
 
-        // -------------------------------------------------
-        // APP / NAVIGATION
-        // -------------------------------------------------
+        t == "Volume increased." -> "Boss, volume badha diya."
+        t == "Volume decreased." -> "Boss, volume kam kar diya."
+        t == "Media control executed." -> "Boss, media control kar diya."
 
-        t == "YouTube opened." ->
-            "Boss, YouTube open kar diya."
+        t == "Flashlight turned on." -> "Boss, flashlight on kar di."
+        t == "Flashlight turned off." -> "Boss, flashlight off kar di."
+        t == "Flashlight is not available." -> "Boss, flashlight available nahi hai."
 
-        t == "Phone opened." ->
-            "Boss, Phone open kar diya."
+        t == "Camera is not available." -> "Boss, camera available nahi hai."
+        t == "Gallery is not available." -> "Boss, gallery available nahi hai."
+        t == "Music app is not available." -> "Boss, music app available nahi hai."
+        t == "Notes app is not available." -> "Boss, notes app available nahi hai."
+        t == "Calculator is not available." -> "Boss, calculator available nahi hai."
+        t == "YouTube is not available." -> "Boss, YouTube available nahi hai."
+        t == "Browser is not available." -> "Boss, browser available nahi hai."
+        t == "Maps is not available." -> "Boss, Maps available nahi hai."
+        t == "Phone app is not available." -> "Boss, phone app available nahi hai."
+        t == "Settings is not available." -> "Boss, settings available nahi hain."
+        t == "Wi-Fi settings are not available." -> "Boss, Wi-Fi settings available nahi hain."
 
-        t == "Settings opened." ->
-            "Boss, Settings open kar di."
+        t == "I could not control the flashlight." -> "Boss, main flashlight control nahi kar saka."
+        t == "I could not change the volume." -> "Boss, main volume change nahi kar saka."
+        t == "I could not control media." -> "Boss, main media control nahi kar saka."
+        t == "I could not check the battery." -> "Boss, main battery check nahi kar saka."
+        t == "I could not search that." -> "Boss, main uski search nahi kar saka."
+        t == "I could not open YouTube." -> "Boss, main YouTube nahi khol saka."
+        t == "I could not open Maps." -> "Boss, main Maps nahi khol saka."
 
-        t == "Opening YouTube." ->
-            "Boss, YouTube open kar raha hoon."
-
-        t == "Opening camera." ->
-            "Boss, camera open kar raha hoon."
-
-        t == "Opening gallery." ->
-            "Boss, Gallery open kar raha hoon."
-
-        t == "Opening music." ->
-            "Boss, music open kar raha hoon."
-
-        t == "Opening notes." ->
-            "Boss, Notes open kar raha hoon."
-
-        t == "Opening calculator." ->
-            "Boss, Calculator open kar raha hoon."
-
-        // -------------------------------------------------
-        // CONTROL
-        // -------------------------------------------------
-
-        t == "Volume increased." ->
-            "Boss, volume badha diya."
-
-        t == "Volume decreased." ->
-            "Boss, volume kam kar diya."
-
-        t == "Flashlight turned on." ->
-            "Boss, flashlight on kar di."
-
-        t == "Flashlight turned off." ->
-            "Boss, flashlight off kar di."
-
-        t == "I could not control the flashlight." ->
-            "Boss, flashlight control nahi ho payi."
-
-        t == "I could not change the volume." ->
-            "Boss, volume change nahi ho paya."
-
-        t == "I could not control media." ->
-            "Boss, media control nahi ho paya."
-
-        t == "I could not check the battery." ->
-            "Boss, battery check nahi ho payi."
-
-        // -------------------------------------------------
-        // APP NOT AVAILABLE
-        // -------------------------------------------------
-
-        t == "Camera is not available." ->
-            "Boss, camera available nahi hai."
-
-        t == "Gallery is not available." ->
-            "Boss, Gallery available nahi hai."
-
-        t == "Music app is not available." ->
-            "Boss, Music app available nahi hai."
-
-        t == "Notes app is not available." ->
-            "Boss, Notes app available nahi hai."
-
-        t == "Calculator is not available." ->
-            "Boss, Calculator available nahi hai."
-
-        t == "YouTube is not available." ->
-            "Boss, YouTube available nahi hai."
-
-        t == "Browser is not available." ->
-            "Boss, Browser available nahi hai."
-
-        t == "Maps is not available." ->
-            "Boss, Maps available nahi hai."
-
-        t == "Phone app is not available." ->
-            "Boss, Phone app available nahi hai."
-
-        t == "Settings is not available." ->
-            "Boss, Settings available nahi hai."
-
-        // -------------------------------------------------
-        // MEMORY
-        // -------------------------------------------------
-
-        t == "Got it. I'll remember that." ->
-            "Got it boss, main ise yaad rakhunga."
-
-        t == "Okay. I'll forget that." ->
-            "Okay boss, main ise bhool jaunga."
-
-        t == "Tell me what you want me to forget." ->
-            "Boss, batao kya bhoolna hai."
-
-        t == "I don't have any personal memory about you yet." ->
-            "Boss, abhi mere paas aapki koi personal memory nahi hai."
-
-        t == "I've cleared my personal memory." ->
-            "Boss, aapki personal memory clear kar di."
-
-        t == "All personal memory has been cleared." ->
-            "Boss, saari personal memory clear kar di."
-
-        // -------------------------------------------------
-        // TIMER
-        // -------------------------------------------------
+        t == "Got it. I'll remember that." -> "Got it boss, main ye yaad rakhunga."
+        t == "I've cleared my personal memory." -> "Boss, maine tumhari personal memory clear kar di."
+        t == "Okay. I'll forget that." -> "Okay boss, main ye bhool jaunga."
+        t == "Tell me what you want me to forget." -> "Boss, batao tum kya bhulwana chahte ho."
+        t == "I don't have any personal memory about you yet." -> "Boss, mere paas abhi tumhare baare mein koi personal memory nahi hai."
+        t == "All personal memory has been cleared." -> "Boss, saari personal memory clear kar di."
 
         Regex("(\\d+) hour timer started").matches(t) -> {
-            val value = Regex("(\\d+) hour timer started")
-                .find(t)
-                ?.groupValues
-                ?.get(1)
-                ?: ""
-
-            "$value ghante ka timer start kar diya boss."
-        }
-
-        Regex("(\\d+) minute timer started").matches(t) -> {
-            val value = Regex("(\\d+) minute timer started")
-                .find(t)
-                ?.groupValues
-                ?.get(1)
-                ?: ""
-
-            "$value minute ka timer start kar diya boss."
-        }
-
-        Regex("(\\d+) second timer started").matches(t) -> {
-            val value = Regex("(\\d+) second timer started")
-                .find(t)
-                ?.groupValues
-                ?.get(1)
-                ?: ""
-
-            "$value second ka timer start kar diya boss."
-        }
-
-        t == "Please tell me the timer duration." ->
-            "Boss, timer kitne time ka lagana hai?"
-
-        // -------------------------------------------------
-        // APP OPENING
-        // -------------------------------------------------
-
-        t == "Opening YouTube." ->
-            "Boss, YouTube khol raha hoon."
-
-        t == "Opening camera." ->
-            "Boss, camera khol raha hoon."
-
-        t == "Opening gallery." ->
-            "Boss, gallery khol raha hoon."
-
-        t == "Opening music." ->
-            "Boss, music khol raha hoon."
-
-        t == "Opening notes." ->
-            "Boss, notes khol raha hoon."
-
-        t == "Opening calculator." ->
-            "Boss, calculator khol raha hoon."
-
-        t == "Opening Chrome." ->
-            "Boss, Chrome khol raha hoon."
-
-        t == "Opening Maps." ->
-            "Boss, Maps khol raha hoon."
-
-        t == "Opening phone." ->
-            "Boss, phone khol raha hoon."
-
-        t == "Opening settings." ->
-            "Boss, settings khol raha hoon."
-
-        t == "Opening Wi-Fi settings." ->
-            "Boss, Wi-Fi settings khol raha hoon."
-
-
-        // -------------------------------------------------
-        // VOLUME / MEDIA
-        // -------------------------------------------------
-
-        t == "Volume increased." ->
-            "Boss, volume badha diya."
-
-        t == "Volume decreased." ->
-            "Boss, volume kam kar diya."
-
-        t == "Media control executed." ->
-            "Boss, media control kar diya."
-
-
-        // -------------------------------------------------
-        // FLASHLIGHT
-        // -------------------------------------------------
-
-        t == "Flashlight turned on." ->
-            "Boss, flashlight on kar di."
-
-        t == "Flashlight turned off." ->
-            "Boss, flashlight off kar di."
-
-        t == "Flashlight is not available." ->
-            "Boss, flashlight available nahi hai."
-
-
-        // -------------------------------------------------
-        // DEVICE ERRORS
-        // -------------------------------------------------
-
-        t == "Camera is not available." ->
-            "Boss, camera available nahi hai."
-
-        t == "Gallery is not available." ->
-            "Boss, gallery available nahi hai."
-
-        t == "Music app is not available." ->
-            "Boss, music app available nahi hai."
-
-        t == "Notes app is not available." ->
-            "Boss, notes app available nahi hai."
-
-        t == "Calculator is not available." ->
-            "Boss, calculator available nahi hai."
-
-        t == "YouTube is not available." ->
-            "Boss, YouTube available nahi hai."
-
-        t == "Browser is not available." ->
-            "Boss, browser available nahi hai."
-
-        t == "Maps is not available." ->
-            "Boss, Maps available nahi hai."
-
-        t == "Phone app is not available." ->
-            "Boss, phone app available nahi hai."
-
-        t == "Settings is not available." ->
-            "Boss, settings available nahi hain."
-
-        t == "Wi-Fi settings are not available." ->
-            "Boss, Wi-Fi settings available nahi hain."
-
-
-        // -------------------------------------------------
-        // CONTROL ERRORS
-        // -------------------------------------------------
-
-        t == "I could not control the flashlight." ->
-            "Boss, main flashlight control nahi kar saka."
-
-        t == "I could not change the volume." ->
-            "Boss, main volume change nahi kar saka."
-
-        t == "I could not control media." ->
-            "Boss, main media control nahi kar saka."
-
-        t == "I could not check the battery." ->
-            "Boss, main battery check nahi kar saka."
-
-        t == "I could not search that." ->
-            "Boss, main uski search nahi kar saka."
-
-        t == "I could not open YouTube." ->
-            "Boss, main YouTube nahi khol saka."
-
-        t == "I could not open Maps." ->
-            "Boss, main Maps nahi khol saka."
-
-
-        // -------------------------------------------------
-        // MEMORY
-        // -------------------------------------------------
-
-        t == "Got it. I'll remember that." ->
-            "Got it boss, main ye yaad rakhunga."
-
-        t == "I've cleared my personal memory." ->
-            "Boss, maine tumhari personal memory clear kar di."
-
-        t == "Okay. I'll forget that." ->
-            "Okay boss, main ye bhool jaunga."
-
-        t == "Tell me what you want me to forget." ->
-            "Boss, batao tum kya bhulwana chahte ho."
-
-        t == "I don't have any personal memory about you yet." ->
-            "Boss, mere paas abhi tumhare baare mein koi personal memory nahi hai."
-
-        t == "All personal memory has been cleared." ->
-            "Boss, saari personal memory clear kar di."
-
-
-        // -------------------------------------------------
-        // TIMER
-        // -------------------------------------------------
-
-        Regex(
-            "(\\d+) hour timer started"
-        ).matches(t) -> {
-
-            val value =
-                Regex(
-                    "(\\d+) hour timer started"
-                )
-                    .find(t)
-                    ?.groupValues
-                    ?.get(1)
-                    ?: ""
-
+            val value = Regex("(\\d+) hour timer started").find(t)?.groupValues?.get(1).orEmpty()
             "Boss, $value hour ka timer start kar diya."
         }
-
-        Regex(
-            "(\\d+) minute timer started"
-        ).matches(t) -> {
-
-            val value =
-                Regex(
-                    "(\\d+) minute timer started"
-                )
-                    .find(t)
-                    ?.groupValues
-                    ?.get(1)
-                    ?: ""
-
+        Regex("(\\d+) minute timer started").matches(t) -> {
+            val value = Regex("(\\d+) minute timer started").find(t)?.groupValues?.get(1).orEmpty()
             "Boss, $value minute ka timer start kar diya."
         }
-
-        Regex(
-            "(\\d+) second timer started"
-        ).matches(t) -> {
-
-            val value =
-                Regex(
-                    "(\\d+) second timer started"
-                )
-                    .find(t)
-                    ?.groupValues
-                    ?.get(1)
-                    ?: ""
-
+        Regex("(\\d+) second timer started").matches(t) -> {
+            val value = Regex("(\\d+) second timer started").find(t)?.groupValues?.get(1).orEmpty()
             "Boss, $value second ka timer start kar diya."
         }
+        t == "Please tell me the timer duration." -> "Boss, timer kitne time ka lagana hai?"
 
-        t == "Please tell me the timer duration." ->
-            "Boss, timer kitne time ka lagana hai?"
+        t == "That is not a valid alarm time." -> "Boss, ye valid alarm time nahi hai."
+        t == "Please tell me the alarm time, for example seven PM." -> "Boss, alarm ka time batao, jaise seven PM."
 
-
-        // -------------------------------------------------
-        // ALARM
-        // -------------------------------------------------
-
-        t == "That is not a valid alarm time." ->
-            "Boss, ye valid alarm time nahi hai."
-
-        t == "Please tell me the alarm time, for example seven PM." ->
-            "Boss, alarm ka time batao, jaise seven PM."
-
-        t.startsWith("Alarm set for ") &&
-                t.endsWith(".") -> {
-
-            val time =
-                t.removePrefix(
-                    "Alarm set for "
-                ).removeSuffix(".")
-
+        t.startsWith("Alarm set for ") && t.endsWith(".") -> {
+            val time = t.removePrefix("Alarm set for ").removeSuffix(".")
             "Boss, $time ka alarm set kar diya."
         }
-
-
-        // -------------------------------------------------
-        // DATE / DAY / TIME
-        // -------------------------------------------------
-
-        t.startsWith("Today is ") &&
-                t.endsWith(".") -> {
-
-            val value =
-                t.removePrefix(
-                    "Today is "
-                ).removeSuffix(".")
-
+        t.startsWith("Today is ") && t.endsWith(".") -> {
+            val value = t.removePrefix("Today is ").removeSuffix(".")
             "Boss, aaj $value hai."
         }
-
-        t.startsWith("The time is ") &&
-                t.endsWith(".") -> {
-
-            val value =
-                t.removePrefix(
-                    "The time is "
-                ).removeSuffix(".")
-
+        t.startsWith("The time is ") && t.endsWith(".") -> {
+            val value = t.removePrefix("The time is ").removeSuffix(".")
             "Boss, abhi time $value hai."
         }
-
-
-        // -------------------------------------------------
-        // BATTERY
-        // -------------------------------------------------
-
-        t.startsWith("Battery is at ") &&
-                t.endsWith(" percent.") -> {
-
-            val value =
-                t.removePrefix(
-                    "Battery is at "
-                ).removeSuffix(
-                    " percent."
-                )
-
+        t.startsWith("Battery is at ") && t.endsWith(" percent.") -> {
+            val value = t.removePrefix("Battery is at ").removeSuffix(" percent.")
             "Boss, battery $value percent hai."
         }
 
-
-        // -------------------------------------------------
-        // SEARCH
-        // -------------------------------------------------
-
-        t.startsWith("Searching YouTube for ") &&
-                t.endsWith(".") -> {
-
-            val query =
-                t.removePrefix(
-                    "Searching YouTube for "
-                ).removeSuffix(".")
-
+        t.startsWith("Searching YouTube for ") && t.endsWith(".") -> {
+            val query = t.removePrefix("Searching YouTube for ").removeSuffix(".")
             "Boss, YouTube par $query search kar raha hoon."
         }
-
-        t.startsWith("Opening YouTube search for ") &&
-                t.endsWith(".") -> {
-
-            val query =
-                t.removePrefix(
-                    "Opening YouTube search for "
-                ).removeSuffix(".")
-
+        t.startsWith("Opening YouTube search for ") && t.endsWith(".") -> {
+            val query = t.removePrefix("Opening YouTube search for ").removeSuffix(".")
             "Boss, YouTube par $query search khol raha hoon."
         }
-
-        t.startsWith("Searching Maps for ") &&
-                t.endsWith(".") -> {
-
-            val query =
-                t.removePrefix(
-                    "Searching Maps for "
-                ).removeSuffix(".")
-
+        t.startsWith("Searching Maps for ") && t.endsWith(".") -> {
+            val query = t.removePrefix("Searching Maps for ").removeSuffix(".")
             "Boss, Maps par $query search kar raha hoon."
         }
-
-        t.startsWith("Searching for ") &&
-                t.endsWith(".") -> {
-
-            val query =
-                t.removePrefix(
-                    "Searching for "
-                ).removeSuffix(".")
-
+        t.startsWith("Searching for ") && t.endsWith(".") -> {
+            val query = t.removePrefix("Searching for ").removeSuffix(".")
             "Boss, $query search kar raha hoon."
         }
 
+        t == "Agent completed all planned steps." -> "Boss, saare planned steps complete ho gaye."
+        t == "YouTube opened." -> "Boss, YouTube khul gaya."
+        t == "Phone opened." -> "Boss, phone khul gaya."
+        t == "Settings opened." -> "Boss, settings khul gayi."
+        t == "I couldn't open YouTube." -> "Boss, YouTube nahi khol saka."
+        t == "I couldn't open phone." -> "Boss, phone nahi khol saka."
+        t == "I couldn't open settings." -> "Boss, settings nahi khol saka."
+        t == "I couldn't execute this step." -> "Boss, main ye step execute nahi kar saka."
 
-        // -------------------------------------------------
-        // AGENT
-        // -------------------------------------------------
-
-        t == "Agent completed all planned steps." ->
-            "Boss, saare planned steps complete ho gaye."
-
-        t == "YouTube opened." ->
-            "Boss, YouTube khul gaya."
-
-        t == "Phone opened." ->
-            "Boss, phone khul gaya."
-
-        t == "Settings opened." ->
-            "Boss, settings khul gayi."
-
-        t == "I couldn't open YouTube." ->
-            "Boss, YouTube nahi khol saka."
-
-        t == "I couldn't open phone." ->
-            "Boss, phone nahi khol saka."
-
-        t == "I couldn't open settings." ->
-            "Boss, settings nahi khol saka."
-
-        t == "I couldn't execute this step." ->
-            "Boss, main ye step execute nahi kar saka."
-
-
-        // -------------------------------------------------
-        // APP NOT FOUND
-        // -------------------------------------------------
-
-        t.startsWith(
-            "I couldn't find "
-        ) &&
-                t.endsWith(
-                    " on your phone."
-                ) -> {
-
-            val app =
-                t.removePrefix(
-                    "I couldn't find "
-                ).removeSuffix(
-                    " on your phone."
-                )
-
+        t.startsWith("I couldn't find ") && t.endsWith(" on your phone.") -> {
+            val app = t.removePrefix("I couldn't find ").removeSuffix(" on your phone.")
             "Boss, tumhare phone mein $app nahi mila."
         }
-
-
-        // -------------------------------------------------
-        // GENERIC APP OPENING
-        // -------------------------------------------------
-
-        t.startsWith("Opening ") &&
-                t.endsWith(".") -> {
-
-            val app =
-                t.removePrefix(
-                    "Opening "
-                ).removeSuffix(".")
-
+        t.startsWith("Opening ") && t.endsWith(".") -> {
+            val app = t.removePrefix("Opening ").removeSuffix(".")
             "Boss, $app khol raha hoon."
         }
 
-
-        // -------------------------------------------------
-        // GREETING / IDENTITY
-        // -------------------------------------------------
-
         t == "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?" ->
             "Hello boss, main AURIX hoon. Batao, kya help chahiye?"
-
         t == "Main AURIX hoon, aapka personal AI assistant." ->
             "Main AURIX hoon, aapka personal AI assistant."
-
-
-        // -------------------------------------------------
-        // HOME
-        // -------------------------------------------------
-
         t == "Unable to go to home screen." ->
             "Boss, main home screen par nahi ja saka."
 
-
-        // -------------------------------------------------
-        // FALLBACK
-        // -------------------------------------------------
-
-        else ->
-            t
+        else -> t
     }
 }
 
-    // =========================================================
-    // SPEAK ONCE
-    // =========================================================
-
-    private fun speakOnce(
+private fun speakOnce(
         text: String
     ) {
 
@@ -5213,32 +4549,43 @@ private fun aurixResponse(text: String): String {
         // Do NOT immediately send LISTENING here.
         // TTS needs time to finish.
     }
+
+ // =========================================================
+// AURIX GREETING
+// =========================================================
+
 private fun speakAurixGreeting() {
 
     val hour =
         Calendar.getInstance()
-            .get(Calendar.HOUR_OF_DAY)
+            .get(
+                Calendar.HOUR_OF_DAY
+            )
 
     val greeting =
         when {
+
             hour < 5 ->
-                "Good night boss, abhi kya karna hai?"
+                "啶ㄠぎ啶膏啶む 啶啶膏イ 啶曕ぞ啶 啶︵啶� 啶灌 啶椸 啶灌啷� 啶曕啶� 啶溹ぐ啷傕ぐ啷€ 啶曕ぞ啶� 啶灌 啶曕啶ぞ?"
 
             hour < 12 ->
-                "Good morning boss, aaj kya karna hai?"
+                "啶膏啶啶班き啶距い 啶啶膏イ 啶い啶距啶�, 啶嗋 啶曕啶ぞ 啶曕ぞ啶� 啶曕ぐ啶ㄠぞ 啶灌?"
 
             hour < 17 ->
-                "Good afternoon boss, aaj kya karna hai?"
+                "啶ㄠぎ啶膏啶曕ぞ啶� 啶啶膏イ 啶い啶距啶�, 啶啶� 啶嗋お啶曕 啶侧た啶� 啶曕啶ぞ 啶曕ぐ啷傕?"
 
             hour < 22 ->
-                "Good evening boss, aaj kya karna hai?"
+                "啶多啶� 啶膏啶о啶ぞ 啶啶膏イ 啶い啶距啶�, 啶嗋 啶曕啶ぞ 啶曕ぞ啶� 啶曕ぐ啶ㄠぞ 啶灌?"
 
             else ->
-                "Good night boss, aaj kya karna hai?"
+                "啶ㄠぎ啶膏啶む 啶啶膏イ 啶曕ぞ啶 啶︵啶� 啶灌 啶椸 啶灌啷� 啶曕啶� 啶溹ぐ啷傕ぐ啷€ 啶曕ぞ啶� 啶灌 啶曕啶ぞ?"
         }
 
-    speakOnce(greeting)
+    speakOnce(
+        greeting
+    )
 }
+
     // =========================================================
     // EVENTS
     // =========================================================
