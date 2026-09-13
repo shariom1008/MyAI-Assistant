@@ -827,7 +827,6 @@ class MainActivity : ComponentActivity() {
         root.addView(row2)
     }
 
-
 private fun addAction(
     row: LinearLayout,
     label: String,
@@ -835,31 +834,41 @@ private fun addAction(
 ) {
     val button = LinearLayout(this).apply {
 
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
 
         setPadding(
-            dp(8),
-            0,
-            dp(8),
-            0
+            dp(4),
+            dp(5),
+            dp(4),
+            dp(4)
         )
 
         background = GradientDrawable().apply {
-            setColor(Color.parseColor("#10162A"))
-            cornerRadius = dp(16).toFloat()
+            setColor(
+                Color.parseColor("#10162A")
+            )
+
+            cornerRadius =
+                dp(16).toFloat()
+
             setStroke(
                 dp(1),
                 Color.parseColor("#263653")
             )
         }
 
-        elevation = dp(3).toFloat()
+        elevation =
+            dp(3).toFloat()
 
         setOnClickListener {
             action()
         }
     }
+
+    // -------------------------------
+    // COLORFUL ICON
+    // -------------------------------
 
     val icon = QuickActionIcon(
         this@MainActivity,
@@ -869,10 +878,16 @@ private fun addAction(
     button.addView(
         icon,
         LinearLayout.LayoutParams(
-            dp(28),
-            dp(28)
-        )
+            dp(27),
+            dp(27)
+        ).apply {
+            gravity = Gravity.CENTER
+        }
     )
+
+    // -------------------------------
+    // LABEL
+    // -------------------------------
 
     val text = TextView(this).apply {
 
@@ -882,17 +897,19 @@ private fun addAction(
             Color.parseColor("#E8ECF5")
         )
 
-        textSize = 12f
+        textSize = 11f
 
-        gravity = Gravity.CENTER_VERTICAL
+        gravity = Gravity.CENTER
 
         maxLines = 1
 
-        ellipsize = android.text.TextUtils.TruncateAt.END
+        ellipsize = null
+
+        includeFontPadding = false
 
         setPadding(
-            dp(6),
             0,
+            dp(3),
             0,
             0
         )
@@ -901,17 +918,20 @@ private fun addAction(
     button.addView(
         text,
         LinearLayout.LayoutParams(
-            0,
             ViewGroup.LayoutParams.MATCH_PARENT,
-            1f
+            dp(18)
         )
     )
+
+    // -------------------------------
+    // BUTTON SIZE
+    // -------------------------------
 
     row.addView(
         button,
         LinearLayout.LayoutParams(
             0,
-            dp(48),
+            dp(58),
             1f
         ).apply {
             setMargins(
