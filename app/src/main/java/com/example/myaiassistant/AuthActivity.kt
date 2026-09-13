@@ -19,7 +19,8 @@ import android.widget.Toast
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import androidx.credentials.exceptions.NoCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -76,7 +77,6 @@ class AuthActivity : Activity() {
                     R.string.default_web_client_id
                 )
 
-
             Log.d(
                 "AURIX_AUTH",
                 "========================================"
@@ -97,10 +97,6 @@ class AuthActivity : Activity() {
                 "WEB CLIENT = $webClientId"
             )
 
-
-            // -----------------------------------------
-            // ANDROID 9+
-            // -----------------------------------------
 
             if (
                 Build.VERSION.SDK_INT >=
@@ -147,10 +143,6 @@ class AuthActivity : Activity() {
 
             } else {
 
-                // -------------------------------------
-                // ANDROID 7 / 8
-                // -------------------------------------
-
                 @Suppress("DEPRECATION")
                 val packageInfo =
                     packageManager.getPackageInfo(
@@ -183,7 +175,6 @@ class AuthActivity : Activity() {
                 }
             }
 
-
             Log.d(
                 "AURIX_AUTH",
                 "========================================"
@@ -212,27 +203,15 @@ class AuthActivity : Activity() {
             savedInstanceState
         )
 
-
         auth =
             FirebaseAuth.getInstance()
-
 
         credentialManager =
             CredentialManager.create(
                 this
             )
 
-
-        // ---------------------------------------------
-        // PRINT ACTUAL APK CONFIG
-        // ---------------------------------------------
-
         logAurixGoogleConfig()
-
-
-        // ---------------------------------------------
-        // ALREADY LOGGED IN
-        // ---------------------------------------------
 
         if (
             auth.currentUser != null
@@ -242,7 +221,6 @@ class AuthActivity : Activity() {
 
             return
         }
-
 
         createAuthInterface()
     }
@@ -452,9 +430,8 @@ class AuthActivity : Activity() {
 
                 Log.d(
                     "AURIX_AUTH",
-                    "Starting Sign in with Google button flow"
+                    "Starting GetGoogleIdOption flow"
                 )
-
 
                 Log.d(
                     "AURIX_AUTH",
@@ -463,20 +440,38 @@ class AuthActivity : Activity() {
 
 
                 // -------------------------------------
-                // GOOGLE BUTTON FLOW
+                // GOOGLE ID OPTION
+                //
+                // IMPORTANT:
+                // false = show accounts even if they
+                // have not previously authorized AURIX.
                 // -------------------------------------
 
-                val googleOption =
-                    GetSignInWithGoogleOption.Builder(
-                        serverClientId = webClientId
-                    )
+                val googleIdOption =
+                    GetGoogleIdOption.Builder()
+                        .setServerClientId(
+                            webClientId
+                        )
+                        .setFilterByAuthorizedAccounts(
+                            false
+                        )
+                        .setAutoSelectEnabled(
+                            false
+                        )
+                        .setNonce(
+                            generateSecureRandomNonce()
+                        )
                         .build()
 
+
+                // -------------------------------------
+                // CREDENTIAL REQUEST
+                // -------------------------------------
 
                 val request =
                     GetCredentialRequest.Builder()
                         .addCredentialOption(
-                            googleOption
+                            googleIdOption
                         )
                         .build()
 
@@ -491,11 +486,23 @@ class AuthActivity : Activity() {
                     )
 
 
+                // -------------------------------------
+                // GET CREDENTIAL
+                // -------------------------------------
+
                 val result =
                     credentialManager.getCredential(
-                        context = mutableContext,
-                        request = request
+                        context =
+                            mutableContext,
+                        request =
+                            request
                     )
+
+
+                Log.d(
+                    "AURIX_AUTH",
+                    "Credential received successfully"
+                )
 
 
                 // -------------------------------------
@@ -531,6 +538,23 @@ class AuthActivity : Activity() {
                 )
 
             } catch (
+                e: NoCredentialException
+            ) {
+
+                Log.e(
+                    "AURIX_AUTH",
+                    "No Google credential available",
+                    e
+                )
+
+
+                showError(
+                    "GOOGLE ACCOUNT NOT AVAILABLE",
+                    "${e.javaClass.name}\n\n" +
+                        "${e.message ?: "No Google credential available"}"
+                )
+
+            } catch (
                 e: GetCredentialException
             ) {
 
@@ -541,21 +565,11 @@ class AuthActivity : Activity() {
                 )
 
 
-                android.app.AlertDialog.Builder(
-                    this@AuthActivity
+                showError(
+                    "GOOGLE LOGIN FAILED",
+                    "${e.javaClass.name}\n\n" +
+                        "${e.message ?: "No error message"}"
                 )
-                    .setTitle(
-                        "GOOGLE LOGIN FAILED"
-                    )
-                    .setMessage(
-                        "${e.javaClass.name}\n\n" +
-                            "${e.message ?: "No error message"}"
-                    )
-                    .setPositiveButton(
-                        "OK",
-                        null
-                    )
-                    .show()
 
             } catch (
                 e: Exception
@@ -568,23 +582,39 @@ class AuthActivity : Activity() {
                 )
 
 
-                android.app.AlertDialog.Builder(
-                    this@AuthActivity
+                showError(
+                    "GOOGLE LOGIN ERROR",
+                    "${e.javaClass.name}\n\n" +
+                        "${e.message ?: "No error message"}"
                 )
-                    .setTitle(
-                        "GOOGLE LOGIN ERROR"
-                    )
-                    .setMessage(
-                        "${e.javaClass.name}\n\n" +
-                            "${e.message ?: "No error message"}"
-                    )
-                    .setPositiveButton(
-                        "OK",
-                        null
-                    )
-                    .show()
             }
         }
+    }
+
+
+    // -------------------------------------------------
+    // ERROR DIALOG
+    // -------------------------------------------------
+
+    private fun showError(
+        title: String,
+        message: String
+    ) {
+
+        android.app.AlertDialog.Builder(
+            this
+        )
+            .setTitle(
+                title
+            )
+            .setMessage(
+                message
+            )
+            .setPositiveButton(
+                "OK",
+                null
+            )
+            .show()
     }
 
 
@@ -619,6 +649,12 @@ class AuthActivity : Activity() {
                         auth.currentUser
 
 
+                    Log.d(
+                        "AURIX_AUTH",
+                        "Firebase Google login successful"
+                    )
+
+
                     if (
                         user != null
                     ) {
@@ -627,6 +663,13 @@ class AuthActivity : Activity() {
                     }
 
                 } else {
+
+                    Log.e(
+                        "AURIX_AUTH",
+                        "Firebase Google login failed",
+                        task.exception
+                    )
+
 
                     Toast.makeText(
                         this,
