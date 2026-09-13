@@ -828,7 +828,7 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    private fun addAction(
+private fun addAction(
     row: LinearLayout,
     label: String,
     action: () -> Unit
@@ -836,25 +836,25 @@ class MainActivity : ComponentActivity() {
     val button = LinearLayout(this).apply {
 
         orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER
+        gravity = Gravity.CENTER_VERTICAL
 
         setPadding(
-            dp(10),
+            dp(8),
             0,
-            dp(12),
+            dp(8),
             0
         )
 
         background = GradientDrawable().apply {
-            setColor(Color.parseColor("#111827"))
-            cornerRadius = dp(14).toFloat()
+            setColor(Color.parseColor("#10162A"))
+            cornerRadius = dp(16f)
             setStroke(
                 dp(1),
-                Color.parseColor("#263244")
+                Color.parseColor("#263653")
             )
         }
 
-        elevation = dp(4).toFloat()
+        elevation = dp(3).toFloat()
 
         setOnClickListener {
             action()
@@ -869,8 +869,8 @@ class MainActivity : ComponentActivity() {
     button.addView(
         icon,
         LinearLayout.LayoutParams(
-            dp(25),
-            dp(25)
+            dp(28),
+            dp(28)
         )
     )
 
@@ -879,15 +879,19 @@ class MainActivity : ComponentActivity() {
         this.text = label
 
         setTextColor(
-            Color.parseColor("#E5E7EB")
+            Color.parseColor("#E8ECF5")
         )
 
         textSize = 12f
 
         gravity = Gravity.CENTER_VERTICAL
 
+        maxLines = 1
+
+        ellipsize = android.text.TextUtils.TruncateAt.END
+
         setPadding(
-            dp(7),
+            dp(6),
             0,
             0,
             0
@@ -907,7 +911,7 @@ class MainActivity : ComponentActivity() {
         button,
         LinearLayout.LayoutParams(
             0,
-            dp(44),
+            dp(48),
             1f
         ).apply {
             setMargins(
