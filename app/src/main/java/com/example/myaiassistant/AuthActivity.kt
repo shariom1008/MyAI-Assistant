@@ -29,11 +29,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.util.Log
 import java.security.SecureRandom
+import android.util.Base64
 
 class AuthActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var credentialManager: CredentialManager
+    private fun generateSecureRandomNonce(byteLength: Int = 32): String {
+    val randomBytes = ByteArray(byteLength)
+    SecureRandom().nextBytes(randomBytes)
+
+    return Base64.encodeToString(
+        randomBytes,
+        Base64.NO_WRAP or
+            Base64.URL_SAFE or
+            Base64.NO_PADDING
+    )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -159,13 +171,12 @@ class AuthActivity : Activity() {
 
                 val nonce =
                     generateSecureRandomNonce()
-
-                val googleSignInOption =
-                    GetSignInWithGoogleOption.Builder(
-                        getString(R.string.default_web_client_id)
-                    )
-                        .setNonce(nonce)
-                        .build()
+val googleSignInOption =
+    GetSignInWithGoogleOption.Builder(
+        getString(R.string.default_web_client_id)
+    )
+        .setNonce(generateSecureRandomNonce())
+        .build()
 
                 val request =
                     GetCredentialRequest.Builder()
