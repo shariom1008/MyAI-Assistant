@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var voiceButton: TextView
     private lateinit var voiceStatus: TextView
     private lateinit var conversationBox: LinearLayout
+    private lateinit var aurixOrb: AurixOrbView
 
     companion object {
         private const val REQUEST_AUDIO = 1001
@@ -47,7 +48,6 @@ class MainActivity : ComponentActivity() {
 
     private var drawerView: LinearLayout? = null
     private var drawerOverlay: View? = null
-
 
     // -------------------------------------------------
     // AURIX STATUS RECEIVER
@@ -95,7 +95,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-
                 AurixService.TYPE_COMMAND -> {
 
                     val command =
@@ -109,7 +108,6 @@ class MainActivity : ComponentActivity() {
                         addUserMessage(command)
                     }
                 }
-
 
                 AurixService.TYPE_SPEAK -> {
 
@@ -127,7 +125,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
 
     // -------------------------------------------------
     // ACTIVITY
@@ -152,7 +149,6 @@ class MainActivity : ComponentActivity() {
         checkMicrophonePermission()
     }
 
-
     override fun onBackPressed() {
 
         if (drawerView != null) {
@@ -163,7 +159,6 @@ class MainActivity : ComponentActivity() {
         super.onBackPressed()
     }
 
-
     override fun onDestroy() {
 
         try {
@@ -173,7 +168,6 @@ class MainActivity : ComponentActivity() {
 
         super.onDestroy()
     }
-
 
     // =================================================
     // MAIN INTERFACE
@@ -213,7 +207,6 @@ class MainActivity : ComponentActivity() {
         buildBottomNavigation()
     }
 
-
     // =================================================
     // HEADER
     // =================================================
@@ -229,7 +222,6 @@ class MainActivity : ComponentActivity() {
                 gravity =
                     Gravity.CENTER_VERTICAL
             }
-
 
         // MENU BUTTON
 
@@ -260,7 +252,6 @@ class MainActivity : ComponentActivity() {
             )
         )
 
-
         // BRAND
 
         val brandBox =
@@ -269,7 +260,6 @@ class MainActivity : ComponentActivity() {
                 orientation =
                     LinearLayout.VERTICAL
             }
-
 
         val brand =
             TextView(this).apply {
@@ -285,7 +275,6 @@ class MainActivity : ComponentActivity() {
                     Color.WHITE
                 )
             }
-
 
         val tagline =
             TextView(this).apply {
@@ -306,10 +295,8 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-
         brandBox.addView(brand)
         brandBox.addView(tagline)
-
 
         header.addView(
             brandBox,
@@ -319,7 +306,6 @@ class MainActivity : ComponentActivity() {
                 1f
             )
         )
-
 
         // ONLINE
 
@@ -345,7 +331,6 @@ class MainActivity : ComponentActivity() {
                     Gravity.CENTER
             }
 
-
         header.addView(
             online,
             LinearLayout.LayoutParams(
@@ -353,7 +338,6 @@ class MainActivity : ComponentActivity() {
                 dp(40)
             )
         )
-
 
         // VOICE BUTTON
 
@@ -382,7 +366,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-
         val micParams =
             LinearLayout.LayoutParams(
                 dp(48),
@@ -397,7 +380,6 @@ class MainActivity : ComponentActivity() {
             micParams
         )
 
-
         root.addView(
             header,
             LinearLayout.LayoutParams(
@@ -406,7 +388,6 @@ class MainActivity : ComponentActivity() {
             )
         )
     }
-
 
     // =================================================
     // TITLE
@@ -445,7 +426,6 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-
     // =================================================
     // CORE
     // =================================================
@@ -462,15 +442,16 @@ class MainActivity : ComponentActivity() {
                     Gravity.CENTER
             }
 
+        aurixOrb =
+            AurixOrbView(this)
 
         container.addView(
-            AurixOrbView(this),
+            aurixOrb,
             LinearLayout.LayoutParams(
                 dp(220),
                 dp(220)
             )
         )
-
 
         voiceStatus =
             TextView(this).apply {
@@ -497,7 +478,6 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-
         container.addView(
             voiceStatus,
             LinearLayout.LayoutParams(
@@ -505,7 +485,6 @@ class MainActivity : ComponentActivity() {
                 dp(34)
             )
         )
-
 
         statusText =
             TextView(this).apply {
@@ -527,9 +506,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-
         container.addView(statusText)
-
 
         root.addView(
             container,
@@ -539,7 +516,6 @@ class MainActivity : ComponentActivity() {
             )
         )
     }
-
 
     // =================================================
     // CONVERSATION
@@ -554,11 +530,9 @@ class MainActivity : ComponentActivity() {
                     LinearLayout.VERTICAL
             }
 
-
         addAurixMessage(
             "AURIX ready. Tap the voice icon to speak."
         )
-
 
         val scroll =
             ScrollView(this).apply {
@@ -571,7 +545,6 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-
         root.addView(
             scroll,
             LinearLayout.LayoutParams(
@@ -581,7 +554,6 @@ class MainActivity : ComponentActivity() {
             )
         )
     }
-
 
     private fun addUserMessage(
         message: String
@@ -600,7 +572,6 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-
     private fun addAurixMessage(
         message: String
     ) {
@@ -617,7 +588,6 @@ class MainActivity : ComponentActivity() {
             )
         )
     }
-
 
     private fun messageCard(
         title: String,
@@ -665,7 +635,6 @@ class MainActivity : ComponentActivity() {
                     }
             }
 
-
         box.addView(
             TextView(this).apply {
 
@@ -681,7 +650,6 @@ class MainActivity : ComponentActivity() {
                 setTextColor(accent)
             }
         )
-
 
         box.addView(
             TextView(this).apply {
@@ -703,7 +671,6 @@ class MainActivity : ComponentActivity() {
             }
         )
 
-
         val params =
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -721,7 +688,6 @@ class MainActivity : ComponentActivity() {
 
         return box
     }
-
 
     // =================================================
     // QUICK ACTIONS
@@ -756,7 +722,6 @@ class MainActivity : ComponentActivity() {
             }
         )
 
-
         val row1 =
             LinearLayout(this)
 
@@ -788,9 +753,7 @@ class MainActivity : ComponentActivity() {
             openWeather()
         }
 
-
         root.addView(row1)
-
 
         val row2 =
             LinearLayout(this)
@@ -823,126 +786,132 @@ class MainActivity : ComponentActivity() {
             openMore()
         }
 
-
         root.addView(row2)
     }
 
-private fun addAction(
-    row: LinearLayout,
-    label: String,
-    action: () -> Unit
-) {
-    val button = LinearLayout(this).apply {
+    private fun addAction(
+        row: LinearLayout,
+        label: String,
+        action: () -> Unit
+    ) {
 
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER
+        val button =
+            LinearLayout(this).apply {
 
-        setPadding(
-            dp(4),
-            dp(5),
-            dp(4),
-            dp(4)
+                orientation =
+                    LinearLayout.VERTICAL
+
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    dp(4),
+                    dp(5),
+                    dp(4),
+                    dp(4)
+                )
+
+                background =
+                    GradientDrawable().apply {
+
+                        setColor(
+                            Color.parseColor(
+                                "#10162A"
+                            )
+                        )
+
+                        cornerRadius =
+                            dp(16).toFloat()
+
+                        setStroke(
+                            dp(1),
+                            Color.parseColor(
+                                "#263653"
+                            )
+                        )
+                    }
+
+                elevation =
+                    dp(3).toFloat()
+
+                setOnClickListener {
+                    action()
+                }
+            }
+
+        val icon =
+            QuickActionIcon(
+                this@MainActivity,
+                label
+            )
+
+        button.addView(
+            icon,
+            LinearLayout.LayoutParams(
+                dp(27),
+                dp(27)
+            ).apply {
+                gravity =
+                    Gravity.CENTER
+            }
         )
 
-        background = GradientDrawable().apply {
-            setColor(
-                Color.parseColor("#10162A")
+        val text =
+            TextView(this).apply {
+
+                this.text = label
+
+                setTextColor(
+                    Color.parseColor(
+                        "#E8ECF5"
+                    )
+                )
+
+                textSize = 11f
+
+                gravity =
+                    Gravity.CENTER
+
+                maxLines = 1
+
+                ellipsize = null
+
+                includeFontPadding =
+                    false
+
+                setPadding(
+                    0,
+                    dp(3),
+                    0,
+                    0
+                )
+            }
+
+        button.addView(
+            text,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(18)
             )
+        )
 
-            cornerRadius =
-                dp(16).toFloat()
+        row.addView(
+            button,
+            LinearLayout.LayoutParams(
+                0,
+                dp(58),
+                1f
+            ).apply {
 
-            setStroke(
-                dp(1),
-                Color.parseColor("#263653")
-            )
-        }
-
-        elevation =
-            dp(3).toFloat()
-
-        setOnClickListener {
-            action()
-        }
+                setMargins(
+                    dp(4),
+                    dp(4),
+                    dp(4),
+                    dp(4)
+                )
+            }
+        )
     }
-
-    // -------------------------------
-    // COLORFUL ICON
-    // -------------------------------
-
-    val icon = QuickActionIcon(
-        this@MainActivity,
-        label
-    )
-
-    button.addView(
-        icon,
-        LinearLayout.LayoutParams(
-            dp(27),
-            dp(27)
-        ).apply {
-            gravity = Gravity.CENTER
-        }
-    )
-
-    // -------------------------------
-    // LABEL
-    // -------------------------------
-
-    val text = TextView(this).apply {
-
-        this.text = label
-
-        setTextColor(
-            Color.parseColor("#E8ECF5")
-        )
-
-        textSize = 11f
-
-        gravity = Gravity.CENTER
-
-        maxLines = 1
-
-        ellipsize = null
-
-        includeFontPadding = false
-
-        setPadding(
-            0,
-            dp(3),
-            0,
-            0
-        )
-    }
-
-    button.addView(
-        text,
-        LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(18)
-        )
-    )
-
-    // -------------------------------
-    // BUTTON SIZE
-    // -------------------------------
-
-    row.addView(
-        button,
-        LinearLayout.LayoutParams(
-            0,
-            dp(58),
-            1f
-        ).apply {
-            setMargins(
-                dp(4),
-                dp(4),
-                dp(4),
-                dp(4)
-            )
-        }
-    )
-}
 
     // =================================================
     // BOTTOM NAVIGATION
@@ -967,14 +936,12 @@ private fun addAction(
                 )
             }
 
-
         addNavItem(
             nav,
             "Home"
         ) {
             setReadyState()
         }
-
 
         addNavItem(
             nav,
@@ -984,14 +951,12 @@ private fun addAction(
                 "Conversation history"
         }
 
-
         addNavItem(
             nav,
             "AURIX"
         ) {
             setReadyState()
         }
-
 
         addNavItem(
             nav,
@@ -1001,14 +966,12 @@ private fun addAction(
                 "Quick actions are ready"
         }
 
-
         addNavItem(
             nav,
             "Settings"
         ) {
             openSideDrawer()
         }
-
 
         root.addView(
             nav,
@@ -1019,124 +982,106 @@ private fun addAction(
         )
     }
 
-
     private fun addNavItem(
-    nav: LinearLayout,
-    label: String,
-    action: () -> Unit
-) {
+        nav: LinearLayout,
+        label: String,
+        action: () -> Unit
+    ) {
 
-    val item =
-        LinearLayout(this).apply {
+        val item =
+            LinearLayout(this).apply {
 
-            orientation =
-                LinearLayout.VERTICAL
+                orientation =
+                    LinearLayout.VERTICAL
 
-            gravity =
-                Gravity.CENTER
+                gravity =
+                    Gravity.CENTER
 
-            setPadding(
-                dp(2),
-                dp(2),
-                dp(2),
-                dp(2)
-            )
+                setPadding(
+                    dp(2),
+                    dp(2),
+                    dp(2),
+                    dp(2)
+                )
 
-            setOnClickListener {
-                action()
-            }
-        }
-
-
-    // ---------------------------------------------
-    // NAV ICON
-    // ---------------------------------------------
-
-    val icon =
-        BottomNavIcon(
-            this@MainActivity,
-            label,
-            label == "AURIX"
-        )
-
-
-    item.addView(
-        icon,
-        LinearLayout.LayoutParams(
-            dp(23),
-            dp(23)
-        ).apply {
-            gravity =
-                Gravity.CENTER
-        }
-    )
-
-
-    // ---------------------------------------------
-    // NAV LABEL
-    // ---------------------------------------------
-
-    val text =
-        TextView(this).apply {
-
-            this.text = label
-
-            textSize = 8f
-
-            gravity =
-                Gravity.CENTER
-
-            maxLines = 1
-
-            includeFontPadding =
-                false
-
-            setTextColor(
-                if (label == "AURIX") {
-                    Color.rgb(
-                        90,
-                        210,
-                        255
-                    )
-                } else {
-                    Color.rgb(
-                        130,
-                        140,
-                        175
-                    )
+                setOnClickListener {
+                    action()
                 }
+            }
+
+        val icon =
+            BottomNavIcon(
+                this@MainActivity,
+                label,
+                label == "AURIX"
             )
 
-            setPadding(
-                0,
-                dp(2),
-                0,
-                0
+        item.addView(
+            icon,
+            LinearLayout.LayoutParams(
+                dp(23),
+                dp(23)
+            ).apply {
+                gravity =
+                    Gravity.CENTER
+            }
+        )
+
+        val text =
+            TextView(this).apply {
+
+                this.text = label
+
+                textSize = 8f
+
+                gravity =
+                    Gravity.CENTER
+
+                maxLines = 1
+
+                includeFontPadding =
+                    false
+
+                setTextColor(
+                    if (label == "AURIX") {
+                        Color.rgb(
+                            90,
+                            210,
+                            255
+                        )
+                    } else {
+                        Color.rgb(
+                            130,
+                            140,
+                            175
+                        )
+                    }
+                )
+
+                setPadding(
+                    0,
+                    dp(2),
+                    0,
+                    0
+                )
+            }
+
+        item.addView(
+            text,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(17)
             )
-        }
-
-
-    item.addView(
-        text,
-        LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(17)
         )
-    )
 
-
-    // ---------------------------------------------
-    // NAV ITEM WIDTH
-    // ---------------------------------------------
-
-    nav.addView(
-        item,
-        LinearLayout.LayoutParams(
-            0,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            1f
+        nav.addView(
+            item,
+            LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                1f
+            )
         )
-    )
     }
 
     // =================================================
@@ -1148,11 +1093,6 @@ private fun addAction(
         if (drawerView != null) {
             return
         }
-
-
-        // -------------------------------------------------
-        // DARK OVERLAY
-        // -------------------------------------------------
 
         val overlay =
             View(this).apply {
@@ -1171,9 +1111,7 @@ private fun addAction(
                 }
             }
 
-
         drawerOverlay = overlay
-
 
         addContentView(
             overlay,
@@ -1182,11 +1120,6 @@ private fun addAction(
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         )
-
-
-        // -------------------------------------------------
-        // DRAWER
-        // -------------------------------------------------
 
         val drawer =
             LinearLayout(this).apply {
@@ -1230,9 +1163,7 @@ private fun addAction(
                     -dp(340).toFloat()
             }
 
-
         drawerView = drawer
-
 
         addContentView(
             drawer,
@@ -1241,11 +1172,6 @@ private fun addAction(
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         )
-
-
-        // -------------------------------------------------
-        // DRAWER HEADER
-        // -------------------------------------------------
 
         val header =
             LinearLayout(this).apply {
@@ -1257,14 +1183,12 @@ private fun addAction(
                     Gravity.CENTER_VERTICAL
             }
 
-
         val brandBox =
             LinearLayout(this).apply {
 
                 orientation =
                     LinearLayout.VERTICAL
             }
-
 
         brandBox.addView(
             TextView(this).apply {
@@ -1282,7 +1206,6 @@ private fun addAction(
                 )
             }
         )
-
 
         brandBox.addView(
             TextView(this).apply {
@@ -1304,7 +1227,6 @@ private fun addAction(
             }
         )
 
-
         header.addView(
             brandBox,
             LinearLayout.LayoutParams(
@@ -1313,7 +1235,6 @@ private fun addAction(
                 1f
             )
         )
-
 
         header.addView(
             TextView(this).apply {
@@ -1336,7 +1257,6 @@ private fun addAction(
             }
         )
 
-
         drawer.addView(
             header,
             LinearLayout.LayoutParams(
@@ -1345,15 +1265,9 @@ private fun addAction(
             )
         )
 
-
         drawer.addView(
             drawerDivider()
         )
-
-
-        // -------------------------------------------------
-        // MENU ITEMS
-        // -------------------------------------------------
 
         addDrawerItem(
             drawer,
@@ -1373,7 +1287,6 @@ private fun addAction(
             closeSideDrawer()
         }
 
-
         addDrawerItem(
             drawer,
             "◷",
@@ -1385,7 +1298,6 @@ private fun addAction(
 
             closeSideDrawer()
         }
-
 
         addDrawerItem(
             drawer,
@@ -1399,7 +1311,6 @@ private fun addAction(
             closeSideDrawer()
         }
 
-
         addDrawerItem(
             drawer,
             "♪",
@@ -1410,7 +1321,6 @@ private fun addAction(
 
             openMusic()
         }
-
 
         addDrawerItem(
             drawer,
@@ -1423,7 +1333,6 @@ private fun addAction(
             openApps()
         }
 
-
         addDrawerItem(
             drawer,
             "⚙",
@@ -1434,7 +1343,6 @@ private fun addAction(
 
             openMore()
         }
-
 
         addDrawerItem(
             drawer,
@@ -1448,11 +1356,6 @@ private fun addAction(
             closeSideDrawer()
         }
 
-
-        // -------------------------------------------------
-        // SPACER
-        // -------------------------------------------------
-
         drawer.addView(
             View(this),
             LinearLayout.LayoutParams(
@@ -1462,15 +1365,9 @@ private fun addAction(
             )
         )
 
-
         drawer.addView(
             drawerDivider()
         )
-
-
-        // -------------------------------------------------
-        // ACCOUNT
-        // -------------------------------------------------
 
         drawer.addView(
             TextView(this).apply {
@@ -1502,14 +1399,12 @@ private fun addAction(
             }
         )
 
-
         val accountEmail =
             FirebaseAuth
                 .getInstance()
                 .currentUser
                 ?.email
                 ?: "Google account"
-
 
         drawer.addView(
             TextView(this).apply {
@@ -1537,11 +1432,6 @@ private fun addAction(
             }
         )
 
-
-        // -------------------------------------------------
-        // SIGN OUT
-        // -------------------------------------------------
-
         addDrawerItem(
             drawer,
             "⇥",
@@ -1551,11 +1441,6 @@ private fun addAction(
             signOutGoogle()
         }
 
-
-        // -------------------------------------------------
-        // OPEN ANIMATION
-        // -------------------------------------------------
-
         drawer.animate()
             .translationX(0f)
             .setDuration(280)
@@ -1564,7 +1449,6 @@ private fun addAction(
             )
             .start()
     }
-
 
     private fun addDrawerItem(
         drawer: LinearLayout,
@@ -1622,7 +1506,6 @@ private fun addAction(
                 }
             }
 
-
         val iconView =
             TextView(this).apply {
 
@@ -1642,7 +1525,6 @@ private fun addAction(
                 )
             }
 
-
         item.addView(
             iconView,
             LinearLayout.LayoutParams(
@@ -1650,7 +1532,6 @@ private fun addAction(
                 dp(48)
             )
         )
-
 
         item.addView(
             TextView(this).apply {
@@ -1668,13 +1549,11 @@ private fun addAction(
             }
         )
 
-
         val params =
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(50)
             )
-
 
         params.setMargins(
             0,
@@ -1683,13 +1562,11 @@ private fun addAction(
             dp(4)
         )
 
-
         drawer.addView(
             item,
             params
         )
     }
-
 
     private fun drawerDivider(): View {
 
@@ -1720,13 +1597,11 @@ private fun addAction(
         }
     }
 
-
     private fun closeSideDrawer() {
 
         val drawer =
             drawerView
                 ?: return
-
 
         drawer.animate()
             .translationX(
@@ -1746,7 +1621,6 @@ private fun addAction(
                 } catch (_: Exception) {
                 }
 
-
                 try {
                     (
                         drawerOverlay?.parent
@@ -1757,13 +1631,11 @@ private fun addAction(
                 } catch (_: Exception) {
                 }
 
-
                 drawerView = null
                 drawerOverlay = null
             }
             .start()
     }
-
 
     // =================================================
     // GOOGLE SIGN OUT
@@ -1774,11 +1646,7 @@ private fun addAction(
         val firebaseAuth =
             FirebaseAuth.getInstance()
 
-
-        // Firebase session clear
-
         firebaseAuth.signOut()
-
 
         try {
 
@@ -1786,7 +1654,6 @@ private fun addAction(
                 CredentialManager.create(
                     this
                 )
-
 
             lifecycleScope.launch {
 
@@ -1800,7 +1667,6 @@ private fun addAction(
                 } catch (_: Exception) {
                 }
 
-
                 goToAuthActivity()
             }
 
@@ -1810,11 +1676,9 @@ private fun addAction(
         }
     }
 
-
     private fun goToAuthActivity() {
 
         closeSideDrawer()
-
 
         val intent =
             Intent(
@@ -1827,12 +1691,10 @@ private fun addAction(
                     Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
 
-
         startActivity(intent)
 
         finish()
     }
-
 
     // =================================================
     // VOICE
@@ -1857,7 +1719,6 @@ private fun addAction(
             return
         }
 
-
         listening = true
 
         voiceButton.text = "●"
@@ -1871,6 +1732,9 @@ private fun addAction(
         statusText.text =
             "Listening for your command..."
 
+        aurixOrb.setMode(
+            AurixOrbView.Mode.LISTENING
+        )
 
         val intent =
             Intent(
@@ -1882,13 +1746,11 @@ private fun addAction(
                     AurixService.ACTION_LISTEN_ONCE
             }
 
-
         ContextCompat.startForegroundService(
             this,
             intent
         )
     }
-
 
     private fun checkMicrophonePermission() {
 
@@ -1912,7 +1774,6 @@ private fun addAction(
         }
     }
 
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -1925,13 +1786,11 @@ private fun addAction(
             grantResults
         )
 
-
         if (
             requestCode != REQUEST_AUDIO
         ) {
             return
         }
-
 
         if (
             grantResults.isNotEmpty() &&
@@ -1944,6 +1803,10 @@ private fun addAction(
         } else {
 
             listening = false
+
+            aurixOrb.setMode(
+                AurixOrbView.Mode.READY
+            )
 
             voiceStatus.text =
                 "VOICE  •  MIC REQUIRED"
@@ -1959,7 +1822,6 @@ private fun addAction(
         }
     }
 
-
     // =================================================
     // VOICE STATES
     // =================================================
@@ -1967,6 +1829,10 @@ private fun addAction(
     private fun setListeningState() {
 
         listening = true
+
+        aurixOrb.setMode(
+            AurixOrbView.Mode.LISTENING
+        )
 
         voiceButton.text = "●"
 
@@ -1980,10 +1846,13 @@ private fun addAction(
             "Listening for your command..."
     }
 
-
     private fun setThinkingState() {
 
         listening = true
+
+        aurixOrb.setMode(
+            AurixOrbView.Mode.THINKING
+        )
 
         voiceButton.text = "●"
 
@@ -1997,10 +1866,13 @@ private fun addAction(
             "Processing your command..."
     }
 
-
     private fun setReadyState() {
 
         listening = false
+
+        aurixOrb.setMode(
+            AurixOrbView.Mode.READY
+        )
 
         voiceButton.text = "◉"
 
@@ -2014,7 +1886,6 @@ private fun addAction(
             "Tap the AURIX voice icon to speak"
     }
 
-
     private fun createVoiceBackground(
         active: Boolean
     ): GradientDrawable {
@@ -2023,7 +1894,6 @@ private fun addAction(
 
             shape =
                 GradientDrawable.OVAL
-
 
             if (active) {
 
@@ -2066,7 +1936,6 @@ private fun addAction(
         }
     }
 
-
     // =================================================
     // QUICK ACTION TARGETS
     // =================================================
@@ -2089,14 +1958,12 @@ private fun addAction(
         }
     }
 
-
     private fun openSearch() {
 
         openUrl(
             "https://www.google.com/search?q="
         )
     }
-
 
     private fun openMusic() {
 
@@ -2117,14 +1984,12 @@ private fun addAction(
         }
     }
 
-
     private fun openWeather() {
 
         openUrl(
             "https://www.google.com/search?q=weather"
         )
     }
-
 
     private fun openDialer() {
 
@@ -2134,7 +1999,6 @@ private fun addAction(
             )
         )
     }
-
 
     private fun openMessages() {
 
@@ -2151,7 +2015,6 @@ private fun addAction(
         )
     }
 
-
     private fun openApps() {
 
         startActivity(
@@ -2161,7 +2024,6 @@ private fun addAction(
         )
     }
 
-
     private fun openMore() {
 
         startActivity(
@@ -2170,7 +2032,6 @@ private fun addAction(
             )
         )
     }
-
 
     private fun packageIntent(
         packageName: String
@@ -2188,7 +2049,6 @@ private fun addAction(
             )
     }
 
-
     private fun openUrl(
         url: String
     ) {
@@ -2201,7 +2061,6 @@ private fun addAction(
         )
     }
 
-
     // =================================================
     // DP
     // =================================================
@@ -2213,25 +2072,32 @@ private fun addAction(
         return (
             value *
                 resources.displayMetrics.density
-            ).toInt()
+        ).toInt()
     }
 
-
     // =================================================
-    // AURIX ORB
+    // AURIX ADVANCED CORE
     // =================================================
 
     class AurixOrbView(
         context: Context
     ) : View(context) {
 
+        enum class Mode {
+            READY,
+            LISTENING,
+            THINKING
+        }
+
         private val paint =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            )
+            Paint(Paint.ANTI_ALIAS_FLAG)
+
+        private val path =
+            Path()
 
         private var rotation = 0f
-
+        private var pulse = 0f
+        private var mode = Mode.READY
 
         private val animator =
             ValueAnimator.ofFloat(
@@ -2239,7 +2105,7 @@ private fun addAction(
                 360f
             ).apply {
 
-                duration = 5000
+                duration = 7000L
 
                 repeatCount =
                     ValueAnimator.INFINITE
@@ -2247,13 +2113,22 @@ private fun addAction(
                 addUpdateListener {
 
                     rotation =
-                        it.animatedValue
-                            as Float
+                        it.animatedValue as Float
+
+                    pulse =
+                        (
+                            Math.sin(
+                                Math.toRadians(
+                                    rotation.toDouble()
+                                )
+                            ) *
+                                0.5 +
+                                0.5
+                        ).toFloat()
 
                     invalidate()
                 }
             }
-
 
         init {
 
@@ -2265,6 +2140,29 @@ private fun addAction(
             animator.start()
         }
 
+        fun setMode(
+            newMode: Mode
+        ) {
+
+            mode = newMode
+
+            when (newMode) {
+
+                Mode.READY -> {
+                    animator.duration = 7000L
+                }
+
+                Mode.LISTENING -> {
+                    animator.duration = 3200L
+                }
+
+                Mode.THINKING -> {
+                    animator.duration = 1800L
+                }
+            }
+
+            invalidate()
+        }
 
         override fun onDetachedFromWindow() {
 
@@ -2273,13 +2171,11 @@ private fun addAction(
             super.onDetachedFromWindow()
         }
 
-
         override fun onDraw(
             canvas: Canvas
         ) {
 
             super.onDraw(canvas)
-
 
             val cx =
                 width / 2f
@@ -2287,130 +2183,101 @@ private fun addAction(
             val cy =
                 height / 2f
 
-            val radius =
+            val baseRadius =
                 min(
                     width,
                     height
-                ) * 0.30f
+                ) * 0.285f
 
+            val pulseRadius =
+                baseRadius *
+                    (
+                        1f +
+                            pulse *
+                            when (mode) {
 
-            // -------------------------------------------------
-            // TRANSPARENT CANVAS
-            // -------------------------------------------------
+                                Mode.READY ->
+                                    0.025f
 
-            paint.shader = null
+                                Mode.LISTENING ->
+                                    0.10f
 
-            paint.style =
-                Paint.Style.FILL
+                                Mode.THINKING ->
+                                    0.055f
+                            }
+                    )
 
-            paint.color =
-                Color.TRANSPARENT
+            // =================================================
+            // CLEAR
+            // =================================================
 
             canvas.drawColor(
                 Color.TRANSPARENT,
                 PorterDuff.Mode.CLEAR
             )
 
+            // =================================================
+            // ATMOSPHERIC GLOW
+            // =================================================
 
-            // -------------------------------------------------
-            // OUTER GLOW
-            // -------------------------------------------------
-
-            for (
-                i in 5 downTo 1
-            ) {
-
-                paint.shader =
-                    RadialGradient(
-                        cx,
-                        cy,
-                        radius * i,
-                        intArrayOf(
-                            Color.argb(
-                                35,
-                                70,
-                                180,
-                                255
-                            ),
-                            Color.TRANSPARENT
-                        ),
-                        null,
-                        Shader.TileMode.CLAMP
-                    )
-
-
-                canvas.drawCircle(
-                    cx,
-                    cy,
-                    radius * i,
-                    paint
-                )
-            }
-
-
-            // -------------------------------------------------
-            // CORE
-            // -------------------------------------------------
+            paint.style =
+                Paint.Style.FILL
 
             paint.shader =
                 RadialGradient(
-                    cx -
-                        radius * 0.3f,
-                    cy -
-                        radius * 0.3f,
-                    radius * 1.4f,
+                    cx,
+                    cy,
+                    baseRadius * 3f,
                     intArrayOf(
-                        Color.rgb(
-                            130,
-                            230,
+                        Color.argb(
+                            when (mode) {
+
+                                Mode.READY -> 45
+                                Mode.LISTENING -> 75
+                                Mode.THINKING -> 60
+                            },
+                            30,
+                            190,
                             255
                         ),
-                        Color.rgb(
+
+                        Color.argb(
+                            18,
                             70,
                             90,
-                            230
+                            255
                         ),
-                        Color.rgb(
-                            30,
-                            20,
-                            90
-                        )
+
+                        Color.TRANSPARENT
                     ),
-                    null,
+                    floatArrayOf(
+                        0f,
+                        0.45f,
+                        1f
+                    ),
                     Shader.TileMode.CLAMP
                 )
-
 
             canvas.drawCircle(
                 cx,
                 cy,
-                radius,
+                baseRadius * 3f,
                 paint
             )
 
-
-            // -------------------------------------------------
-            // RINGS
-            // -------------------------------------------------
+            // =================================================
+            // OUTER HUD RINGS
+            // =================================================
 
             paint.shader = null
 
             paint.style =
                 Paint.Style.STROKE
 
-            paint.strokeWidth =
-                3f
-
-            paint.color =
-                Color.rgb(
-                    90,
-                    210,
-                    255
-                )
-
+            paint.strokeCap =
+                Paint.Cap.ROUND
 
             canvas.save()
-
 
             canvas.rotate(
                 rotation,
@@ -2418,50 +2285,492 @@ private fun addAction(
                 cy
             )
 
+            // Outer ring
+
+            paint.strokeWidth =
+                dp(1.4f)
+
+            paint.color =
+                Color.argb(
+                    100,
+                    80,
+                    190,
+                    255
+                )
+
+            canvas.drawCircle(
+                cx,
+                cy,
+                baseRadius * 1.52f,
+                paint
+            )
+
+            // Segmented cyan ring
+
+            paint.strokeWidth =
+                dp(2.2f)
+
+            paint.color =
+                Color.rgb(
+                    65,
+                    200,
+                    255
+                )
 
             canvas.drawArc(
-                cx -
-                    radius * 1.18f,
-                cy -
-                    radius * 1.18f,
-                cx +
-                    radius * 1.18f,
-                cy +
-                    radius * 1.18f,
-                20f,
-                100f,
+                cx - baseRadius * 1.40f,
+                cy - baseRadius * 1.40f,
+                cx + baseRadius * 1.40f,
+                cy + baseRadius * 1.40f,
+                -25f,
+                105f,
                 false,
                 paint
             )
 
-
             canvas.drawArc(
-                cx -
-                    radius * 1.32f,
-                cy -
-                    radius * 1.32f,
-                cx +
-                    radius * 1.32f,
-                cy +
-                    radius * 1.32f,
-                190f,
-                70f,
+                cx - baseRadius * 1.40f,
+                cy - baseRadius * 1.40f,
+                cx + baseRadius * 1.40f,
+                cy + baseRadius * 1.40f,
+                155f,
+                80f,
                 false,
                 paint
             )
 
+            // Inner rotating ring
+
+            paint.strokeWidth =
+                dp(2.8f)
+
+            paint.color =
+                Color.rgb(
+                    100,
+                    225,
+                    255
+                )
+
+            canvas.drawArc(
+                cx - baseRadius * 1.22f,
+                cy - baseRadius * 1.22f,
+                cx + baseRadius * 1.22f,
+                cy + baseRadius * 1.22f,
+                rotation * 1.5f,
+                85f,
+                false,
+                paint
+            )
 
             canvas.restore()
 
+            // =================================================
+            // ORBIT RING
+            // =================================================
 
-            // -------------------------------------------------
-            // AURIX TEXT
-            // -------------------------------------------------
+            canvas.save()
+
+            canvas.rotate(
+                -rotation * 0.7f,
+                cx,
+                cy
+            )
+
+            paint.strokeWidth =
+                dp(2.5f)
+
+            paint.color =
+                Color.rgb(
+                    45,
+                    190,
+                    255
+                )
+
+            val orbitRect =
+                RectF(
+                    cx - baseRadius * 1.45f,
+                    cy - baseRadius * 0.62f,
+                    cx + baseRadius * 1.45f,
+                    cy + baseRadius * 0.62f
+                )
+
+            canvas.drawOval(
+                orbitRect,
+                paint
+            )
+
+            canvas.restore()
+
+            // =================================================
+            // CORE OUTER GLOW
+            // =================================================
 
             paint.style =
                 Paint.Style.FILL
 
+            paint.shader =
+                RadialGradient(
+                    cx - baseRadius * 0.30f,
+                    cy - baseRadius * 0.32f,
+                    pulseRadius * 1.45f,
+                    intArrayOf(
+                        Color.rgb(
+                            190,
+                            250,
+                            255
+                        ),
+
+                        Color.rgb(
+                            40,
+                            190,
+                            255
+                        ),
+
+                        Color.rgb(
+                            50,
+                            70,
+                            220
+                        ),
+
+                        Color.rgb(
+                            15,
+                            12,
+                            70
+                        )
+                    ),
+                    floatArrayOf(
+                        0f,
+                        0.30f,
+                        0.68f,
+                        1f
+                    ),
+                    Shader.TileMode.CLAMP
+                )
+
+            canvas.drawCircle(
+                cx,
+                cy,
+                pulseRadius,
+                paint
+            )
+
+            // =================================================
+            // INNER GLASS
+            // =================================================
+
+            paint.shader =
+                RadialGradient(
+                    cx - baseRadius * 0.25f,
+                    cy - baseRadius * 0.28f,
+                    baseRadius * 0.90f,
+                    intArrayOf(
+                        Color.argb(
+                            210,
+                            30,
+                            130,
+                            255
+                        ),
+
+                        Color.argb(
+                            130,
+                            30,
+                            55,
+                            190
+                        ),
+
+                        Color.argb(
+                            180,
+                            5,
+                            10,
+                            60
+                        )
+                    ),
+                    null,
+                    Shader.TileMode.CLAMP
+                )
+
+            canvas.drawCircle(
+                cx,
+                cy,
+                baseRadius * 0.90f,
+                paint
+            )
+
+            // =================================================
+            // CORE BORDER
+            // =================================================
+
             paint.shader = null
+
+            paint.style =
+                Paint.Style.STROKE
+
+            paint.strokeWidth =
+                when (mode) {
+
+                    Mode.READY ->
+                        dp(2f)
+
+                    Mode.LISTENING ->
+                        dp(3f)
+
+                    Mode.THINKING ->
+                        dp(2.5f)
+                }
+
+            paint.color =
+                when (mode) {
+
+                    Mode.READY ->
+                        Color.rgb(
+                            75,
+                            215,
+                            255
+                        )
+
+                    Mode.LISTENING ->
+                        Color.rgb(
+                            120,
+                            245,
+                            255
+                        )
+
+                    Mode.THINKING ->
+                        Color.rgb(
+                            145,
+                            110,
+                            255
+                        )
+                }
+
+            canvas.drawCircle(
+                cx,
+                cy,
+                baseRadius * 0.90f,
+                paint
+            )
+
+            // =================================================
+            // PROCESSING LIGHT
+            // =================================================
+
+            canvas.save()
+
+            canvas.rotate(
+                rotation * 2f,
+                cx,
+                cy
+            )
+
+            paint.style =
+                Paint.Style.STROKE
+
+            paint.strokeWidth =
+                dp(3f)
+
+            paint.color =
+                when (mode) {
+
+                    Mode.READY ->
+                        Color.argb(
+                            160,
+                            90,
+                            220,
+                            255
+                        )
+
+                    Mode.LISTENING ->
+                        Color.argb(
+                            230,
+                            100,
+                            245,
+                            255
+                        )
+
+                    Mode.THINKING ->
+                        Color.argb(
+                            220,
+                            170,
+                            120,
+                            255
+                        )
+                }
+
+            canvas.drawArc(
+                cx - baseRadius * 0.78f,
+                cy - baseRadius * 0.78f,
+                cx + baseRadius * 0.78f,
+                cy + baseRadius * 0.78f,
+                0f,
+                55f,
+                false,
+                paint
+            )
+
+            canvas.restore()
+
+            // =================================================
+            // LISTENING WAVEFORM
+            // =================================================
+
+            if (
+                mode ==
+                Mode.LISTENING
+            ) {
+
+                paint.style =
+                    Paint.Style.STROKE
+
+                paint.strokeWidth =
+                    dp(2f)
+
+                paint.color =
+                    Color.rgb(
+                        80,
+                        235,
+                        255
+                    )
+
+                val bars = 13
+
+                for (i in 0 until bars) {
+
+                    val x =
+                        cx -
+                            baseRadius * 1.55f +
+                            i *
+                            (
+                                baseRadius *
+                                    3.10f /
+                                    (bars - 1)
+                            )
+
+                    val wave =
+                        Math.sin(
+                            (
+                                rotation *
+                                    0.10f +
+                                    i *
+                                    38f
+                            ).toDouble()
+                        ).toFloat()
+
+                    val barHeight =
+                        baseRadius *
+                            (
+                                0.08f +
+                                    0.18f *
+                                    (
+                                        wave + 1f
+                                    ) /
+                                    2f
+                            )
+
+                    canvas.drawLine(
+                        x,
+                        cy - barHeight,
+                        x,
+                        cy + barHeight,
+                        paint
+                    )
+                }
+            }
+
+            // =================================================
+            // THINKING PROCESSING DOTS
+            // =================================================
+
+            if (
+                mode ==
+                Mode.THINKING
+            ) {
+
+                paint.style =
+                    Paint.Style.FILL
+
+                for (i in 0 until 8) {
+
+                    val angle =
+                        Math.toRadians(
+                            (
+                                rotation * 1.8f +
+                                    i * 45f
+                            ).toDouble()
+                        )
+
+                    val distance =
+                        baseRadius * 1.62f
+
+                    val x =
+                        cx +
+                            Math.cos(angle)
+                                .toFloat() *
+                            distance
+
+                    val y =
+                        cy +
+                            Math.sin(angle)
+                                .toFloat() *
+                            distance
+
+                    val dot =
+                        baseRadius *
+                            (
+                                0.025f +
+                                    0.025f *
+                                    (
+                                        (
+                                            Math.sin(
+                                                angle
+                                            ).toFloat() +
+                                                1f
+                                        ) / 2f
+                                    )
+                            )
+
+                    paint.color =
+                        Color.rgb(
+                            150,
+                            120,
+                            255
+                        )
+
+                    canvas.drawCircle(
+                        x,
+                        y,
+                        dot,
+                        paint
+                    )
+                }
+            }
+
+            // =================================================
+            // CORE HIGHLIGHT
+            // =================================================
+
+            paint.shader = null
+
+            paint.style =
+                Paint.Style.FILL
+
+            paint.color =
+                Color.argb(
+                    180,
+                    220,
+                    250,
+                    255
+                )
+
+            canvas.drawCircle(
+                cx - baseRadius * 0.34f,
+                cy - baseRadius * 0.36f,
+                baseRadius * 0.075f,
+                paint
+            )
+
+            // =================================================
+            // AURIX TEXT
+            // =================================================
 
             paint.textAlign =
                 Paint.Align.CENTER
@@ -2470,751 +2779,699 @@ private fun addAction(
                 Typeface.DEFAULT_BOLD
 
             paint.textSize =
-                radius * 0.27f
+                baseRadius * 0.27f
 
             paint.color =
                 Color.WHITE
 
-
             canvas.drawText(
                 "AURIX",
                 cx,
-                cy +
-                    radius * 0.08f,
+                cy + baseRadius * 0.08f,
                 paint
             )
 
-
-            // -------------------------------------------------
+            // =================================================
             // CORE TEXT
-            // -------------------------------------------------
+            // =================================================
 
             paint.textSize =
-                radius * 0.09f
+                baseRadius * 0.085f
 
             paint.color =
-                Color.rgb(
-                    160,
-                    220,
-                    255
-                )
+                when (mode) {
 
+                    Mode.READY ->
+                        Color.rgb(
+                            170,
+                            230,
+                            255
+                        )
+
+                    Mode.LISTENING ->
+                        Color.rgb(
+                            180,
+                            250,
+                            255
+                        )
+
+                    Mode.THINKING ->
+                        Color.rgb(
+                            205,
+                            185,
+                            255
+                        )
+                }
 
             canvas.drawText(
                 "CORE",
                 cx,
-                cy +
-                    radius * 0.32f,
+                cy + baseRadius * 0.31f,
                 paint
             )
         }
+
+        private fun dp(
+            value: Float
+        ): Float {
+
+            return value *
+                resources.displayMetrics.density
+        }
     }
+
+    // =================================================
+    // QUICK ACTION ICON
+    // =================================================
+
     private class QuickActionIcon(
-    context: Context,
-    private val label: String
-) : View(context) {
+        context: Context,
+        private val label: String
+    ) : View(context) {
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val path = Path()
+        private val paint =
+            Paint(Paint.ANTI_ALIAS_FLAG)
 
-    override fun onDraw(canvas: Canvas) {
+        private val path =
+            Path()
 
-        super.onDraw(canvas)
+        override fun onDraw(
+            canvas: Canvas
+        ) {
+
+            super.onDraw(canvas)
+
+            val w =
+                width.toFloat()
+
+            val h =
+                height.toFloat()
+
+            paint.style =
+                Paint.Style.FILL
 
-        val w = width.toFloat()
-        val h = height.toFloat()
+            paint.strokeWidth =
+                dp(2.2f)
 
-        paint.style = Paint.Style.FILL
-        paint.strokeWidth = dp(2.2f)
+            when (label.lowercase()) {
+
+                // ------------------------------------------------
+                // YOUTUBE
+                // ------------------------------------------------
+
+                "youtube" -> {
 
-        when (label.lowercase()) {
+                    paint.color =
+                        Color.parseColor(
+                            "#FF0033"
+                        )
 
-            // ------------------------------------------------
-            // YOUTUBE
-            // ------------------------------------------------
+                    val rect =
+                        RectF(
+                            w * 0.08f,
+                            h * 0.20f,
+                            w * 0.92f,
+                            h * 0.80f
+                        )
 
-            "youtube" -> {
+                    canvas.drawRoundRect(
+                        rect,
+                        dp(5f),
+                        dp(5f),
+                        paint
+                    )
 
-                paint.color =
-                    Color.parseColor("#FF0033")
+                    paint.color =
+                        Color.WHITE
 
-                val rect = RectF(
-                    w * 0.08f,
-                    h * 0.20f,
-                    w * 0.92f,
-                    h * 0.80f
-                )
+                    path.reset()
 
-                canvas.drawRoundRect(
-                    rect,
-                    dp(5f),
-                    dp(5f),
-                    paint
-                )
+                    path.moveTo(
+                        w * 0.43f,
+                        h * 0.35f
+                    )
 
-                paint.color = Color.WHITE
+                    path.lineTo(
+                        w * 0.43f,
+                        h * 0.65f
+                    )
 
-                path.reset()
+                    path.lineTo(
+                        w * 0.70f,
+                        h * 0.50f
+                    )
 
-                path.moveTo(
-                    w * 0.43f,
-                    h * 0.35f
-                )
+                    path.close()
 
-                path.lineTo(
-                    w * 0.43f,
-                    h * 0.65f
-                )
+                    canvas.drawPath(
+                        path,
+                        paint
+                    )
+                }
 
-                path.lineTo(
-                    w * 0.70f,
-                    h * 0.50f
-                )
+                // ------------------------------------------------
+                // SEARCH
+                // ------------------------------------------------
 
-                path.close()
+                "search" -> {
 
-                canvas.drawPath(
-                    path,
-                    paint
-                )
-            }
+                    paint.color =
+                        Color.parseColor(
+                            "#22D3EE"
+                        )
 
+                    paint.style =
+                        Paint.Style.STROKE
 
-            // ------------------------------------------------
-            // SEARCH
-            // ------------------------------------------------
+                    paint.strokeWidth =
+                        dp(2.5f)
 
-            "search" -> {
-
-                paint.color =
-                    Color.parseColor("#22D3EE")
-
-                paint.style =
-                    Paint.Style.STROKE
-
-                paint.strokeWidth =
-                    dp(2.5f)
-
-                canvas.drawCircle(
-                    w * 0.43f,
-                    h * 0.42f,
-                    w * 0.25f,
-                    paint
-                )
-
-                canvas.drawLine(
-                    w * 0.61f,
-                    h * 0.61f,
-                    w * 0.84f,
-                    h * 0.84f,
-                    paint
-                )
-
-                paint.style =
-                    Paint.Style.FILL
-            }
-
-
-            // ------------------------------------------------
-            // MUSIC
-            // ------------------------------------------------
-
-            "music" -> {
-
-                paint.color =
-                    Color.parseColor("#D946EF")
-
-                paint.style =
-                    Paint.Style.STROKE
-
-                paint.strokeWidth =
-                    dp(2.8f)
-
-                canvas.drawLine(
-                    w * 0.65f,
-                    h * 0.20f,
-                    w * 0.65f,
-                    h * 0.67f,
-                    paint
-                )
-
-                canvas.drawLine(
-                    w * 0.65f,
-                    h * 0.20f,
-                    w * 0.86f,
-                    h * 0.14f,
-                    paint
-                )
-
-                paint.style =
-                    Paint.Style.FILL
-
-                canvas.drawCircle(
-                    w * 0.48f,
-                    h * 0.70f,
-                    dp(4f),
-                    paint
-                )
-
-                canvas.drawCircle(
-                    w * 0.76f,
-                    h * 0.64f,
-                    dp(4f),
-                    paint
-                )
-            }
-
-
-            // ------------------------------------------------
-            // WEATHER
-            // ------------------------------------------------
-
-            "weather" -> {
-
-                paint.color =
-                    Color.parseColor("#FACC15")
-
-                canvas.drawCircle(
-                    w * 0.38f,
-                    h * 0.38f,
-                    dp(6f),
-                    paint
-                )
-
-                paint.color =
-                    Color.parseColor("#38BDF8")
-
-                canvas.drawCircle(
-                    w * 0.43f,
-                    h * 0.62f,
-                    dp(7f),
-                    paint
-                )
-
-                canvas.drawCircle(
-                    w * 0.62f,
-                    h * 0.57f,
-                    dp(6f),
-                    paint
-                )
-
-                canvas.drawRoundRect(
-                    RectF(
-                        w * 0.28f,
-                        h * 0.57f,
-                        w * 0.78f,
-                        h * 0.78f
-                    ),
-                    dp(7f),
-                    dp(7f),
-                    paint
-                )
-            }
-
-
-            // ------------------------------------------------
-            // CALL
-            // ------------------------------------------------
-
-            "call" -> {
-
-                paint.color =
-                    Color.parseColor("#22C55E")
-
-                paint.style =
-                    Paint.Style.STROKE
-
-                paint.strokeWidth =
-                    dp(3.5f)
-
-                path.reset()
-
-                path.moveTo(
-                    w * 0.30f,
-                    h * 0.25f
-                )
-
-                path.cubicTo(
-                    w * 0.22f,
-                    h * 0.42f,
-                    w * 0.45f,
-                    h * 0.73f,
-                    w * 0.70f,
-                    h * 0.72f
-                )
-
-                path.lineTo(
-                    w * 0.82f,
-                    h * 0.58f
-                )
-
-                canvas.drawPath(
-                    path,
-                    paint
-                )
-
-                paint.style =
-                    Paint.Style.FILL
-            }
-
-
-            // ------------------------------------------------
-            // MESSAGES
-            // ------------------------------------------------
-
-            "messages" -> {
-
-                paint.color =
-                    Color.parseColor("#3B82F6")
-
-                canvas.drawRoundRect(
-                    RectF(
-                        w * 0.12f,
+                    canvas.drawCircle(
+                        w * 0.43f,
+                        h * 0.42f,
+                        w * 0.25f,
+                        paint
+                    )
+
+                    canvas.drawLine(
+                        w * 0.61f,
+                        h * 0.61f,
+                        w * 0.84f,
+                        h * 0.84f,
+                        paint
+                    )
+
+                    paint.style =
+                        Paint.Style.FILL
+                }
+
+                // ------------------------------------------------
+                // MUSIC
+                // ------------------------------------------------
+
+                "music" -> {
+
+                    paint.color =
+                        Color.parseColor(
+                            "#D946EF"
+                        )
+
+                    paint.style =
+                        Paint.Style.STROKE
+
+                    paint.strokeWidth =
+                        dp(2.8f)
+
+                    canvas.drawLine(
+                        w * 0.65f,
                         h * 0.20f,
-                        w * 0.88f,
-                        h * 0.70f
-                    ),
-                    dp(7f),
-                    dp(7f),
-                    paint
-                )
+                        w * 0.65f,
+                        h * 0.67f,
+                        paint
+                    )
 
-                path.reset()
+                    canvas.drawLine(
+                        w * 0.65f,
+                        h * 0.20f,
+                        w * 0.86f,
+                        h * 0.14f,
+                        paint
+                    )
 
-                path.moveTo(
-                    w * 0.28f,
-                    h * 0.68f
-                )
+                    paint.style =
+                        Paint.Style.FILL
 
-                path.lineTo(
-                    w * 0.23f,
-                    h * 0.86f
-                )
+                    canvas.drawCircle(
+                        w * 0.48f,
+                        h * 0.70f,
+                        dp(4f),
+                        paint
+                    )
 
-                path.lineTo(
-                    w * 0.45f,
-                    h * 0.70f
-                )
+                    canvas.drawCircle(
+                        w * 0.76f,
+                        h * 0.64f,
+                        dp(4f),
+                        paint
+                    )
+                }
 
-                path.close()
+                // ------------------------------------------------
+                // WEATHER
+                // ------------------------------------------------
 
-                canvas.drawPath(
-                    path,
-                    paint
-                )
+                "weather" -> {
 
-                paint.color = Color.WHITE
+                    paint.color =
+                        Color.parseColor(
+                            "#FACC15"
+                        )
 
-                canvas.drawCircle(
-                    w * 0.36f,
-                    h * 0.45f,
-                    dp(2f),
-                    paint
-                )
+                    canvas.drawCircle(
+                        w * 0.38f,
+                        h * 0.38f,
+                        dp(6f),
+                        paint
+                    )
 
-                canvas.drawCircle(
-                    w * 0.50f,
-                    h * 0.45f,
-                    dp(2f),
-                    paint
-                )
+                    paint.color =
+                        Color.parseColor(
+                            "#38BDF8"
+                        )
 
-                canvas.drawCircle(
-                    w * 0.64f,
-                    h * 0.45f,
-                    dp(2f),
-                    paint
-                )
-            }
+                    canvas.drawCircle(
+                        w * 0.43f,
+                        h * 0.62f,
+                        dp(7f),
+                        paint
+                    )
 
-
-            // ------------------------------------------------
-            // APPS
-            // ------------------------------------------------
-
-            "apps" -> {
-
-                val colors = intArrayOf(
-                    Color.parseColor("#22D3EE"),
-                    Color.parseColor("#A855F7"),
-                    Color.parseColor("#F43F5E"),
-                    Color.parseColor("#FACC15")
-                )
-
-                val positions = arrayOf(
-                    floatArrayOf(0.30f, 0.30f),
-                    floatArrayOf(0.70f, 0.30f),
-                    floatArrayOf(0.30f, 0.70f),
-                    floatArrayOf(0.70f, 0.70f)
-                )
-
-                for (i in 0..3) {
-
-                    paint.color = colors[i]
+                    canvas.drawCircle(
+                        w * 0.62f,
+                        h * 0.57f,
+                        dp(6f),
+                        paint
+                    )
 
                     canvas.drawRoundRect(
                         RectF(
-                            w * (positions[i][0] - 0.13f),
-                            h * (positions[i][1] - 0.13f),
-                            w * (positions[i][0] + 0.13f),
-                            h * (positions[i][1] + 0.13f)
+                            w * 0.28f,
+                            h * 0.57f,
+                            w * 0.78f,
+                            h * 0.78f
                         ),
-                        dp(3f),
+                        dp(7f),
+                        dp(7f),
+                        paint
+                    )
+                }
+
+                // ------------------------------------------------
+                // CALL
+                // ------------------------------------------------
+
+                "call" -> {
+
+                    paint.color =
+                        Color.parseColor(
+                            "#22C55E"
+                        )
+
+                    paint.style =
+                        Paint.Style.STROKE
+
+                    paint.strokeWidth =
+                        dp(3.5f)
+
+                    path.reset()
+
+                    path.moveTo(
+                        w * 0.30f,
+                        h * 0.25f
+                    )
+
+                    path.cubicTo(
+                        w * 0.22f,
+                        h * 0.42f,
+                        w * 0.45f,
+                        h * 0.73f,
+                        w * 0.70f,
+                        h * 0.72f
+                    )
+
+                    path.lineTo(
+                        w * 0.82f,
+                        h * 0.58f
+                    )
+
+                    canvas.drawPath(
+                        path,
+                        paint
+                    )
+
+                    paint.style =
+                        Paint.Style.FILL
+                }
+
+                // ------------------------------------------------
+                // MESSAGES
+                // ------------------------------------------------
+
+                "messages" -> {
+
+                    paint.color =
+                        Color.parseColor(
+                            "#3B82F6"
+                        )
+
+                    canvas.drawRoundRect(
+                        RectF(
+                            w * 0.12f,
+                            h * 0.20f,
+                            w * 0.88f,
+                            h * 0.70f
+                        ),
+                        dp(7f),
+                        dp(7f),
+                        paint
+                    )
+
+                    path.reset()
+
+                    path.moveTo(
+                        w * 0.28f,
+                        h * 0.68f
+                    )
+
+                    path.lineTo(
+                        w * 0.23f,
+                        h * 0.86f
+                    )
+
+                    path.lineTo(
+                        w * 0.45f,
+                        h * 0.70f
+                    )
+
+                    path.close()
+
+                    canvas.drawPath(
+                        path,
+                        paint
+                    )
+
+                    paint.color =
+                        Color.WHITE
+
+                    canvas.drawCircle(
+                        w * 0.36f,
+                        h * 0.45f,
+                        dp(2f),
+                        paint
+                    )
+
+                    canvas.drawCircle(
+                        w * 0.50f,
+                        h * 0.45f,
+                        dp(2f),
+                        paint
+                    )
+
+                    canvas.drawCircle(
+                        w * 0.64f,
+                        h * 0.45f,
+                        dp(2f),
+                        paint
+                    )
+                }
+
+                // ------------------------------------------------
+                // APPS
+                // ------------------------------------------------
+
+                "apps" -> {
+
+                    val colors =
+                        intArrayOf(
+                            Color.parseColor(
+                                "#22D3EE"
+                            ),
+                            Color.parseColor(
+                                "#A855F7"
+                            ),
+                            Color.parseColor(
+                                "#F43F5E"
+                            ),
+                            Color.parseColor(
+                                "#FACC15"
+                            )
+                        )
+
+                    val positions =
+                        arrayOf(
+                            floatArrayOf(
+                                0.30f,
+                                0.30f
+                            ),
+                            floatArrayOf(
+                                0.70f,
+                                0.30f
+                            ),
+                            floatArrayOf(
+                                0.30f,
+                                0.70f
+                            ),
+                            floatArrayOf(
+                                0.70f,
+                                0.70f
+                            )
+                        )
+
+                    for (i in 0..3) {
+
+                        paint.color =
+                            colors[i]
+
+                        canvas.drawRoundRect(
+                            RectF(
+                                w *
+                                    (
+                                        positions[i][0] -
+                                            0.13f
+                                    ),
+                                h *
+                                    (
+                                        positions[i][1] -
+                                            0.13f
+                                    ),
+                                w *
+                                    (
+                                        positions[i][0] +
+                                            0.13f
+                                    ),
+                                h *
+                                    (
+                                        positions[i][1] +
+                                            0.13f
+                                    )
+                            ),
+                            dp(3f),
+                            dp(3f),
+                            paint
+                        )
+                    }
+                }
+
+                // ------------------------------------------------
+                // DEFAULT
+                // ------------------------------------------------
+
+                else -> {
+
+                    paint.color =
+                        Color.parseColor(
+                            "#8B5CF6"
+                        )
+
+                    canvas.drawCircle(
+                        w / 2f,
+                        h / 2f,
+                        dp(8f),
+                        paint
+                    )
+
+                    paint.color =
+                        Color.WHITE
+
+                    canvas.drawCircle(
+                        w / 2f,
+                        h / 2f,
                         dp(3f),
                         paint
                     )
                 }
             }
+        }
 
+        private fun dp(
+            value: Float
+        ): Float {
 
-            // ------------------------------------------------
-            // DEFAULT
-            // ------------------------------------------------
-
-            else -> {
-
-                paint.color =
-                    Color.parseColor("#8B5CF6")
-
-                canvas.drawCircle(
-                    w / 2f,
-                    h / 2f,
-                    dp(8f),
-                    paint
-                )
-
-                paint.color = Color.WHITE
-
-                canvas.drawCircle(
-                    w / 2f,
-                    h / 2f,
-                    dp(3f),
-                    paint
-                )
-            }
+            return value *
+                resources.displayMetrics.density
         }
     }
 
-    private fun dp(value: Float): Float {
-        return value *
-                resources.displayMetrics.density
-    }
-}
+    // =================================================
+    // BOTTOM NAV ICON
+    // =================================================
+
     private class BottomNavIcon(
-    context: Context,
-    private val label: String,
-    private val active: Boolean
-) : View(context) {
+        context: Context,
+        private val label: String,
+        private val active: Boolean
+    ) : View(context) {
 
-    private val paint =
-        Paint(Paint.ANTI_ALIAS_FLAG)
+        private val paint =
+            Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val path =
-        Path()
+        private val path =
+            Path()
 
+        override fun onDraw(
+            canvas: Canvas
+        ) {
 
-    override fun onDraw(
-        canvas: Canvas
-    ) {
+            super.onDraw(canvas)
 
-        super.onDraw(canvas)
+            val w =
+                width.toFloat()
 
-        val w =
-            width.toFloat()
+            val h =
+                height.toFloat()
 
-        val h =
-            height.toFloat()
+            val color =
+                if (active) {
 
+                    Color.rgb(
+                        90,
+                        210,
+                        255
+                    )
 
-        val color =
-            if (active) {
-                Color.rgb(
-                    90,
-                    210,
-                    255
-                )
-            } else {
-                Color.rgb(
-                    125,
-                    140,
-                    175
-                )
-            }
+                } else {
+
+                    Color.rgb(
+                        125,
+                        140,
+                        175
+                    )
+                }
 
+            paint.shader = null
+
+            paint.color = color
 
-        paint.shader = null
-
-        paint.color = color
-
-        paint.style =
-            Paint.Style.STROKE
-
-        paint.strokeWidth =
-            dp(2f)
-
-        paint.strokeCap =
-            Paint.Cap.ROUND
-
-        paint.strokeJoin =
-            Paint.Join.ROUND
-
-
-        when (label.lowercase()) {
-
-            // -----------------------------------------
-            // HOME
-            // -----------------------------------------
-
-            "home" -> {
-
-                path.reset()
-
-                path.moveTo(
-                    w * 0.18f,
-                    h * 0.46f
-                )
-
-                path.lineTo(
-                    w * 0.50f,
-                    h * 0.18f
-                )
-
-                path.lineTo(
-                    w * 0.82f,
-                    h * 0.46f
-                )
-
-                path.moveTo(
-                    w * 0.25f,
-                    h * 0.40f
-                )
-
-                path.lineTo(
-                    w * 0.25f,
-                    h * 0.82f
-                )
-
-                path.lineTo(
-                    w * 0.75f,
-                    h * 0.82f
-                )
-
-                path.lineTo(
-                    w * 0.75f,
-                    h * 0.40f
-                )
-
-                canvas.drawPath(
-                    path,
-                    paint
-                )
-            }
-
-
-            // -----------------------------------------
-            // HISTORY
-            // -----------------------------------------
-
-            "history" -> {
-
-                canvas.drawCircle(
-                    w * 0.50f,
-                    h * 0.50f,
-                    w * 0.31f,
-                    paint
-                )
-
-                canvas.drawLine(
-                    w * 0.50f,
-                    h * 0.50f,
-                    w * 0.50f,
-                    h * 0.31f,
-                    paint
-                )
-
-                canvas.drawLine(
-                    w * 0.50f,
-                    h * 0.50f,
-                    w * 0.65f,
-                    h * 0.59f,
-                    paint
-                )
-
-                path.reset()
-
-                path.moveTo(
-                    w * 0.17f,
-                    h * 0.27f
-                )
-
-                path.lineTo(
-                    w * 0.17f,
-                    h * 0.45f
-                )
-
-                path.lineTo(
-                    w * 0.32f,
-                    h * 0.37f
-                )
-
-                canvas.drawPath(
-                    path,
-                    paint
-                )
-            }
-
-
-            // -----------------------------------------
-            // AURIX
-            // -----------------------------------------
-
-            "aurix" -> {
-
-                paint.style =
-                    Paint.Style.STROKE
-
-                paint.strokeWidth =
-                    dp(2f)
-
-                canvas.drawCircle(
-                    w * 0.50f,
-                    h * 0.50f,
-                    w * 0.36f,
-                    paint
-                )
-
-                paint.style =
-                    Paint.Style.FILL
-
-                canvas.drawCircle(
-                    w * 0.50f,
-                    h * 0.50f,
-                    w * 0.15f,
-                    paint
-                )
-
-                paint.color =
-                    Color.WHITE
-
-                canvas.drawCircle(
-                    w * 0.50f,
-                    h * 0.50f,
-                    w * 0.055f,
-                    paint
-                )
-            }
-
-
-            // -----------------------------------------
-            // SHORTCUTS
-            // -----------------------------------------
-
-            "shortcuts" -> {
-
-                paint.style =
-                    Paint.Style.FILL
-
-                path.reset()
-
-                path.moveTo(
-                    w * 0.57f,
-                    h * 0.10f
-                )
-
-                path.lineTo(
-                    w * 0.27f,
-                    h * 0.55f
-                )
-
-                path.lineTo(
-                    w * 0.49f,
-                    h * 0.55f
-                )
-
-                path.lineTo(
-                    w * 0.40f,
-                    h * 0.90f
-                )
-
-                path.lineTo(
-                    w * 0.76f,
-                    h * 0.42f
-                )
-
-                path.lineTo(
-                    w * 0.54f,
-                    h * 0.42f
-                )
-
-                path.close()
-
-                canvas.drawPath(
-                    path,
-                    paint
-                )
-            }
-
-
-            // -----------------------------------------
-            // SETTINGS
-            // -----------------------------------------
-
-            "settings" -> {
-
-                paint.style =
-                    Paint.Style.STROKE
-
-                paint.strokeWidth =
-                    dp(2.2f)
-
-                canvas.drawCircle(
-                    w * 0.50f,
-                    h * 0.50f,
-                    w * 0.28f,
-                    paint
-                )
-
-                paint.style =
-                    Paint.Style.FILL
-
-                canvas.drawCircle(
-                    w * 0.50f,
-                    h * 0.50f,
-                    w * 0.10f,
-                    paint
-                )
-
-
-                for (i in 0 until 8) {
-
-                    val angle =
-                        Math.toRadians(
-                            (i * 45).toDouble()
-                        )
-
-                    val x1 =
-                        w * 0.50f +
-                            kotlin.math.cos(angle)
-                                .toFloat() *
-                            w * 0.34f
-
-                    val y1 =
-                        h * 0.50f +
-                            kotlin.math.sin(angle)
-                                .toFloat() *
-                            h * 0.34f
-
-                    val x2 =
-                        w * 0.50f +
-                            kotlin.math.cos(angle)
-                                .toFloat() *
-                            w * 0.43f
-
-                    val y2 =
-                        h * 0.50f +
-                            kotlin.math.sin(angle)
-                                .toFloat() *
-                            h * 0.43f
+            paint.style =
+                Paint.Style.STROKE
+
+            paint.strokeWidth =
+                dp(2f)
+
+            paint.strokeCap =
+                Paint.Cap.ROUND
+
+            paint.strokeJoin =
+                Paint.Join.ROUND
+
+            when (label.lowercase()) {
+
+                // -----------------------------------------
+                // HOME
+                // -----------------------------------------
+
+                "home" -> {
+
+                    path.reset()
+
+                    path.moveTo(
+                        w * 0.18f,
+                        h * 0.46f
+                    )
+
+                    path.lineTo(
+                        w * 0.50f,
+                        h * 0.18f
+                    )
+
+                    path.lineTo(
+                        w * 0.82f,
+                        h * 0.46f
+                    )
+
+                    path.moveTo(
+                        w * 0.25f,
+                        h * 0.40f
+                    )
+
+                    path.lineTo(
+                        w * 0.25f,
+                        h * 0.82f
+                    )
+
+                    path.lineTo(
+                        w * 0.75f,
+                        h * 0.82f
+                    )
+
+                    path.lineTo(
+                        w * 0.75f,
+                        h * 0.40f
+                    )
+
+                    canvas.drawPath(
+                        path,
+                        paint
+                    )
+                }
+
+                // -----------------------------------------
+                // HISTORY
+                // -----------------------------------------
+
+                "history" -> {
+
+                    canvas.drawCircle(
+                        w * 0.50f,
+                        h * 0.50f,
+                        w * 0.31f,
+                        paint
+                    )
+
+                    canvas.drawLine(
+                        w * 0.50f,
+                        h * 0.50f,
+                        w * 0.50f,
+                        h * 0.31f,
+                        paint
+                    )
+
+                    canvas.drawLine(
+                        w * 0.50f,
+                        h * 0.50f,
+                        w * 0.65f,
+                        h * 0.59f,
+                        paint
+                    )
+
+                    path.reset()
+
+                    path.moveTo(
+                        w * 0.17f,
+                        h * 0.27f
+                    )
+
+                    path.lineTo(
+                        w * 0.17f,
+                        h * 0.45f
+                    )
+
+                    path.lineTo(
+                        w * 0.32f,
+                        h * 0.37f
+                    )
+
+                    canvas.drawPath(
+                        path,
+                        paint
+                    )
+                }
+
+                // -----------------------------------------
+                // AURIX
+                // -----------------------------------------
+
+                "aurix" -> {
 
                     paint.style =
                         Paint.Style.STROKE
@@ -3222,25 +3479,175 @@ private fun addAction(
                     paint.strokeWidth =
                         dp(2f)
 
-                    canvas.drawLine(
-                        x1,
-                        y1,
-                        x2,
-                        y2,
+                    canvas.drawCircle(
+                        w * 0.50f,
+                        h * 0.50f,
+                        w * 0.36f,
+                        paint
+                    )
+
+                    paint.style =
+                        Paint.Style.FILL
+
+                    canvas.drawCircle(
+                        w * 0.50f,
+                        h * 0.50f,
+                        w * 0.15f,
+                        paint
+                    )
+
+                    paint.color =
+                        Color.WHITE
+
+                    canvas.drawCircle(
+                        w * 0.50f,
+                        h * 0.50f,
+                        w * 0.055f,
                         paint
                     )
                 }
+
+                // -----------------------------------------
+                // SHORTCUTS
+                // -----------------------------------------
+
+                "shortcuts" -> {
+
+                    paint.style =
+                        Paint.Style.FILL
+
+                    path.reset()
+
+                    path.moveTo(
+                        w * 0.57f,
+                        h * 0.10f
+                    )
+
+                    path.lineTo(
+                        w * 0.27f,
+                        h * 0.55f
+                    )
+
+                    path.lineTo(
+                        w * 0.49f,
+                        h * 0.55f
+                    )
+
+                    path.lineTo(
+                        w * 0.40f,
+                        h * 0.90f
+                    )
+
+                    path.lineTo(
+                        w * 0.76f,
+                        h * 0.42f
+                    )
+
+                    path.lineTo(
+                        w * 0.54f,
+                        h * 0.42f
+                    )
+
+                    path.close()
+
+                    canvas.drawPath(
+                        path,
+                        paint
+                    )
+                }
+
+                // -----------------------------------------
+                // SETTINGS
+                // -----------------------------------------
+
+                "settings" -> {
+
+                    paint.style =
+                        Paint.Style.STROKE
+
+                    paint.strokeWidth =
+                        dp(2.2f)
+
+                    canvas.drawCircle(
+                        w * 0.50f,
+                        h * 0.50f,
+                        w * 0.28f,
+                        paint
+                    )
+
+                    paint.style =
+                        Paint.Style.FILL
+
+                    canvas.drawCircle(
+                        w * 0.50f,
+                        h * 0.50f,
+                        w * 0.10f,
+                        paint
+                    )
+
+                    for (
+                        i in 0 until 8
+                    ) {
+
+                        val angle =
+                            Math.toRadians(
+                                (
+                                    i * 45
+                                ).toDouble()
+                            )
+
+                        val x1 =
+                            w * 0.50f +
+                                kotlin.math.cos(
+                                    angle
+                                ).toFloat() *
+                                w * 0.34f
+
+                        val y1 =
+                            h * 0.50f +
+                                kotlin.math.sin(
+                                    angle
+                                ).toFloat() *
+                                h * 0.34f
+
+                        val x2 =
+                            w * 0.50f +
+                                kotlin.math.cos(
+                                    angle
+                                ).toFloat() *
+                                w * 0.43f
+
+                        val y2 =
+                            h * 0.50f +
+                                kotlin.math.sin(
+                                    angle
+                                ).toFloat() *
+                                h * 0.43f
+
+                        paint.style =
+                            Paint.Style.STROKE
+
+                        paint.strokeWidth =
+                            dp(2f)
+
+                        canvas.drawLine(
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            paint
+                        )
+                    }
+                }
             }
         }
-    }
 
+        private fun dp(
+            value: Float
+        ): Float {
 
-    private fun dp(
-        value: Float
-    ): Float {
-
-        return value *
-            resources.displayMetrics.density
-    }
+            return value *
+                resources.displayMetrics.density
+        }
     }
 }
