@@ -32,7 +32,7 @@
         android:allowBackup="true"
         android:label="AURIX"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MyAI"
+        android:theme="@style/Theme.MyAI">
 
         <!-- Authentication screen / Launcher -->
         <activity
