@@ -7,14 +7,15 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import kotlin.math.sin
 
 class MainActivity : Activity() {
 
@@ -22,6 +23,7 @@ class MainActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var voiceButton: TextView
     private lateinit var voiceStatus: TextView
+    private lateinit var conversationBox: LinearLayout
 
     private var listening = false
 
@@ -89,7 +91,10 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         }
 
+        // -----------------------------------------------------
         // MENU
+        // -----------------------------------------------------
+
         val menu = TextView(this).apply {
 
             text = "☰"
@@ -99,6 +104,10 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
 
             setTextColor(Color.WHITE)
+
+            setOnClickListener {
+                openMore()
+            }
         }
 
         header.addView(
@@ -109,7 +118,10 @@ class MainActivity : Activity() {
             )
         )
 
+        // -----------------------------------------------------
         // BRAND
+        // -----------------------------------------------------
+
         val brandBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
@@ -150,7 +162,10 @@ class MainActivity : Activity() {
             )
         )
 
+        // -----------------------------------------------------
         // ONLINE
+        // -----------------------------------------------------
+
         val online = TextView(this).apply {
 
             text = "● ONLINE"
@@ -174,9 +189,9 @@ class MainActivity : Activity() {
             )
         )
 
-        // =====================================================
-        // SMALL SMART VOICE BUTTON
-        // =====================================================
+        // -----------------------------------------------------
+        // VOICE BUTTON
+        // -----------------------------------------------------
 
         voiceButton = TextView(this).apply {
 
@@ -329,8 +344,6 @@ class MainActivity : Activity() {
     // =========================================================
     // CONVERSATION
     // =========================================================
-
-    private lateinit var conversationBox: LinearLayout
 
     private fun buildConversation() {
 
@@ -570,12 +583,43 @@ class MainActivity : Activity() {
                     )
                 }
 
-            /*
-             * Quick action buttons abhi sirf UI hain.
-             *
-             * Voice command execution ka actual flow
-             * AurixService ke existing implementation se chalega.
-             */
+            setOnClickListener {
+
+                when (label) {
+
+                    "YouTube" -> {
+                        openYouTube()
+                    }
+
+                    "Search" -> {
+                        openSearch()
+                    }
+
+                    "Music" -> {
+                        openMusic()
+                    }
+
+                    "Weather" -> {
+                        openWeather()
+                    }
+
+                    "Call" -> {
+                        openDialer()
+                    }
+
+                    "Messages" -> {
+                        openMessages()
+                    }
+
+                    "Apps" -> {
+                        openApps()
+                    }
+
+                    "More" -> {
+                        openMore()
+                    }
+                }
+            }
         }
 
         val params = LinearLayout.LayoutParams(
@@ -652,6 +696,47 @@ class MainActivity : Activity() {
                 else
                     Color.rgb(130, 140, 175)
             )
+
+            setOnClickListener {
+
+                when (label) {
+
+                    "Home" -> {
+
+                        setReadyState()
+
+                        statusText.text =
+                            "Tap the AURIX voice icon to speak"
+                    }
+
+                    "History" -> {
+
+                        statusText.text =
+                            "Conversation history"
+
+                        conversationBox.requestFocus()
+                    }
+
+                    "AURIX" -> {
+
+                        setReadyState()
+
+                        statusText.text =
+                            "AURIX is ready"
+                    }
+
+                    "Shortcuts" -> {
+
+                        statusText.text =
+                            "Choose a quick action"
+                    }
+
+                    "Settings" -> {
+
+                        openMore()
+                    }
+                }
+            }
         }
 
         nav.addView(
@@ -670,10 +755,6 @@ class MainActivity : Activity() {
 
     private fun activateVoice() {
 
-        if (listening) {
-            return
-        }
-
         if (
             ContextCompat.checkSelfPermission(
                 this,
@@ -690,6 +771,23 @@ class MainActivity : Activity() {
 
             return
         }
+
+        /*
+         * IMPORTANT:
+         *
+         * Yahan pehle:
+         *
+         * if (listening) {
+         *     return
+         * }
+         *
+         * tha.
+         *
+         * Uski wajah se first command ke baad
+         * second tap ignore ho raha tha.
+         *
+         * Ab har tap ACTION_LISTEN_ONCE bhejega.
+         */
 
         listening = true
 
@@ -744,10 +842,6 @@ class MainActivity : Activity() {
             )
 
         } else {
-
-            // IMPORTANT:
-            // Permission already hai to service START nahi hogi.
-            // User ko top-right voice icon tap karna padega.
 
             setReadyState()
         }
@@ -863,6 +957,160 @@ class MainActivity : Activity() {
                     )
                 )
             }
+        }
+    }
+
+    // =========================================================
+    // QUICK ACTION FUNCTIONS
+    // =========================================================
+
+    private fun openYouTube() {
+
+        try {
+
+            val intent =
+                packageManager.getLaunchIntentForPackage(
+                    "com.google.android.youtube"
+                )
+
+            if (intent != null) {
+
+                startActivity(intent)
+
+            } else {
+
+                startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse(
+                            "https://www.youtube.com"
+                        )
+                    )
+                )
+            }
+
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun openSearch() {
+
+        try {
+
+            startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(
+                        "https://www.google.com"
+                    )
+                )
+            )
+
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun openMusic() {
+
+        try {
+
+            val intent =
+                Intent.makeMainSelectorActivity(
+                    Intent.ACTION_MAIN,
+                    Intent.CATEGORY_APP_MUSIC
+                )
+
+            startActivity(intent)
+
+        } catch (_: Exception) {
+
+            try {
+
+                startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse(
+                            "https://music.youtube.com"
+                        )
+                    )
+                )
+
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun openWeather() {
+
+        try {
+
+            startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(
+                        "https://www.google.com/search?q=weather"
+                    )
+                )
+            )
+
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun openDialer() {
+
+        try {
+
+            startActivity(
+                Intent(
+                    Intent.ACTION_DIAL
+                )
+            )
+
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun openMessages() {
+
+        try {
+
+            startActivity(
+                Intent(
+                    Intent.ACTION_SENDTO,
+                    Uri.parse("smsto:")
+                )
+            )
+
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun openApps() {
+
+        try {
+
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS
+                )
+            )
+
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun openMore() {
+
+        try {
+
+            startActivity(
+                Intent(
+                    Settings.ACTION_SETTINGS
+                )
+            )
+
+        } catch (_: Exception) {
         }
     }
 
