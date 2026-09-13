@@ -29,13 +29,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.util.Log
 import java.security.SecureRandom
-import android.util.Base64
+
 
 class AuthActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var credentialManager: CredentialManager
-    private fun generateSecureRandomNonce(byteLength: Int = 32): String {
     val randomBytes = ByteArray(byteLength)
     SecureRandom().nextBytes(randomBytes)
 
