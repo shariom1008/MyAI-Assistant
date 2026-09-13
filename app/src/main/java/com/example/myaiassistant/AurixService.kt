@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
@@ -84,7 +85,13 @@ class AurixService :
     // true = passive wake-word mode, false = one-shot command mode
     private var wakeWordMode = true
 
+    // Prevent one utterance from triggering wake detection twice.
+    private var wakeDetectionTriggered = false
+
     private var restarting = false
+
+    // Prevent immediate re-listening while AURIX is speaking or an action is starting.
+    private var suppressListeningUntil = 0L
 
     private var serviceDestroyed = false
 
@@ -101,13 +108,7 @@ class AurixService :
 
     @Volatile
     private var aiRequestInProgress = false
-
-    @Volatile
-    private var waitingForAIConfirmation = false
-
-    private var pendingAICommand = ""
-        
-    // =========================================================
+// =========================================================
     // CREATE
     // =========================================================
 
@@ -314,7 +315,8 @@ class AurixService :
 
         startForeground(
             NOTIFICATION_ID,
-            notification
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         )
     }
 
@@ -322,9 +324,63 @@ class AurixService :
 // SPEECH RECOGNITION
 // =========================================================
 
+private fun normalizeWakeText(
+    value: String
+): String {
+    return value
+        .lowercase(Locale.ENGLISH)
+        .replace("’", "'")
+        .replace(Regex("[^a-z0-9]+"), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+}
+
+private fun extractWakeCommand(
+    value: String
+): String? {
+
+    val text =
+        normalizeWakeText(value)
+
+    if (text.isBlank()) {
+        return null
+    }
+
+    val wakePatterns =
+        listOf(
+            Regex("\\bhey\\s+(aurix|aurics|orix|oryx|auriks)\\b"),
+            Regex("\\bhi\\s+(aurix|aurics|orix|oryx|auriks)\\b"),
+            Regex("\\bhello\\s+(aurix|aurics|orix|oryx|auriks)\\b")
+        )
+
+    for (pattern in wakePatterns) {
+        val match = pattern.find(text) ?: continue
+        return text
+            .substring(match.range.last + 1)
+            .trim()
+    }
+
+    return null
+}
+
+private fun createAurixSpeechRecognizer(): SpeechRecognizer {
+
+    return if (
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+        SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
+    ) {
+        SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
+    } else {
+        SpeechRecognizer.createSpeechRecognizer(this)
+    }
+}
+
 private fun startListening() {
 
-    if (serviceDestroyed || !isRunning) {
+    if (
+        serviceDestroyed ||
+        !isRunning
+    ) {
         return
     }
 
@@ -335,7 +391,6 @@ private fun startListening() {
 
     try {
 
-        // Make sure previous recognition session is not running.
         try {
             speechRecognizer?.cancel()
         } catch (_: Exception) {
@@ -344,20 +399,16 @@ private fun startListening() {
         if (speechRecognizer == null) {
 
             speechRecognizer =
-                if (
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
-                ) {
-                    SpeechRecognizer.createOnDeviceSpeechRecognizer(this)
-                } else {
-                    SpeechRecognizer.createSpeechRecognizer(this)
-                }
+                createAurixSpeechRecognizer()
 
             speechRecognizer?.setRecognitionListener(
                 object : RecognitionListener {
 
-                    override fun onReadyForSpeech(params: Bundle?) {
+                    override fun onReadyForSpeech(
+                        params: Bundle?
+                    ) {
                         listening = true
+                        wakeDetectionTriggered = false
 
                         sendStatus(
                             if (wakeWordMode)
@@ -371,31 +422,40 @@ private fun startListening() {
                         sendStatus("THINKING")
                     }
 
-                    override fun onRmsChanged(rmsdB: Float) {
+                    override fun onRmsChanged(
+                        rmsdB: Float
+                    ) {
                     }
 
-                    override fun onBufferReceived(buffer: ByteArray?) {
+                    override fun onBufferReceived(
+                        buffer: ByteArray?
+                    ) {
                     }
 
                     override fun onEndOfSpeech() {
                     }
 
-                    override fun onError(error: Int) {
+                    override fun onError(
+                        error: Int
+                    ) {
 
                         listening = false
+                        wakeDetectionTriggered = false
 
-                        if (!isRunning || serviceDestroyed) {
+                        if (
+                            !isRunning ||
+                            serviceDestroyed
+                        ) {
                             return
                         }
 
-                        /*
-                         * Important:
-                         * Manual tap mode should also recover from
-                         * temporary SpeechRecognizer errors.
-                         */
-
                         if (!wakeWordMode) {
-                            sendStatus("READY")
+
+                            wakeWordMode = true
+
+                            sendStatus(
+                                "HEY AURIX READY"
+                            )
 
                             handler.postDelayed({
 
@@ -404,11 +464,10 @@ private fun startListening() {
                                     !serviceDestroyed &&
                                     !listening
                                 ) {
-                                    wakeWordMode = true
                                     startListening()
                                 }
 
-                            }, 800)
+                            }, 700L)
 
                             return
                         }
@@ -416,141 +475,139 @@ private fun startListening() {
                         restartListening()
                     }
 
-                    override fun onResults(results: Bundle?) {
+                    override fun onResults(
+                        results: Bundle?
+                    ) {
 
                         listening = false
 
-                        if (!isRunning || serviceDestroyed) {
+                        if (
+                            !isRunning ||
+                            serviceDestroyed
+                        ) {
                             return
                         }
 
-                        val text =
+                        val resultsList =
                             results
                                 ?.getStringArrayList(
                                     SpeechRecognizer.RESULTS_RECOGNITION
                                 )
-                                ?.firstOrNull()
-                                ?.trim()
-                                ?.lowercase(Locale.getDefault())
-                                .orEmpty()
+                                ?: arrayListOf()
 
-                        if (text.isBlank()) {
+                        if (resultsList.isEmpty()) {
 
                             if (wakeWordMode) {
                                 restartListening()
-                            } else {
-                                sendStatus("READY")
                             }
 
                             return
                         }
 
-                        /*
-                         * DO NOT reject recognition just because
-                         * music is currently playing.
-                         *
-                         * SpeechRecognizer itself decides what was heard.
-                         * The old isMusicActive check could throw away
-                         * perfectly valid commands.
-                         */
-
                         if (wakeWordMode) {
-                            // Normalize ASR output so punctuation/capitalization do not
-                            // prevent AURIX from recognizing the wake phrase.
-                            val normalized =
-                                text
-                                    .lowercase(Locale.US)
-                                    .replace(Regex("[^a-z0-9]+"), " ")
-                                    .trim()
 
-                            // Common ASR variants of AURIX are accepted only after
-                            // a wake prefix, so ordinary speech is not treated as a command.
-                            val wake =
-                                Regex(
-                                    "\\b(hey|hi|hello)\\s+(aurix|aurics|auriks|orix|oryx)\\b"
-                                )
+                            var detectedCommand: String? =
+                                null
 
-                            val candidates =
-                                results
-                                    ?.getStringArrayList(
-                                        SpeechRecognizer.RESULTS_RECOGNITION
-                                    )
-                                    .orEmpty()
+                            for (candidate in resultsList) {
 
-                            val matchedText =
-                                candidates
-                                    .asSequence()
-                                    .map {
-                                        it
-                                            .lowercase(Locale.US)
-                                            .replace(
-                                                Regex("[^a-z0-9]+"),
-                                                " "
-                                            )
-                                            .trim()
-                                    }
-                                    .firstOrNull {
-                                        wake.containsMatchIn(it)
-                                    }
-                                    ?: normalized
+                                val candidateCommand =
+                                    extractWakeCommand(candidate)
 
-                            val match =
-                                wake.find(matchedText)
+                                if (candidateCommand != null) {
+                                    detectedCommand =
+                                        candidateCommand
+                                    break
+                                }
+                            }
 
-                            if (match == null) {
-                                scheduleWakeListening(250L)
+                            if (detectedCommand == null) {
+                                restartListening()
                                 return
                             }
 
-                            val command =
-                                matchedText
-                                    .substring(match.range.last + 1)
-                                    .trim()
+                            wakeDetectionTriggered = true
 
-                            // "Hey AURIX" alone: listen for the next utterance exactly once.
-                            if (command.isBlank()) {
+                            val recognizedCommand =
+                                detectedCommand
+
+                            if (recognizedCommand.isBlank()) {
+
                                 wakeWordMode = false
-                                suppressListeningUntil =
-                                    System.currentTimeMillis() + 700L
 
                                 sendStatus("LISTENING")
 
                                 handler.postDelayed({
+
                                     if (
                                         isRunning &&
                                         !serviceDestroyed &&
+                                        !listening &&
                                         !wakeWordMode
                                     ) {
                                         startListening()
                                     }
-                                }, 700L)
+
+                                }, 350L)
 
                                 return
                             }
 
                             // Wake word + command in one sentence.
-                            sendCommand(command)
-                            stopRecognitionForCommand()
+                            sendCommand(recognizedCommand)
 
                             handler.postDelayed({
+
                                 if (
                                     isRunning &&
                                     !serviceDestroyed
                                 ) {
-                                    processCommand(command)
+
+                                    processCommand(
+                                        recognizedCommand
+                                    )
+
                                     wakeWordMode = true
-                                    scheduleWakeListening(1200L)
+
+                                    handler.postDelayed({
+
+                                        if (
+                                            isRunning &&
+                                            !serviceDestroyed &&
+                                            !listening
+                                        ) {
+                                            startListening()
+                                        }
+
+                                    }, 1800L)
                                 }
+
                             }, 250L)
 
                             return
                         }
 
-                        // =================================================
-                        // MANUAL TAP MODE
-                        // =================================================
+                        // One-shot command mode.
+                        val command =
+                            resultsList
+                                .firstOrNull()
+                                ?.trim()
+                                .orEmpty()
 
-                        sendCommand(text)
+                        if (command.isBlank()) {
+
+                            wakeWordMode = true
+
+                            sendStatus(
+                                "HEY AURIX READY"
+                            )
+
+                            restartListening()
+
+                            return
+                        }
+
+                        sendCommand(command)
 
                         handler.postDelayed({
 
@@ -559,7 +616,7 @@ private fun startListening() {
                                 !serviceDestroyed
                             ) {
 
-                                processCommand(text)
+                                processCommand(command)
 
                                 wakeWordMode = true
 
@@ -573,15 +630,45 @@ private fun startListening() {
                                         startListening()
                                     }
 
-                                }, 1800)
+                                }, 1800L)
                             }
 
-                        }, 300)
+                        }, 250L)
                     }
 
                     override fun onPartialResults(
                         partialResults: Bundle?
                     ) {
+
+                        if (
+                            !wakeWordMode ||
+                            wakeDetectionTriggered ||
+                            !isRunning ||
+                            serviceDestroyed
+                        ) {
+                            return
+                        }
+
+                        val partials =
+                            partialResults
+                                ?.getStringArrayList(
+                                    SpeechRecognizer.RESULTS_RECOGNITION
+                                )
+                                ?: return
+
+                        for (candidate in partials) {
+
+                            val command =
+                                extractWakeCommand(candidate)
+
+                            if (command != null) {
+
+                                wakeDetectionTriggered = true
+
+                                // Let SpeechRecognizer finish the utterance.
+                                return
+                            }
+                        }
                     }
 
                     override fun onEvent(
@@ -603,29 +690,25 @@ private fun startListening() {
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
                 )
 
-                /*
-                 * Device default language.
-                 * This keeps Hindi/English/Hinglish recognition
-                 * dependent on the phone's configured speech language.
-                 */
+                // English is used while waiting for the wake phrase.
+                // The actual command uses the device locale.
                 putExtra(
                     RecognizerIntent.EXTRA_LANGUAGE,
-                    "en-IN"
+                    if (wakeWordMode) {
+                        "en-IN"
+                    } else {
+                        Locale.getDefault()
+                    }
                 )
 
                 putExtra(
                     RecognizerIntent.EXTRA_PARTIAL_RESULTS,
-                    true
-                )
-
-                putExtra(
-                    RecognizerIntent.EXTRA_PREFER_OFFLINE,
-                    true
+                    wakeWordMode
                 )
 
                 putExtra(
                     RecognizerIntent.EXTRA_MAX_RESULTS,
-                    3
+                    5
                 )
             }
 
@@ -634,44 +717,38 @@ private fun startListening() {
     } catch (_: Exception) {
 
         listening = false
+        wakeDetectionTriggered = false
 
         if (
             isRunning &&
-            !serviceDestroyed
+            !serviceDestroyed &&
+            wakeWordMode
         ) {
-
-            handler.postDelayed({
-
-                if (
-                    isRunning &&
-                    !serviceDestroyed &&
-                    !listening
-                ) {
-                    startListening()
-                }
-
-            }, 1000)
+            restartListening()
         }
     }
 }
-
 
 // =========================================================
 // SAFE RESTART
 // =========================================================
 
-private fun restartListening() {
+private fun stopRecognitionForCommand() {
 
-    if (
-        restarting ||
-        !isRunning ||
-        serviceDestroyed
-    ) {
-        return
-    }
-
-    restarting = true
     listening = false
+    restarting = true
+    suppressListeningUntil =
+        System.currentTimeMillis() + 3000L
+
+    try {
+        speechRecognizer?.cancel()
+    } catch (_: Exception) {
+    }
+}
+
+private fun scheduleWakeListening(
+    delayMs: Long
+) {
 
     handler.postDelayed({
 
@@ -680,16 +757,54 @@ private fun restartListening() {
         if (
             isRunning &&
             !serviceDestroyed &&
-            !listening
+            wakeWordMode &&
+            System.currentTimeMillis() >= suppressListeningUntil
         ) {
             startListening()
         }
 
-    }, 1000)
+    }, delayMs)
 }
 
+private fun restartListening() {
 
-    // =========================================================
+    if (
+        restarting ||
+        !isRunning ||
+        serviceDestroyed ||
+        !wakeWordMode
+    ) {
+        return
+    }
+
+    restarting = true
+    listening = false
+    wakeDetectionTriggered = false
+
+    val delay =
+        maxOf(
+            450L,
+            suppressListeningUntil - System.currentTimeMillis()
+        )
+
+    handler.postDelayed({
+
+        restarting = false
+
+        if (
+            isRunning &&
+            !serviceDestroyed &&
+            wakeWordMode &&
+            !listening &&
+            System.currentTimeMillis() >= suppressListeningUntil
+        ) {
+            startListening()
+        }
+
+    }, delay)
+}
+
+// =========================================================
     // MAIN COMMAND ENGINE
     // =========================================================
 
@@ -711,58 +826,7 @@ private fun restartListening() {
             return
         }
 
-        // =====================================================
-// AI SEARCH PERMISSION RESPONSE
-// =====================================================
-
-if (waitingForAIConfirmation) {
-
-    when (command) {
-
-        "yes",
-        "haan",
-        "ha",
-        "han" -> {
-
-            waitingForAIConfirmation = false
-
-            val aiCommand =
-                pendingAICommand
-
-            pendingAICommand = ""
-
-            if (aiCommand.isNotBlank()) {
-                askFinalAI(aiCommand)
-            }
-
-            return
-        }
-
-        "no",
-        "nahi",
-        "nahin",
-        "naa",
-        "na" -> {
-
-            waitingForAIConfirmation = false
-            pendingAICommand = ""
-
-            speakOnce(
-                "Theek hai Boss."
-            )
-
-            return
-        }
-
-        else -> {
-            return
-        }
-    }
-}
-
-        
-        // =========================================================
-// AURIX LOCAL PRIORITY COMMANDS
+        // AURIX LOCAL PRIORITY COMMANDS
 // OWNER + DATE + DAY + TIME
 // =========================================================
 
@@ -2177,23 +2241,19 @@ if (
 
 
 // =========================================================
-// FINAL AI FALLBACK - PERMISSION FIRST
+// FINAL AI FALLBACK
 // =========================================================
 
 if (aiRequestInProgress) {
     return
 }
 
-pendingAICommand = command
-waitingForAIConfirmation = true
-
-speakOnce(
-    "Boss, ultra search karu?"
-)
-
+// AURIX should feel like an assistant, not a search gate.
+// Local/device/action handlers above get first priority.
+// Anything still unresolved is sent directly to the AI brain.
+askFinalAI(command)
 return
 }
-
 
 // =========================================================
 // FINAL AI REQUEST
