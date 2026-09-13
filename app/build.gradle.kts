@@ -67,8 +67,8 @@ dependencies {
     implementation("com.google.firebase:firebase-auth:23.1.0")
 
     // Credential Manager — UPDATED FOR THIS TEST
-    implementation("androidx.credentials:credentials:1.6.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+   implementation("androidx.credentials:credentials:1.3.0")
+   implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
 
     // Google Identity Services
     implementation(
