@@ -2,7 +2,6 @@ package com.example.myaiassistant
 
 import android.Manifest
 import android.animation.ValueAnimator
-import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -26,8 +25,9 @@ import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import kotlin.math.min
+import androidx.activity.ComponentActivity
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
 
     private lateinit var root: LinearLayout
     private lateinit var statusText: TextView
