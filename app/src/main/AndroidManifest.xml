@@ -1,125 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-<manifest
-    xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- MICROPHONE -->
+    <!-- Microphone -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- FOREGROUND SERVICE -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-
-    <!-- NOTIFICATIONS -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- CAMERA -->
+    <!-- Camera -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- LOCATION -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Notifications on Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- BLUETOOTH -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation" />
+    <!-- Foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <!-- ALARM -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-
-
-    <!-- ===================================================== -->
-    <!-- APP / SYSTEM QUERIES -->
-    <!-- ===================================================== -->
-
+    <!-- Package visibility -->
     <queries>
 
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent>
-
-        <!-- Speech recognition -->
+        <!-- Speech recognition services -->
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
 
-        <package android:name="com.whatsapp" />
-        <package android:name="com.whatsapp.w4b" />
-        <package android:name="com.instagram.android" />
-        <package android:name="com.google.android.gm" />
-        <package android:name="com.google.android.youtube" />
-        <package android:name="com.android.chrome" />
-        <package android:name="com.google.android.apps.maps" />
-        <package android:name="com.facebook.katana" />
-        <package android:name="org.telegram.messenger" />
-        <package android:name="com.snapchat.android" />
-        <package android:name="com.spotify.music" />
+        <!-- Camera applications -->
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
 
     </queries>
 
-
     <application
-        android:theme="@style/Theme.MyAI"
-        android:label="AURIX"
         android:allowBackup="true"
+        android:label="AURIX"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
-        android:icon="@drawable/aurix_logo">
+        android:theme="@style/Theme.MyAI_Assistant">
 
-
-        <!-- ================================================= -->
-        <!-- AUTH ACTIVITY — REAL LAUNCHER -->
-        <!-- ================================================= -->
-
+        <!-- Authentication screen / Launcher -->
         <activity
             android:name=".AuthActivity"
             android:exported="true">
 
             <intent-filter>
-
-                <action
-                    android:name="android.intent.action.MAIN" />
-
-                <category
-                    android:name="android.intent.category.LAUNCHER" />
-
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
         </activity>
 
-
-        <!-- ================================================= -->
-        <!-- MAIN AURIX -->
-        <!-- ================================================= -->
-
+        <!-- Main AURIX screen -->
         <activity
             android:name=".MainActivity"
             android:exported="false" />
 
-
-        <!-- ================================================= -->
-        <!-- AURIX SERVICE -->
-        <!-- ================================================= -->
-
+        <!-- AURIX voice service -->
         <service
             android:name=".AurixService"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
-
-
-        <!-- ================================================= -->
-        <!-- ALARM -->
-        <!-- ================================================= -->
-
-        <receiver
-            android:name=".AlarmReceiver"
+            android:enabled="true"
             android:exported="false" />
 
     </application>
