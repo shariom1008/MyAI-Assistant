@@ -2,7 +2,6 @@ package com.example.myaiassistant
 
 import android.app.Activity
 import android.content.Intent
-import android.content.MutableContextWrapper
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
@@ -221,10 +220,7 @@ class AuthActivity : Activity() {
 
         logAurixGoogleConfig()
 
-        // -----------------------------------------
-        // ALREADY LOGGED IN
-        // -----------------------------------------
-
+        // Already logged in
         if (
             auth.currentUser != null
         ) {
@@ -264,10 +260,6 @@ class AuthActivity : Activity() {
                 )
             }
 
-        // -----------------------------------------
-        // AURIX TITLE
-        // -----------------------------------------
-
         val title =
             TextView(this).apply {
 
@@ -288,10 +280,6 @@ class AuthActivity : Activity() {
                 )
             }
 
-        // -----------------------------------------
-        // SUBTITLE
-        // -----------------------------------------
-
         val subtitle =
             TextView(this).apply {
 
@@ -308,10 +296,6 @@ class AuthActivity : Activity() {
                     Color.LTGRAY
                 )
             }
-
-        // -----------------------------------------
-        // LOGIN TITLE
-        // -----------------------------------------
 
         val loginTitle =
             TextView(this).apply {
@@ -333,10 +317,6 @@ class AuthActivity : Activity() {
                 )
             }
 
-        // -----------------------------------------
-        // GOOGLE BUTTON
-        // -----------------------------------------
-
         val googleButton =
             Button(this).apply {
 
@@ -348,10 +328,6 @@ class AuthActivity : Activity() {
                     signInWithGoogle()
                 }
             }
-
-        // -----------------------------------------
-        // EMAIL BUTTON
-        // -----------------------------------------
 
         val emailButton =
             Button(this).apply {
@@ -368,10 +344,6 @@ class AuthActivity : Activity() {
                     ).show()
                 }
             }
-
-        // -----------------------------------------
-        // ADD VIEWS
-        // -----------------------------------------
 
         root.addView(
             title,
@@ -493,24 +465,19 @@ class AuthActivity : Activity() {
                         )
                         .build()
 
-                val mutableContext =
-                    MutableContextWrapper(
-                        this@AuthActivity
-                    )
-
                 Log.d(
                     "AURIX_AUTH",
                     "Calling CredentialManager..."
                 )
 
                 // -------------------------------------
-                // GET CREDENTIAL
+                // DIRECT ACTIVITY CONTEXT
                 // -------------------------------------
 
                 val result =
                     credentialManager.getCredential(
                         context =
-                            mutableContext,
+                            this@AuthActivity,
                         request =
                             request
                     )
@@ -519,10 +486,6 @@ class AuthActivity : Activity() {
                     "AURIX_AUTH",
                     "Credential received successfully"
                 )
-
-                // -------------------------------------
-                // GET CREDENTIAL
-                // -------------------------------------
 
                 val credential =
                     result.credential
