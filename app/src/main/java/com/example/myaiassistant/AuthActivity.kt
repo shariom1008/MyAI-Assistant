@@ -2,46 +2,39 @@ package com.example.myaiassistant
 
 import android.app.Activity
 import android.content.Intent
+import android.content.MutableContextWrapper
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Base64
+import android.util.Log
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import android.content.MutableContextWrapper
-
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
-
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseUser
-
+import com.google.firebase.auth.GoogleAuthProvider
+import java.security.SecureRandom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import android.util.Log
-import java.security.SecureRandom
-
 
 class AuthActivity : Activity() {
-
-    private lateinit var auth: FirebaseAuth
-    private lateinit var credentialManager: CredentialManager
-    class AuthActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var credentialManager: CredentialManager
 
     private fun generateSecureRandomNonce(byteLength: Int = 32): String {
         val randomBytes = ByteArray(byteLength)
+
         SecureRandom().nextBytes(randomBytes)
 
         return Base64.encodeToString(
@@ -50,22 +43,6 @@ class AuthActivity : Activity() {
                 Base64.URL_SAFE or
                 Base64.NO_PADDING
         )
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        auth = FirebaseAuth.getInstance()
-        credentialManager = CredentialManager.create(this)
-    val randomBytes = ByteArray(byteLength)
-    SecureRandom().nextBytes(randomBytes)
-
-    return Base64.encodeToString(
-        randomBytes,
-        Base64.NO_WRAP or
-            Base64.URL_SAFE or
-            Base64.NO_PADDING
-    )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -190,14 +167,14 @@ class AuthActivity : Activity() {
 
             try {
 
-                val nonce =
-                    generateSecureRandomNonce()
-val googleSignInOption =
-    GetSignInWithGoogleOption.Builder(
-        getString(R.string.default_web_client_id)
-    )
-        .setNonce(generateSecureRandomNonce())
-        .build()
+                val googleSignInOption =
+                    GetSignInWithGoogleOption.Builder(
+                        getString(R.string.default_web_client_id)
+                    )
+                        .setNonce(
+                            generateSecureRandomNonce()
+                        )
+                        .build()
 
                 val request =
                     GetCredentialRequest.Builder()
@@ -207,7 +184,9 @@ val googleSignInOption =
                         .build()
 
                 val mutableContext =
-                    MutableContextWrapper(this@AuthActivity)
+                    MutableContextWrapper(
+                        this@AuthActivity
+                    )
 
                 val result =
                     credentialManager.getCredential(
@@ -219,57 +198,45 @@ val googleSignInOption =
                     result.credential
 
                 val googleCredential =
-                    GoogleIdTokenCredential
-                        .createFrom(
-                            credential.data
-                        )
+                    GoogleIdTokenCredential.createFrom(
+                        credential.data
+                    )
 
                 val idToken =
                     googleCredential.idToken
 
                 firebaseAuthWithGoogle(idToken)
-} catch (e: GetCredentialException) {
 
-    Log.e(
-        "AURIX_AUTH",
-        "Google CredentialManager error",
-        e
-    )
+            } catch (e: GetCredentialException) {
 
-    android.app.AlertDialog.Builder(this@AuthActivity)
-        .setTitle("Google Sign-In Error")
-        .setMessage(
-            "${e.javaClass.name}\n\n${e.message ?: "No error message"}"
-        )
-        .setPositiveButton("OK", null)
-        .show()
-        
+                Log.e(
+                    "AURIX_AUTH",
+                    "Google CredentialManager error",
+                    e
+                )
+
+                android.app.AlertDialog.Builder(
+                    this@AuthActivity
+                )
+                    .setTitle("Google Sign-In Error")
+                    .setMessage(
+                        "${e.javaClass.name}\n\n" +
+                            "${e.message ?: "No error message"}"
+                    )
+                    .setPositiveButton("OK", null)
+                    .show()
+
             } catch (e: Exception) {
 
                 Toast.makeText(
                     this@AuthActivity,
-                    "Google error: ${e.javaClass.simpleName}\n${e.message ?: "No error message"}",
+                    "Google error: " +
+                        "${e.javaClass.simpleName}\n" +
+                        "${e.message ?: "No error message"}",
                     Toast.LENGTH_LONG
                 ).show()
             }
         }
-    }
-
-    private fun generateSecureRandomNonce(
-        byteLength: Int = 32
-    ): String {
-
-        val randomBytes =
-            ByteArray(byteLength)
-
-        SecureRandom().nextBytes(randomBytes)
-
-        return Base64.encodeToString(
-            randomBytes,
-            Base64.NO_WRAP or
-                    Base64.URL_SAFE or
-                    Base64.NO_PADDING
-        )
     }
 
     private fun firebaseAuthWithGoogle(
