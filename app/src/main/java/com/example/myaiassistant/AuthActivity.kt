@@ -186,13 +186,10 @@ private fun signInWithGoogle() {
             // ---------------------------------------------
 
             val googleOption =
-                GetSignInWithGoogleOption.Builder(
-                    serverClientId = webClientId
-                )
-                    .setNonce(
-                        generateSecureRandomNonce()
-                    )
-                    .build()
+    GetSignInWithGoogleOption.Builder(
+        serverClientId = webClientId
+    )
+        .build()
 
             val request =
                 GetCredentialRequest.Builder()
