@@ -35,6 +35,28 @@ class AuthActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var credentialManager: CredentialManager
+    class AuthActivity : Activity() {
+
+    private lateinit var auth: FirebaseAuth
+    private lateinit var credentialManager: CredentialManager
+
+    private fun generateSecureRandomNonce(byteLength: Int = 32): String {
+        val randomBytes = ByteArray(byteLength)
+        SecureRandom().nextBytes(randomBytes)
+
+        return Base64.encodeToString(
+            randomBytes,
+            Base64.NO_WRAP or
+                Base64.URL_SAFE or
+                Base64.NO_PADDING
+        )
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
+        credentialManager = CredentialManager.create(this)
     val randomBytes = ByteArray(byteLength)
     SecureRandom().nextBytes(randomBytes)
 
