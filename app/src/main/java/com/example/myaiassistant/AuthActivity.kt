@@ -161,83 +161,117 @@ class AuthActivity : Activity() {
         setContentView(root)
     }
 
-    private fun signInWithGoogle() {
+private fun signInWithGoogle() {
 
-        CoroutineScope(Dispatchers.Main).launch {
+    CoroutineScope(Dispatchers.Main).launch {
 
-            try {
+        try {
 
-                val googleSignInOption =
-                    GetSignInWithGoogleOption.Builder(
-                        getString(R.string.default_web_client_id)
-                    )
-                        .setNonce(
-                            generateSecureRandomNonce()
-                        )
-                        .build()
-
-                val request =
-                    GetCredentialRequest.Builder()
-                        .addCredentialOption(
-                            googleSignInOption
-                        )
-                        .build()
-
-                val mutableContext =
-                    MutableContextWrapper(
-                        this@AuthActivity
-                    )
-
-                val result =
-                    credentialManager.getCredential(
-                        context = mutableContext,
-                        request = request
-                    )
-
-                val credential =
-                    result.credential
-
-                val googleCredential =
-                    GoogleIdTokenCredential.createFrom(
-                        credential.data
-                    )
-
-                val idToken =
-                    googleCredential.idToken
-
-                firebaseAuthWithGoogle(idToken)
-
-            } catch (e: GetCredentialException) {
-
-                Log.e(
-                    "AURIX_AUTH",
-                    "Google CredentialManager error",
-                    e
+            val googleSignInOption =
+                GetSignInWithGoogleOption.Builder(
+                    getString(R.string.default_web_client_id)
                 )
+                    .setNonce(
+                        generateSecureRandomNonce()
+                    )
+                    .build()
 
-                android.app.AlertDialog.Builder(
+            val request =
+                GetCredentialRequest.Builder()
+                    .addCredentialOption(
+                        googleSignInOption
+                    )
+                    .build()
+
+            val mutableContext =
+                MutableContextWrapper(
                     this@AuthActivity
                 )
-                    .setTitle("Google Sign-In Error")
-                    .setMessage(
-                        "${e.javaClass.name}\n\n" +
-                            "${e.message ?: "No error message"}"
-                    )
-                    .setPositiveButton("OK", null)
-                    .show()
 
-            } catch (e: Exception) {
+            Log.d(
+                "AURIX_AUTH",
+                "Starting CredentialManager..."
+            )
 
-                Toast.makeText(
-                    this@AuthActivity,
-                    "Google error: " +
-                        "${e.javaClass.simpleName}\n" +
-                        "${e.message ?: "No error message"}",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+            val result =
+                credentialManager.getCredential(
+                    context = mutableContext,
+                    request = request
+                )
+
+            Log.d(
+                "AURIX_AUTH",
+                "Credential received successfully"
+            )
+
+            val credential =
+                result.credential
+
+            val googleCredential =
+                GoogleIdTokenCredential.createFrom(
+                    credential.data
+                )
+
+            val idToken =
+                googleCredential.idToken
+
+            Log.d(
+                "AURIX_AUTH",
+                "Google ID token received"
+            )
+
+            android.app.AlertDialog.Builder(
+                this@AuthActivity
+            )
+                .setTitle("AURIX TEST")
+                .setMessage(
+                    "TOKEN RECEIVED\n\n" +
+                        "CredentialManager is working.\n\n" +
+                        "Firebase login is temporarily bypassed."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+
+        } catch (e: GetCredentialException) {
+
+            Log.e(
+                "AURIX_AUTH",
+                "CredentialManager failed",
+                e
+            )
+
+            android.app.AlertDialog.Builder(
+                this@AuthActivity
+            )
+                .setTitle("CREDENTIAL TEST FAILED")
+                .setMessage(
+                    "${e.javaClass.name}\n\n" +
+                        "${e.message ?: "No error message"}"
+                )
+                .setPositiveButton("OK", null)
+                .show()
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "AURIX_AUTH",
+                "Unexpected Google error",
+                e
+            )
+
+            android.app.AlertDialog.Builder(
+                this@AuthActivity
+            )
+                .setTitle("AURIX TEST ERROR")
+                .setMessage(
+                    "${e.javaClass.name}\n\n" +
+                        "${e.message ?: "No error message"}"
+                )
+                .setPositiveButton("OK", null)
+                .show()
         }
     }
+}
 
     private fun firebaseAuthWithGoogle(
         idToken: String
