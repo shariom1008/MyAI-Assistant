@@ -1,7 +1,10 @@
 package com.example.myaiassistant
 
 import android.app.Activity
+import android.content.ClipboardManager
+import android.content.ClipData
 import android.content.Intent
+import android.content.MutableContextWrapper
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
@@ -13,6 +16,7 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.credentials.CredentialManager
@@ -33,6 +37,8 @@ class AuthActivity : Activity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var credentialManager: CredentialManager
+
+    private lateinit var diagnosticText: TextView
 
     // -------------------------------------------------
     // SECURE NONCE
@@ -58,44 +64,18 @@ class AuthActivity : Activity() {
     }
 
     // -------------------------------------------------
-    // GOOGLE CONFIG DIAGNOSTIC
+    // GET APK SHA-1
     // -------------------------------------------------
 
-    private fun logAurixGoogleConfig() {
+    private fun getApkSha1(): String {
 
-        try {
+        return try {
 
             val packageNameValue =
                 packageName
 
-            val webClientId =
-                getString(
-                    R.string.default_web_client_id
-                )
-
-            Log.d(
-                "AURIX_AUTH",
-                "========================================"
-            )
-
-            Log.d(
-                "AURIX_AUTH",
-                "AURIX GOOGLE CONFIG"
-            )
-
-            Log.d(
-                "AURIX_AUTH",
-                "PACKAGE = $packageNameValue"
-            )
-
-            Log.d(
-                "AURIX_AUTH",
-                "WEB CLIENT = $webClientId"
-            )
-
-            // -----------------------------------------
-            // APK SHA-1
-            // -----------------------------------------
+            val sha1List =
+                mutableListOf<String>()
 
             if (
                 Build.VERSION.SDK_INT >=
@@ -139,9 +119,8 @@ class AuthActivity : Activity() {
                             "%02X".format(it)
                         }
 
-                    Log.d(
-                        "AURIX_AUTH",
-                        "APK SHA1 = $sha1"
+                    sha1List.add(
+                        sha1
                     )
                 }
 
@@ -174,12 +153,110 @@ class AuthActivity : Activity() {
                             "%02X".format(it)
                         }
 
-                    Log.d(
-                        "AURIX_AUTH",
-                        "APK SHA1 = $sha1"
+                    sha1List.add(
+                        sha1
                     )
                 }
             }
+
+            if (
+                sha1List.isEmpty()
+            ) {
+
+                "SHA-1 NOT FOUND"
+
+            } else {
+
+                sha1List.joinToString(
+                    separator = "\n"
+                )
+            }
+
+        } catch (
+            e: Exception
+        ) {
+
+            "SHA-1 ERROR:\n${e.javaClass.name}\n${e.message}"
+        }
+    }
+
+    // -------------------------------------------------
+    // GOOGLE CONFIG
+    // -------------------------------------------------
+
+    private fun getGoogleConfigText(): String {
+
+        val packageNameValue =
+            packageName
+
+        val webClientId =
+            try {
+
+                getString(
+                    R.string.default_web_client_id
+                )
+
+            } catch (
+                e: Exception
+            ) {
+
+                "WEB CLIENT ID NOT FOUND"
+            }
+
+        val apkSha1 =
+            getApkSha1()
+
+        return """
+AURIX GOOGLE CONFIG
+
+--------------------------------
+
+PACKAGE
+
+$packageNameValue
+
+--------------------------------
+
+APK SHA-1
+
+$apkSha1
+
+--------------------------------
+
+WEB CLIENT ID
+
+$webClientId
+
+--------------------------------
+
+EXPECTED CI DEBUG SHA-1
+
+F7:1D:CD:61:9E:22:23:95:B6:97:96:B5:B2:CF:B1:3C:86:C1:58:2E
+
+--------------------------------
+        """.trimIndent()
+    }
+
+    // -------------------------------------------------
+    // LOG CONFIG
+    // -------------------------------------------------
+
+    private fun logAurixGoogleConfig() {
+
+        try {
+
+            val config =
+                getGoogleConfigText()
+
+            Log.d(
+                "AURIX_AUTH",
+                "========================================"
+            )
+
+            Log.d(
+                "AURIX_AUTH",
+                config
+            )
 
             Log.d(
                 "AURIX_AUTH",
@@ -220,7 +297,10 @@ class AuthActivity : Activity() {
 
         logAurixGoogleConfig()
 
-        // Already logged in
+        // -----------------------------------------
+        // ALREADY LOGGED IN
+        // -----------------------------------------
+
         if (
             auth.currentUser != null
         ) {
@@ -246,19 +326,23 @@ class AuthActivity : Activity() {
                     LinearLayout.VERTICAL
 
                 gravity =
-                    Gravity.CENTER
+                    Gravity.CENTER_HORIZONTAL
 
                 setPadding(
-                    48,
-                    48,
-                    48,
-                    48
+                    40,
+                    40,
+                    40,
+                    40
                 )
 
                 setBackgroundColor(
                     Color.BLACK
                 )
             }
+
+        // -----------------------------------------
+        // TITLE
+        // -----------------------------------------
 
         val title =
             TextView(this).apply {
@@ -280,14 +364,18 @@ class AuthActivity : Activity() {
                 )
             }
 
+        // -----------------------------------------
+        // SUBTITLE
+        // -----------------------------------------
+
         val subtitle =
             TextView(this).apply {
 
                 text =
-                    "YOUR PERSONAL AI ASSISTANT"
+                    "GOOGLE LOGIN DIAGNOSTIC"
 
                 textSize =
-                    13f
+                    14f
 
                 gravity =
                     Gravity.CENTER
@@ -297,25 +385,41 @@ class AuthActivity : Activity() {
                 )
             }
 
-        val loginTitle =
-            TextView(this).apply {
+        // -----------------------------------------
+        // CONFIG BUTTON
+        // -----------------------------------------
+
+        val configButton =
+            Button(this).apply {
 
                 text =
-                    "LOGIN TO CONTINUE"
+                    "GOOGLE CONFIG CHECK"
 
-                textSize =
-                    18f
+                setOnClickListener {
 
-                typeface =
-                    Typeface.DEFAULT_BOLD
-
-                gravity =
-                    Gravity.CENTER
-
-                setTextColor(
-                    Color.WHITE
-                )
+                    showGoogleConfig()
+                }
             }
+
+        // -----------------------------------------
+        // COPY CONFIG BUTTON
+        // -----------------------------------------
+
+        val copyButton =
+            Button(this).apply {
+
+                text =
+                    "COPY CONFIG"
+
+                setOnClickListener {
+
+                    copyGoogleConfig()
+                }
+            }
+
+        // -----------------------------------------
+        // GOOGLE BUTTON
+        // -----------------------------------------
 
         val googleButton =
             Button(this).apply {
@@ -328,6 +432,10 @@ class AuthActivity : Activity() {
                     signInWithGoogle()
                 }
             }
+
+        // -----------------------------------------
+        // EMAIL BUTTON
+        // -----------------------------------------
 
         val emailButton =
             Button(this).apply {
@@ -344,6 +452,35 @@ class AuthActivity : Activity() {
                     ).show()
                 }
             }
+
+        // -----------------------------------------
+        // DIAGNOSTIC OUTPUT
+        // -----------------------------------------
+
+        diagnosticText =
+            TextView(this).apply {
+
+                text =
+                    "Diagnostic ready."
+
+                textSize =
+                    12f
+
+                setTextColor(
+                    Color.LTGRAY
+                )
+
+                setPadding(
+                    16,
+                    16,
+                    16,
+                    16
+                )
+            }
+
+        // -----------------------------------------
+        // ADD VIEWS
+        // -----------------------------------------
 
         root.addView(
             title,
@@ -364,19 +501,31 @@ class AuthActivity : Activity() {
                     8
 
                 bottomMargin =
-                    60
+                    24
             }
         )
 
         root.addView(
-            loginTitle,
+            configButton,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
 
                 bottomMargin =
-                    24
+                    8
+            }
+        )
+
+        root.addView(
+            copyButton,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+
+                bottomMargin =
+                    8
             }
         )
 
@@ -388,7 +537,7 @@ class AuthActivity : Activity() {
             ).apply {
 
                 bottomMargin =
-                    16
+                    8
             }
         )
 
@@ -397,12 +546,99 @@ class AuthActivity : Activity() {
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
-            )
+            ).apply {
+
+                bottomMargin =
+                    16
+            }
+        )
+
+        val scrollView =
+            ScrollView(this).apply {
+
+                addView(
+                    diagnosticText,
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                )
+            }
+
+        root.addView(
+            scrollView,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0
+            ).apply {
+
+                weight =
+                    1f
+            }
         )
 
         setContentView(
             root
         )
+    }
+
+    // -------------------------------------------------
+    // SHOW GOOGLE CONFIG
+    // -------------------------------------------------
+
+    private fun showGoogleConfig() {
+
+        val config =
+            getGoogleConfigText()
+
+        diagnosticText.text =
+            config
+
+        android.app.AlertDialog.Builder(
+            this
+        )
+            .setTitle(
+                "AURIX GOOGLE CONFIG"
+            )
+            .setMessage(
+                config
+            )
+            .setPositiveButton(
+                "OK",
+                null
+            )
+            .show()
+    }
+
+    // -------------------------------------------------
+    // COPY GOOGLE CONFIG
+    // -------------------------------------------------
+
+    private fun copyGoogleConfig() {
+
+        val config =
+            getGoogleConfigText()
+
+        val clipboard =
+            getSystemService(
+                CLIPBOARD_SERVICE
+            ) as ClipboardManager
+
+        val clip =
+            ClipData.newPlainText(
+                "AURIX Google Config",
+                config
+            )
+
+        clipboard.setPrimaryClip(
+            clip
+        )
+
+        Toast.makeText(
+            this,
+            "Google config copied.",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     // -------------------------------------------------
@@ -422,19 +658,25 @@ class AuthActivity : Activity() {
                         R.string.default_web_client_id
                     )
 
-                Log.d(
-                    "AURIX_AUTH",
-                    "========================================"
-                )
+                diagnosticText.text =
+                    """
+Starting Google login...
+
+PACKAGE:
+$packageName
+
+WEB CLIENT:
+$webClientId
+
+APK SHA-1:
+${getApkSha1()}
+
+Calling CredentialManager...
+                    """.trimIndent()
 
                 Log.d(
                     "AURIX_AUTH",
                     "Starting GetGoogleIdOption flow"
-                )
-
-                Log.d(
-                    "AURIX_AUTH",
-                    "Web Client ID = $webClientId"
                 )
 
                 // -------------------------------------
@@ -455,7 +697,7 @@ class AuthActivity : Activity() {
                         .build()
 
                 // -------------------------------------
-                // CREDENTIAL REQUEST
+                // REQUEST
                 // -------------------------------------
 
                 val request =
@@ -465,19 +707,31 @@ class AuthActivity : Activity() {
                         )
                         .build()
 
+                // -------------------------------------
+                // ACTIVITY CONTEXT
+                //
+                // MutableContextWrapper is intentionally
+                // used here according to Android guidance.
+                // -------------------------------------
+
+                val mutableContext =
+                    MutableContextWrapper(
+                        this@AuthActivity
+                    )
+
                 Log.d(
                     "AURIX_AUTH",
                     "Calling CredentialManager..."
                 )
 
                 // -------------------------------------
-                // DIRECT ACTIVITY CONTEXT
+                // GET CREDENTIAL
                 // -------------------------------------
 
                 val result =
                     credentialManager.getCredential(
                         context =
-                            this@AuthActivity,
+                            mutableContext,
                         request =
                             request
                     )
@@ -487,6 +741,14 @@ class AuthActivity : Activity() {
                     "Credential received successfully"
                 )
 
+                diagnosticText.text =
+                    diagnosticText.text.toString() +
+                        "\n\nCredential received successfully."
+
+                // -------------------------------------
+                // CREDENTIAL
+                // -------------------------------------
+
                 val credential =
                     result.credential
 
@@ -494,6 +756,10 @@ class AuthActivity : Activity() {
                     "AURIX_AUTH",
                     "Credential type = ${credential.type}"
                 )
+
+                diagnosticText.text =
+                    diagnosticText.text.toString() +
+                        "\nCredential type = ${credential.type}"
 
                 // -------------------------------------
                 // GOOGLE ID TOKEN
@@ -512,14 +778,13 @@ class AuthActivity : Activity() {
                     "Google ID token received successfully"
                 )
 
+                diagnosticText.text =
+                    diagnosticText.text.toString() +
+                        "\n\nGoogle ID token received."
+
                 // -------------------------------------
                 // FIREBASE
                 // -------------------------------------
-
-                Log.d(
-                    "AURIX_AUTH",
-                    "Sending Google token to Firebase..."
-                )
 
                 firebaseAuthWithGoogle(
                     idToken
@@ -534,6 +799,39 @@ class AuthActivity : Activity() {
                     "CredentialManager failed",
                     e
                 )
+
+                val errorText =
+                    """
+GOOGLE LOGIN FAILED
+
+Exception:
+${e.javaClass.name}
+
+Message:
+${e.message ?: "No error message"}
+
+--------------------------------
+
+PACKAGE:
+$packageName
+
+APK SHA-1:
+${getApkSha1()}
+
+WEB CLIENT:
+${try {
+                        getString(
+                            R.string.default_web_client_id
+                        )
+                    } catch (
+                        _: Exception
+                    ) {
+                        "NOT FOUND"
+                    }}
+                    """.trimIndent()
+
+                diagnosticText.text =
+                    errorText
 
                 showError(
                     "GOOGLE LOGIN FAILED",
@@ -550,6 +848,39 @@ class AuthActivity : Activity() {
                     "Unexpected Google error",
                     e
                 )
+
+                val errorText =
+                    """
+GOOGLE LOGIN ERROR
+
+Exception:
+${e.javaClass.name}
+
+Message:
+${e.message ?: "No error message"}
+
+--------------------------------
+
+PACKAGE:
+$packageName
+
+APK SHA-1:
+${getApkSha1()}
+
+WEB CLIENT:
+${try {
+                        getString(
+                            R.string.default_web_client_id
+                        )
+                    } catch (
+                        _: Exception
+                    ) {
+                        "NOT FOUND"
+                    }}
+                    """.trimIndent()
+
+                diagnosticText.text =
+                    errorText
 
                 showError(
                     "GOOGLE LOGIN ERROR",
@@ -593,6 +924,10 @@ class AuthActivity : Activity() {
         idToken: String
     ) {
 
+        diagnosticText.text =
+            diagnosticText.text.toString() +
+                "\n\nSending Google token to Firebase..."
+
         val credential =
             GoogleAuthProvider.getCredential(
                 idToken,
@@ -619,14 +954,17 @@ class AuthActivity : Activity() {
                         "Firebase Google login successful"
                     )
 
+                    diagnosticText.text =
+                        diagnosticText.text.toString() +
+                            "\nFirebase login SUCCESS."
+
                     if (
                         user != null
                     ) {
 
-                        Log.d(
-                            "AURIX_AUTH",
-                            "Logged in user = ${user.email}"
-                        )
+                        diagnosticText.text =
+                            diagnosticText.text.toString() +
+                                "\nUser = ${user.email}"
 
                         openAurix()
                     }
@@ -639,10 +977,17 @@ class AuthActivity : Activity() {
                         task.exception
                     )
 
-                    showError(
-                        "FIREBASE LOGIN FAILED",
+                    val message =
                         task.exception?.message
                             ?: "Firebase Google Login failed."
+
+                    diagnosticText.text =
+                        diagnosticText.text.toString() +
+                            "\n\nFIREBASE LOGIN FAILED\n$message"
+
+                    showError(
+                        "FIREBASE LOGIN FAILED",
+                        message
                     )
                 }
             }
