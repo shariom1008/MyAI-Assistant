@@ -137,8 +137,6 @@ class AurixService :
                 this,
                 this
             )
-
-        startListening()
     }
 
     // =========================================================
@@ -173,26 +171,32 @@ class AurixService :
 
             ACTION_LISTEN_ONCE -> {
 
-                isRunning = true
-                restarting = false
-                wakeWordMode = false
+    isRunning = true
+    restarting = false
+    wakeWordMode = false
 
-                try {
-                    speechRecognizer?.cancel()
-                } catch (_: Exception) {
-                }
+    handler.removeCallbacksAndMessages(null)
 
-                listening = false
-                startListening()
-            }
+    try {
+        speechRecognizer?.cancel()
+        speechRecognizer?.destroy()
+    } catch (_: Exception) {
+    }
 
-            else -> {
+    speechRecognizer = null
+    listening = false
 
-                wakeWordMode = true
+    handler.postDelayed({
 
-                if (!listening) {
-                    startListening()
-                }
+        if (
+            isRunning &&
+            !serviceDestroyed &&
+            !listening
+        ) {
+            startListening()
+        }
+
+    }, 200)
             }
         }
 
@@ -389,20 +393,6 @@ private fun startListening() {
 
                         if (!wakeWordMode) {
                             sendStatus("READY")
-
-                            handler.postDelayed({
-
-                                if (
-                                    isRunning &&
-                                    !serviceDestroyed &&
-                                    !listening
-                                ) {
-                                    wakeWordMode = true
-                                    startListening()
-                                }
-
-                            }, 800)
-
                             return
                         }
 
@@ -532,31 +522,17 @@ private fun startListening() {
 
                         sendCommand(text)
 
-                        handler.postDelayed({
+handler.postDelayed({
 
-                            if (
-                                isRunning &&
-                                !serviceDestroyed
-                            ) {
+    if (
+        isRunning &&
+        !serviceDestroyed
+    ) {
+        processCommand(text)
+        sendStatus("READY")
+    }
 
-                                processCommand(text)
-
-                                wakeWordMode = true
-
-                                handler.postDelayed({
-
-                                    if (
-                                        isRunning &&
-                                        !serviceDestroyed &&
-                                        !listening
-                                    ) {
-                                        startListening()
-                                    }
-
-                                }, 1800)
-                            }
-
-                        }, 300)
+}, 300)
                     }
 
                     override fun onPartialResults(
