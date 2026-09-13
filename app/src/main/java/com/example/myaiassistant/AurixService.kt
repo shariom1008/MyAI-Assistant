@@ -171,32 +171,34 @@ class AurixService :
 
             ACTION_LISTEN_ONCE -> {
 
-    isRunning = true
-    restarting = false
-    wakeWordMode = false
+                isRunning = true
+                restarting = false
+                wakeWordMode = false
 
-    handler.removeCallbacksAndMessages(null)
+                handler.removeCallbacksAndMessages(null)
 
-    try {
-        speechRecognizer?.cancel()
-        speechRecognizer?.destroy()
-    } catch (_: Exception) {
-    }
+                try {
+                    speechRecognizer?.cancel()
+                    speechRecognizer?.destroy()
+                } catch (_: Exception) {
+                }
 
-    speechRecognizer = null
-    listening = false
+                speechRecognizer = null
+                listening = false
 
-    handler.postDelayed({
+                // Give Android time to fully release the previous
+                // SpeechRecognizer session before creating a new one.
+                handler.postDelayed({
 
-        if (
-            isRunning &&
-            !serviceDestroyed &&
-            !listening
-        ) {
-            startListening()
-        }
+                    if (
+                        isRunning &&
+                        !serviceDestroyed &&
+                        !listening
+                    ) {
+                        startListening()
+                    }
 
-    }, 200)
+                }, 600)
             }
         }
 
@@ -522,17 +524,17 @@ private fun startListening() {
 
                         sendCommand(text)
 
-handler.postDelayed({
+                        handler.postDelayed({
 
-    if (
-        isRunning &&
-        !serviceDestroyed
-    ) {
-        processCommand(text)
-        sendStatus("READY")
-    }
+                            if (
+                                isRunning &&
+                                !serviceDestroyed
+                            ) {
+                                processCommand(text)
+                                sendStatus("READY")
+                            }
 
-}, 300)
+                        }, 300)
                     }
 
                     override fun onPartialResults(
