@@ -60,10 +60,13 @@ class MainActivity : Activity() {
                         )
                     ) {
 
-                        "LISTENING",
-                        "HEY AURIX READY" -> {
-                            setListeningState()
-                        }
+                        "LISTENING" -> {
+    setListeningState()
+}
+
+"HEY AURIX READY" -> {
+    setReadyState()
+}
 
                         "THINKING" -> {
                             setThinkingState()
@@ -472,7 +475,7 @@ override fun onCreate(
             TextView(this).apply {
 
                 text =
-                    "Tap the AURIX voice icon to speak"
+                    "Say  Hey AURIX  to speak"
 
                 textSize = 10f
 
@@ -511,7 +514,7 @@ override fun onCreate(
             }
 
         addAurixMessage(
-            "AURIX ready. Tap the voice icon to speak."
+            "AURIX ready. Say Hey AURIX to speak."
         )
 
         val scroll =
