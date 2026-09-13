@@ -107,26 +107,41 @@ class MainActivity : Activity() {
             }
         }
     }
+override fun onCreate(
+    savedInstanceState: Bundle?
+) {
+    super.onCreate(savedInstanceState)
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-        super.onCreate(savedInstanceState)
+    val auth =
+        com.google.firebase.auth.FirebaseAuth
+            .getInstance()
 
-        buildInterface()
+    if (auth.currentUser == null) {
 
-        ContextCompat.registerReceiver(
-            this,
-            statusReceiver,
-            IntentFilter(
-                AurixService.ACTION_EVENT
-            ),
-            ContextCompat.RECEIVER_NOT_EXPORTED
+        startActivity(
+            Intent(
+                this,
+                AuthActivity::class.java
+            )
         )
 
-        checkMicrophonePermission()
+        finish()
+        return
     }
 
+    buildInterface()
+
+    ContextCompat.registerReceiver(
+        this,
+        statusReceiver,
+        IntentFilter(
+            AurixService.ACTION_EVENT
+        ),
+        ContextCompat.RECEIVER_NOT_EXPORTED
+    )
+
+    checkMicrophonePermission()
+}
     override fun onDestroy() {
 
         try {
