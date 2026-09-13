@@ -847,7 +847,7 @@ private fun addAction(
 
         background = GradientDrawable().apply {
             setColor(Color.parseColor("#10162A"))
-            cornerRadius = dp(16f)
+            cornerRadius = dp(16).toFloat()
             setStroke(
                 dp(1),
                 Color.parseColor("#263653")
