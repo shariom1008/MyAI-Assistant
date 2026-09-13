@@ -13,8 +13,17 @@ jobs:
 
     steps:
 
+      # -------------------------------------------------
+      # CHECKOUT
+      # -------------------------------------------------
+
       - name: Checkout
         uses: actions/checkout@v4
+
+
+      # -------------------------------------------------
+      # JAVA 17
+      # -------------------------------------------------
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -22,6 +31,11 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
+
+
+      # -------------------------------------------------
+      # INSTALL GRADLE
+      # -------------------------------------------------
 
       - name: Install Gradle
         run: |
@@ -35,20 +49,121 @@ jobs:
           echo "$HOME/gradle/gradle-8.9/bin" \
             >> "$GITHUB_PATH"
 
-      - name: Build Debug APK
+
+      # -------------------------------------------------
+      # CREATE PERMANENT KEYSTORE
+      # -------------------------------------------------
+
+      - name: Restore AURIX signing keystore
+        env:
+          AURIX_KEYSTORE_BASE64: ${{ secrets.AURIX_KEYSTORE_BASE64 }}
+        run: |
+          echo "$AURIX_KEYSTORE_BASE64" | base64 --decode > aurix-signing.jks
+
+          test -s aurix-signing.jks
+
+          echo "AURIX signing keystore restored successfully."
+
+
+      # -------------------------------------------------
+      # BUILD RELEASE APK
+      # -------------------------------------------------
+
+      - name: Build Release APK
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
-          gradle assembleDebug \
+          gradle assembleRelease \
             -PGEMINI_API_KEY="$GEMINI_API_KEY" \
+            -PYOUTUBE_API_KEY="$YOUTUBE_API_KEY" \
             --stacktrace
 
-      - name: Show SHA-1
-        run: |
-          gradle signingReport
 
-      - name: Upload APK
+      # -------------------------------------------------
+      # FIND ANDROID BUILD TOOLS
+      # -------------------------------------------------
+
+      - name: Find Android build tools
+        run: |
+          BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" \
+            -maxdepth 1 \
+            -mindepth 1 \
+            -type d \
+            | sort -V \
+            | tail -n 1)
+
+          echo "BUILD_TOOLS=$BUILD_TOOLS" >> "$GITHUB_ENV"
+
+          echo "Using build tools:"
+          echo "$BUILD_TOOLS"
+
+
+      # -------------------------------------------------
+      # ZIPALIGN RELEASE APK
+      # -------------------------------------------------
+
+      - name: Zipalign APK
+        run: |
+          "$BUILD_TOOLS/zipalign" \
+            -f \
+            4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app-release-aligned.apk
+
+
+      # -------------------------------------------------
+      # SIGN APK
+      # -------------------------------------------------
+
+      - name: Sign APK
+        env:
+          AURIX_KEYSTORE_PASSWORD: ${{ secrets.AURIX_KEYSTORE_PASSWORD }}
+          AURIX_KEY_PASSWORD: ${{ secrets.AURIX_KEY_PASSWORD }}
+          AURIX_KEY_ALIAS: ${{ secrets.AURIX_KEY_ALIAS }}
+        run: |
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks aurix-signing.jks \
+            --ks-key-alias "$AURIX_KEY_ALIAS" \
+            --ks-pass env:AURIX_KEYSTORE_PASSWORD \
+            --key-pass env:AURIX_KEY_PASSWORD \
+            --out AURIX-release.apk \
+            app-release-aligned.apk
+
+
+      # -------------------------------------------------
+      # VERIFY SIGNATURE
+      # -------------------------------------------------
+
+      - name: Verify APK signature
+        run: |
+          "$BUILD_TOOLS/apksigner" verify \
+            --verbose \
+            AURIX-release.apk
+
+
+      # -------------------------------------------------
+      # SHOW FINAL SHA-1
+      # -------------------------------------------------
+
+      - name: Show final APK SHA-1
+        run: |
+          echo "======================================"
+          echo "AURIX FINAL RELEASE APK SHA-1"
+          echo "======================================"
+
+          keytool \
+            -printcert \
+            -jarfile AURIX-release.apk \
+            | grep -i "SHA1:"
+
+
+      # -------------------------------------------------
+      # UPLOAD FINAL APK
+      # -------------------------------------------------
+
+      - name: Upload AURIX Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: AURIX-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: AURIX-release
+          path: AURIX-release.apk
