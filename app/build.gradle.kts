@@ -63,15 +63,15 @@ dependencies {
 
     implementation("androidx.activity:activity-ktx:1.8.2")
 
-    // Firebase Auth — KEEP THIS VERSION
+    // Firebase Auth
     implementation("com.google.firebase:firebase-auth:23.1.0")
 
-    // Credential Manager — UPDATED FOR THIS TEST
-   implementation("androidx.credentials:credentials:1.3.0")
-   implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    // Credential Manager
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
 
     // Google Identity Services
     implementation(
-        "com.google.android.libraries.identity.googleid:googleid:1.2.0"
+        "com.google.android.libraries.identity.googleid:googleid:1.1.1"
     )
 }
