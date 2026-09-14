@@ -328,9 +328,7 @@ class AurixService :
 // SPEECH RECOGNITION
 // =========================================================
 
-private fun normalizeWakeText(
-    value: String
-): String {
+private fun normalizeWakeText(value: String): String {
     return value
         .lowercase(Locale.ENGLISH)
         .replace("’", "'")
@@ -339,45 +337,35 @@ private fun normalizeWakeText(
         .trim()
 }
 
-private fun extractWakeCommand(
-    value: String
-): String? {
+private fun extractWakeCommand(value: String): String? {
 
-    val text =
-        normalizeWakeText(value)
+    val text = normalizeWakeText(value)
 
-    if (text.isBlank()) {
+    if (text.isBlank()) return null
+
+    // USER-FACING WAKE WORD = ONLY "AURIX"
+    //
+    // These extra forms are only ASR-error tolerance.
+    val wakePattern = Regex(
+        "\\b(aurix|auriks|aurics|aurik|aurixx|auryx|aurex|orix|oryx|ourix|arix|auric|aurrix|aurixs)\\b"
+    )
+
+    val match = wakePattern.find(text)
+        ?: return null
+
+    // Reject "Hai Aurix", "Hey Aurix", "Hi Aurix", etc.
+    val before = text
+        .substring(0, match.range.first)
+        .trim()
+
+    if (before.isNotBlank()) {
         return null
     }
-
-    // AURIX is the ONLY wake word.
-    // "Hey AURIX" is no longer required.
-    // SpeechRecognizer may return several close spellings, so accept
-    // common AURIX variants without accepting unrelated words like "lyrics".
-    val wakePattern =
-        Regex(
-            "\\b(aurix|auriks|aurics|aurik|aurixx|auryx|aurex|orix|oryx|ourix|arix|auric|aurrix|aurixs)\\b"
-        )
-
-    val match =
-        wakePattern.find(text)
-            ?: run {
-
-                // Some recognizers split the name into multiple words.
-                val splitWakePattern =
-                    Regex(
-                        "\\b(au\\s*rix|a\\s*rix|or\\s*ix|our\\s*ix|aur\\s*iks|aur\\s*ics)\\b"
-                    )
-
-                splitWakePattern.find(text)
-            }
-            ?: return null
 
     return text
         .substring(match.range.last + 1)
         .trim()
 }
-
 private fun createAurixSpeechRecognizer(): SpeechRecognizer {
 
     return if (
