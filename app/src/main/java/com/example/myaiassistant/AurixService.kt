@@ -3493,54 +3493,39 @@ private fun askFinalAI(
 
     private fun openCamera() {
 
+        // Launch the phone's installed camera app.
+        // Do not depend on queryIntentActivities(): on some Android/OEM
+        // builds package-visibility filtering can make that check return
+        // empty even though the camera app is available.
         val intents =
             listOf(
-                Intent(
-                    MediaStore
-                        .ACTION_IMAGE_CAPTURE
-                ),
-                Intent(
-                    "android.media.action.IMAGE_CAPTURE"
-                )
+                Intent(MediaStore.ACTION_IMAGE_CAPTURE),
+                Intent("android.media.action.STILL_IMAGE_CAMERA"),
+                Intent("android.media.action.IMAGE_CAPTURE")
             )
 
-        for (
-            intent in intents
-        ) {
-
+        for (cameraIntent in intents) {
             try {
-
-                intent.addFlags(
+                cameraIntent.addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK
                 )
 
-                if (
-                    packageManager
-                        .queryIntentActivities(
-                            intent,
-                            PackageManager
-                                .MATCH_DEFAULT_ONLY
-                        )
-                        .isNotEmpty()
-                ) {
-
-                    startActivity(
-                        intent
-                    )
+                if (cameraIntent.resolveActivity(packageManager) != null) {
+                    startActivity(cameraIntent)
 
                     speakOnce(
-                        "Opening camera."
+                        "Boss, camera khol raha hoon."
                     )
 
                     return
                 }
-
             } catch (_: Exception) {
+                // Try the next camera intent.
             }
         }
 
         speakOnce(
-            "Camera is not available."
+            "Boss, camera app nahi mil raha."
         )
     }
 
