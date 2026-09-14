@@ -1,63 +1,204 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Microphone -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Camera -->
-    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- ===================================================== -->
+    <!-- INTERNET / AI / YOUTUBE -->
+    <!-- ===================================================== -->
 
-    <!-- Notifications on Android 13+ -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission
+        android:name="android.permission.INTERNET" />
 
-    <!-- Foreground service -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- ===================================================== -->
+    <!-- MICROPHONE / AURIX WAKE -->
+    <!-- ===================================================== -->
 
-    <!-- Package visibility -->
+    <uses-permission
+        android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- ===================================================== -->
+    <!-- CAMERA -->
+    <!-- ===================================================== -->
+
+    <uses-permission
+        android:name="android.permission.CAMERA" />
+
+    <!-- ===================================================== -->
+    <!-- NOTIFICATIONS -->
+    <!-- ===================================================== -->
+
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ===================================================== -->
+    <!-- FOREGROUND SERVICE -->
+    <!-- Android 14 microphone service requirement -->
+    <!-- ===================================================== -->
+
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+    <!-- ===================================================== -->
+    <!-- LOCATION -->
+    <!-- ===================================================== -->
+
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- ===================================================== -->
+    <!-- BLUETOOTH -->
+    <!-- ===================================================== -->
+
+    <uses-permission
+        android:name="android.permission.BLUETOOTH" />
+
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN" />
+
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN" />
+
+    <!-- ===================================================== -->
+    <!-- ALARM -->
+    <!-- ===================================================== -->
+
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- ===================================================== -->
+    <!-- PACKAGE VISIBILITY -->
+    <!-- ===================================================== -->
+
     <queries>
 
-        <!-- Speech recognition services -->
+        <!-- Speech Recognition -->
         <intent>
-            <action android:name="android.speech.RecognitionService" />
+            <action
+                android:name="android.speech.RecognitionService" />
         </intent>
 
-        <!-- Camera applications -->
+        <!-- Camera -->
         <intent>
-            <action android:name="android.media.action.IMAGE_CAPTURE" />
+            <action
+                android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
+
+        <!-- YouTube -->
+        <package
+            android:name="com.google.android.youtube" />
+
+        <!-- Chrome -->
+        <package
+            android:name="com.android.chrome" />
+
+        <!-- Google Maps -->
+        <package
+            android:name="com.google.android.apps.maps" />
+
+        <!-- WhatsApp -->
+        <package
+            android:name="com.whatsapp" />
+
+        <!-- Instagram -->
+        <package
+            android:name="com.instagram.android" />
+
+        <!-- Gmail -->
+        <package
+            android:name="com.google.android.gm" />
+
+        <!-- Facebook -->
+        <package
+            android:name="com.facebook.katana" />
+
+        <!-- Telegram -->
+        <package
+            android:name="org.telegram.messenger" />
+
+        <!-- Snapchat -->
+        <package
+            android:name="com.snapchat.android" />
+
+        <!-- Spotify -->
+        <package
+            android:name="com.spotify.music" />
 
     </queries>
 
-    <application
-        android:allowBackup="true"
-        android:label="AURIX"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.MyAI">
+    <!-- ===================================================== -->
+    <!-- APPLICATION -->
+    <!-- ===================================================== -->
 
-        <!-- Authentication screen / Launcher -->
+    <application
+
+        android:allowBackup="true"
+
+        android:label="AURIX"
+
+        android:supportsRtl="true"
+
+        android:theme="@style/Theme.MyAI"
+
+        android:usesCleartextTraffic="true"
+
+        android:icon="@drawable/aurix_logo">
+
+        <!-- ================================================= -->
+        <!-- AUTHENTICATION -->
+        <!-- ================================================= -->
+
         <activity
             android:name=".AuthActivity"
             android:exported="true">
 
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+
+                <action
+                    android:name="android.intent.action.MAIN" />
+
+                <category
+                    android:name="android.intent.category.LAUNCHER" />
+
             </intent-filter>
 
         </activity>
 
-        <!-- Main AURIX screen -->
+        <!-- ================================================= -->
+        <!-- MAIN AURIX UI -->
+        <!-- ================================================= -->
+
         <activity
             android:name=".MainActivity"
             android:exported="false" />
 
-        <!-- AURIX voice service -->
+        <!-- ================================================= -->
+        <!-- AURIX BACKGROUND VOICE SERVICE -->
+        <!-- ================================================= -->
+
         <service
-    android:name=".AurixService"
-    android:enabled="true"
-    android:exported="false"
-    android:foregroundServiceType="microphone" />
+            android:name=".AurixService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- ================================================= -->
+        <!-- ALARM RECEIVER -->
+        <!-- ================================================= -->
+
+        <receiver
+            android:name=".AlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
     </application>
 
