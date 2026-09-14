@@ -311,47 +311,121 @@ class MainActivity : Activity() {
     // MAIN INTERFACE
     // =========================================================
 
-    private fun createInterface() {
+private lateinit var aurixUi: AurixOriginalUi
 
-        root =
-            FrameLayout(this)
+private fun createInterface() {
 
-        root.background =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    bgTop,
-                    Color.rgb(
-                        1,
-                        5,
-                        16
-                    ),
-                    bgBottom
-                )
-            )
+    root = FrameLayout(this)
 
-        setContentView(root)
-
-        originalUi =
-            AurixOriginalUi(
-                this,
-                uiCallbacks
-            )
-
-        val uiView =
-            originalUi.build()
-
-        root.addView(
-            uiView,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
+    root.background =
+        GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(
+                bgTop,
+                Color.rgb(1, 5, 16),
+                bgBottom
             )
         )
 
-        statusText =
-            originalUi.statusText
-    }
+    val ui =
+        AurixOriginalUi(
+            this,
+            object : AurixOriginalUi.Callbacks {
+
+                override fun onMenu() {
+                    toggleDrawer()
+                }
+
+                override fun onVoice() {
+                    startListeningOnce()
+                }
+
+                override fun onYouTube() {
+                    openUrl("https://www.youtube.com")
+                }
+
+                override fun onSearch() {
+                    openUrl("https://www.google.com")
+                }
+
+                override fun onMusic() {
+                    openUrl("https://music.youtube.com")
+                }
+
+                override fun onWeather() {
+                    openUrl(
+                        "https://www.google.com/search?q=weather"
+                    )
+                }
+
+                override fun onCall() {
+                    startActivity(
+                        Intent(Intent.ACTION_DIAL)
+                    )
+                }
+
+                override fun onMessages() {
+                    startActivity(
+                        Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("smsto:")
+                        }
+                    )
+                }
+
+                override fun onApps() {
+                    performAppsAction()
+                }
+
+                override fun onMore() {
+                    updateStatus("READY")
+                }
+
+                override fun onHome() {
+                    navigate("Home")
+                }
+
+                override fun onHistory() {
+                    navigate("History")
+                }
+
+                override fun onAurix() {
+                    navigate("AURIX")
+                }
+
+                override fun onShortcuts() {
+                    navigate("Shortcuts")
+                }
+
+                override fun onSettings() {
+                    navigate("Settings")
+                }
+            }
+        )
+
+    /*
+     * IMPORTANT:
+     * build() MUST happen before accessing
+     * statusText / voiceButton / conversationBox.
+     */
+    val uiView = ui.build()
+
+    root.addView(
+        uiView,
+        FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+    )
+
+    aurixUi = ui
+
+    setContentView(root)
+
+    /*
+     * Only AFTER ui.build()
+     */
+    statusText = ui.statusText
+}
 
     // =========================================================
     // MICROPHONE PERMISSION
