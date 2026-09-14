@@ -1788,6 +1788,89 @@ private fun startListeningOnce() {
         } catch (_: Exception) {
         }
     }
+// =========================================================
+// MORE APPS
+// =========================================================
+
+private fun showMoreApps() {
+
+    val overlay =
+        createPageOverlay(
+            "MORE APPS"
+        )
+
+    val content =
+        overlay.second
+
+    addSectionTitle(
+        content,
+        "AURIX APP LAUNCHER"
+    )
+
+    addShortcut(
+        content,
+        "▶",
+        "YOUTUBE",
+        "Open YouTube"
+    ) {
+        openUrl(
+            "https://www.youtube.com"
+        )
+    }
+
+    addShortcut(
+        content,
+        "⌕",
+        "GOOGLE",
+        "Open Google Search"
+    ) {
+        openUrl(
+            "https://www.google.com"
+        )
+    }
+
+    addShortcut(
+        content,
+        "♫",
+        "YOUTUBE MUSIC",
+        "Open YouTube Music"
+    ) {
+        openUrl(
+            "https://music.youtube.com"
+        )
+    }
+
+    addShortcut(
+        content,
+        "☁",
+        "WEATHER",
+        "Open current weather"
+    ) {
+        openUrl(
+            "https://www.google.com/search?q=weather"
+        )
+    }
+
+    addShortcut(
+        content,
+        "▦",
+        "INSTALLED APPS",
+        "Open Android app launcher"
+    ) {
+        performAppsAction()
+    }
+
+    addShortcut(
+        content,
+        "⚙",
+        "SETTINGS",
+        "Open AURIX settings"
+    ) {
+        navigate(
+            "Settings"
+        )
+    }
+}
 
     // =========================================================
     // MESSAGE CARD
