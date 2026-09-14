@@ -7,26 +7,29 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import java.util.Locale
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.view.Gravity
 import android.view.View
+import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
+import java.util.Locale
 
 class MainActivity : Activity() {
 
+    // =========================================================
+    // ROOT / UI
+    // =========================================================
+
     private lateinit var root: FrameLayout
-    private lateinit var originalUi: AurixOriginalUi
-    private lateinit var statusText: TextView
+    private lateinit var aurixUi: AurixOriginalUi
     private lateinit var drawer: LinearLayout
 
     private var active = false
@@ -43,118 +46,12 @@ class MainActivity : Activity() {
     // COLORS
     // =========================================================
 
-    private val bgTop =
-        Color.rgb(2, 12, 28)
+    private val bgTop = Color.rgb(2, 12, 28)
+    private val bgBottom = Color.rgb(9, 2, 25)
 
-    private val bgBottom =
-        Color.rgb(9, 2, 25)
-
-    private val cyan =
-        Color.rgb(80, 220, 255)
-
-    private val blue =
-        Color.rgb(45, 120, 255)
-
-    private val purple =
-        Color.rgb(145, 55, 240)
-
-    private val white =
-        Color.WHITE
-
-    private val muted =
-        Color.rgb(105, 155, 190)
-
-    // =========================================================
-    // AURIX UI CALLBACKS
-    // =========================================================
-
-    private val uiCallbacks =
-        object : AurixOriginalUi.Callbacks {
-
-            override fun onMenu() {
-                toggleDrawer()
-            }
-
-            override fun onVoice() {
-                startListeningOnce()
-            }
-
-            override fun onYouTube() {
-                openUrl(
-                    "https://www.youtube.com"
-                )
-            }
-
-            override fun onSearch() {
-                openUrl(
-                    "https://www.google.com"
-                )
-            }
-
-            override fun onMusic() {
-                openUrl(
-                    "https://music.youtube.com"
-                )
-            }
-
-            override fun onWeather() {
-                openUrl(
-                    "https://www.google.com/search?q=weather"
-                )
-            }
-
-            override fun onCall() {
-                try {
-                    startActivity(
-                        Intent(
-                            Intent.ACTION_DIAL
-                        )
-                    )
-                } catch (_: Exception) {
-                }
-            }
-
-            override fun onMessages() {
-                try {
-                    startActivity(
-                        Intent(
-                            Intent.ACTION_SENDTO
-                        ).apply {
-                            data = Uri.parse("smsto:")
-                        }
-                    )
-                } catch (_: Exception) {
-                }
-            }
-
-            override fun onApps() {
-                performAppsAction()
-            }
-
-            override fun onMore() {
-                updateStatus("READY")
-            }
-
-            override fun onHome() {
-                navigate("Home")
-            }
-
-            override fun onHistory() {
-                navigate("History")
-            }
-
-            override fun onAurix() {
-                navigate("AURIX")
-            }
-
-            override fun onShortcuts() {
-                navigate("Shortcuts")
-            }
-
-            override fun onSettings() {
-                navigate("Settings")
-            }
-        }
+    private val cyan = Color.rgb(80, 220, 255)
+    private val white = Color.WHITE
+    private val muted = Color.rgb(105, 155, 190)
 
     // =========================================================
     // AURIX EVENT RECEIVER
@@ -187,15 +84,21 @@ class MainActivity : Activity() {
 
                 when (type) {
 
+                    // -------------------------------------------------
+                    // STATUS
+                    // -------------------------------------------------
+
                     AurixService.TYPE_STATUS -> {
                         updateStatus(text)
                     }
 
+                    // -------------------------------------------------
+                    // USER COMMAND
+                    // -------------------------------------------------
+
                     AurixService.TYPE_COMMAND -> {
 
-                        updateStatus(
-                            "THINKING"
-                        )
+                        updateStatus("THINKING")
 
                         if (text.isNotBlank()) {
 
@@ -204,21 +107,26 @@ class MainActivity : Activity() {
                                 text
                             )
 
-                            if (
-                                ::originalUi.isInitialized
-                            ) {
-                                originalUi.addUserMessage(
-                                    text
-                                )
+                            runOnUiThread {
+
+                                if (
+                                    ::aurixUi.isInitialized
+                                ) {
+                                    aurixUi.addUserMessage(
+                                        text
+                                    )
+                                }
                             }
                         }
                     }
 
+                    // -------------------------------------------------
+                    // AURIX RESPONSE
+                    // -------------------------------------------------
+
                     AurixService.TYPE_SPEAK -> {
 
-                        updateStatus(
-                            "RESPONDING"
-                        )
+                        updateStatus("RESPONDING")
 
                         if (text.isNotBlank()) {
 
@@ -227,12 +135,15 @@ class MainActivity : Activity() {
                                 text
                             )
 
-                            if (
-                                ::originalUi.isInitialized
-                            ) {
-                                originalUi.addAurixMessage(
-                                    text
-                                )
+                            runOnUiThread {
+
+                                if (
+                                    ::aurixUi.isInitialized
+                                ) {
+                                    aurixUi.addAurixMessage(
+                                        text
+                                    )
+                                }
                             }
                         }
                     }
@@ -306,64 +217,6 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // MAIN INTERFACE
-    // =========================================================
-
-    private fun createInterface() {
-
-        root =
-            FrameLayout(this).apply {
-
-                background =
-                    GradientDrawable(
-                        GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(
-                            bgTop,
-                            Color.rgb(
-                                1,
-                                5,
-                                16
-                            ),
-                            bgBottom
-                        )
-                    )
-            }
-
-        /*
-         * AurixOriginalUi is now the ONLY
-         * master UI instance.
-         */
-        originalUi =
-            AurixOriginalUi(
-                this,
-                uiCallbacks
-            )
-
-        /*
-         * Build the original APK-style UI
-         * before accessing its views.
-         */
-        val uiView =
-            originalUi.build()
-
-        root.addView(
-            uiView,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        setContentView(root)
-
-        /*
-         * statusText belongs to AurixOriginalUi.
-         */
-        statusText =
-            originalUi.statusText
-    }
-
-    // =========================================================
     // MICROPHONE PERMISSION
     // =========================================================
 
@@ -373,8 +226,7 @@ class MainActivity : Activity() {
             ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.RECORD_AUDIO
-            ) !=
-            PackageManager.PERMISSION_GRANTED
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
 
             requestPermissions(
@@ -390,6 +242,10 @@ class MainActivity : Activity() {
         }
     }
 
+    // =========================================================
+    // PERMISSION RESULT
+    // =========================================================
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -402,27 +258,21 @@ class MainActivity : Activity() {
             grantResults
         )
 
-        if (
-            requestCode != 500
-        ) {
-            return
-        }
+        if (requestCode == 500) {
 
-        if (
-            grantResults.isNotEmpty() &&
-            grantResults[0] ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
+            if (
+                grantResults.isNotEmpty() &&
+                grantResults[0] ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
 
-            startAurixService()
+                startAurixService()
 
-        } else {
+            } else {
 
-            active = false
-
-            updateStatus(
-                "READY"
-            )
+                active = false
+                updateStatus("READY")
+            }
         }
     }
 
@@ -456,9 +306,7 @@ class MainActivity : Activity() {
 
             } else {
 
-                startService(
-                    intent
-                )
+                startService(intent)
             }
 
             active = true
@@ -478,6 +326,178 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
+    // MASTER UI
+    // =========================================================
+
+    private fun createInterface() {
+
+        root =
+            FrameLayout(this)
+
+        root.setBackgroundColor(
+            Color.rgb(
+                4,
+                7,
+                25
+            )
+        )
+
+        setContentView(root)
+
+        aurixUi =
+            AurixOriginalUi(
+                this,
+                object :
+                    AurixOriginalUi.Callbacks {
+
+                    // =============================================
+                    // HEADER
+                    // =============================================
+
+                    override fun onMenu() {
+                        toggleDrawer()
+                    }
+
+                    override fun onVoice() {
+                        startListeningOnce()
+                    }
+
+                    // =============================================
+                    // QUICK ACTIONS
+                    // =============================================
+
+                    override fun onYouTube() {
+
+                        openUrl(
+                            "https://www.youtube.com"
+                        )
+                    }
+
+                    override fun onSearch() {
+
+                        openUrl(
+                            "https://www.google.com"
+                        )
+                    }
+
+                    override fun onMusic() {
+
+                        openUrl(
+                            "https://music.youtube.com"
+                        )
+                    }
+
+                    override fun onWeather() {
+
+                        openUrl(
+                            "https://www.google.com/search?q=weather"
+                        )
+                    }
+
+                    override fun onCall() {
+
+                        try {
+
+                            startActivity(
+                                Intent(
+                                    Intent.ACTION_DIAL
+                                )
+                            )
+
+                        } catch (_: Exception) {
+                        }
+                    }
+
+                    override fun onMessages() {
+
+                        try {
+
+                            startActivity(
+                                Intent(
+                                    Intent.ACTION_SENDTO
+                                ).apply {
+
+                                    data =
+                                        Uri.parse(
+                                            "smsto:"
+                                        )
+                                }
+                            )
+
+                        } catch (_: Exception) {
+                        }
+                    }
+
+                    override fun onApps() {
+
+                        performAppsAction()
+                    }
+
+                    override fun onMore() {
+
+                        // More now actually works.
+                        toggleDrawer()
+                    }
+
+                    // =============================================
+                    // BOTTOM NAV
+                    // =============================================
+
+                    override fun onHome() {
+
+                        currentPage =
+                            "Home"
+
+                        closeOverlay()
+                    }
+
+                    override fun onHistory() {
+
+                        navigate(
+                            "History"
+                        )
+                    }
+
+                    override fun onAurix() {
+
+                        currentPage =
+                            "AURIX"
+
+                        closeOverlay()
+                    }
+
+                    override fun onShortcuts() {
+
+                        navigate(
+                            "Shortcuts"
+                        )
+                    }
+
+                    override fun onSettings() {
+
+                        navigate(
+                            "Settings"
+                        )
+                    }
+                }
+            )
+
+        val uiView =
+            aurixUi.build()
+
+        val params =
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+
+        root.addView(
+            uiView,
+            params
+        )
+    }
+
+    // =========================================================
     // VOICE BACKUP
     // =========================================================
 
@@ -487,8 +507,7 @@ class MainActivity : Activity() {
             ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.RECORD_AUDIO
-            ) !=
-            PackageManager.PERMISSION_GRANTED
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
 
             requestMicrophonePermission()
@@ -520,9 +539,7 @@ class MainActivity : Activity() {
 
             } else {
 
-                startService(
-                    intent
-                )
+                startService(intent)
             }
 
             active = true
@@ -536,6 +553,88 @@ class MainActivity : Activity() {
             updateStatus(
                 "START FAILED"
             )
+        }
+    }
+
+    // =========================================================
+    // STATUS
+    // =========================================================
+
+    private fun updateStatus(
+        status: String
+    ) {
+
+        runOnUiThread {
+
+            if (
+                !::aurixUi.isInitialized
+            ) {
+                return@runOnUiThread
+            }
+
+            val clean =
+                status
+                    .uppercase(
+                        Locale.getDefault()
+                    )
+
+            when {
+
+                clean.contains(
+                    "LISTEN"
+                ) -> {
+
+                    aurixUi
+                        .setListeningState()
+                }
+
+                clean.contains(
+                    "THINK"
+                ) ||
+                clean.contains(
+                    "PROCESS"
+                ) ||
+                clean.contains(
+                    "VERIFY"
+                ) ||
+                clean.contains(
+                    "PLAN"
+                ) -> {
+
+                    aurixUi
+                        .setThinkingState()
+                }
+
+                else -> {
+
+                    aurixUi
+                        .setReadyState()
+                }
+            }
+        }
+    }
+
+    // =========================================================
+    // INTERFACE STATE
+    // =========================================================
+
+    private fun updateInterface() {
+
+        if (
+            !::aurixUi.isInitialized
+        ) {
+            return
+        }
+
+        if (active) {
+
+            aurixUi
+                .setListeningState()
+
+        } else {
+
+            aurixUi
+                .setReadyState()
         }
     }
 
@@ -554,27 +653,32 @@ class MainActivity : Activity() {
 
             "Home",
             "AURIX" -> {
-                showHomePage()
+
+                closeOverlay()
             }
 
             "History" -> {
+
                 showHistoryPage()
             }
 
             "Shortcuts" -> {
+
                 showShortcutsPage()
             }
 
             "Settings" -> {
+
                 showSettingsPage()
             }
         }
     }
 
-    private fun showHomePage() {
+    // =========================================================
+    // CLOSE OVERLAY
+    // =========================================================
 
-        currentPage =
-            "Home"
+    private fun closeOverlay() {
 
         root.findViewWithTag<View>(
             "AURIX_PAGE"
@@ -582,10 +686,13 @@ class MainActivity : Activity() {
 
             root.removeView(it)
         }
+
+        currentPage =
+            "Home"
     }
 
     // =========================================================
-    // HISTORY
+    // HISTORY PAGE
     // =========================================================
 
     private fun showHistoryPage() {
@@ -691,7 +798,7 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // SHORTCUTS
+    // SHORTCUTS PAGE
     // =========================================================
 
     private fun showShortcutsPage() {
@@ -757,14 +864,12 @@ class MainActivity : Activity() {
                 .clear()
                 .apply()
 
-            navigate(
-                "Home"
-            )
+            closeOverlay()
         }
     }
 
     // =========================================================
-    // SETTINGS
+    // SETTINGS PAGE
     // =========================================================
 
     private fun showSettingsPage() {
@@ -976,6 +1081,9 @@ class MainActivity : Activity() {
                     root.removeView(
                         overlay
                     )
+
+                    currentPage =
+                        "Home"
                 }
             }
 
@@ -996,6 +1104,9 @@ class MainActivity : Activity() {
                 textSize =
                     23f
 
+                letterSpacing =
+                    0.12f
+
                 setTextColor(
                     white
                 )
@@ -1013,6 +1124,359 @@ class MainActivity : Activity() {
         )
 
         return overlay to content
+    }
+
+    // =========================================================
+    // DRAWER
+    // =========================================================
+
+    private fun toggleDrawer() {
+
+        if (
+            ::drawer.isInitialized &&
+            drawer.visibility ==
+            View.VISIBLE
+        ) {
+
+            drawer.visibility =
+                View.GONE
+
+            return
+        }
+
+        if (
+            !::drawer.isInitialized
+        ) {
+
+            createDrawer()
+        }
+
+        drawer.visibility =
+            View.VISIBLE
+    }
+
+    private fun createDrawer() {
+
+        drawer =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(20),
+                    dp(38),
+                    dp(16),
+                    dp(24)
+                )
+
+                background =
+                    GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(
+                            Color.rgb(
+                                7,
+                                14,
+                                38
+                            ),
+                            Color.rgb(
+                                18,
+                                7,
+                                39
+                            )
+                        )
+                    )
+
+                elevation =
+                    dp(18).toFloat()
+            }
+
+        root.addView(
+            drawer,
+            FrameLayout.LayoutParams(
+                dp(310),
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        val close =
+            TextView(this).apply {
+
+                text =
+                    "×"
+
+                textSize =
+                    30f
+
+                gravity =
+                    Gravity.RIGHT
+
+                setTextColor(
+                    white
+                )
+
+                setOnClickListener {
+
+                    drawer.visibility =
+                        View.GONE
+                }
+            }
+
+        drawer.addView(
+            close,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(45)
+            )
+        )
+
+        val logo =
+            TextView(this).apply {
+
+                text =
+                    "A U R I X"
+
+                textSize =
+                    27f
+
+                setTextColor(
+                    white
+                )
+            }
+
+        drawer.addView(
+            logo
+        )
+
+        val sub =
+            TextView(this).apply {
+
+                text =
+                    "INTELLIGENCE CORE"
+
+                textSize =
+                    8f
+
+                letterSpacing =
+                    0.16f
+
+                setTextColor(
+                    cyan
+                )
+
+                setPadding(
+                    0,
+                    dp(4),
+                    0,
+                    dp(24)
+                )
+            }
+
+        drawer.addView(
+            sub
+        )
+
+        addDrawerItem(
+            "⌂",
+            "Home"
+        ) {
+
+            drawer.visibility =
+                View.GONE
+
+            closeOverlay()
+        }
+
+        addDrawerItem(
+            "◷",
+            "History"
+        ) {
+
+            drawer.visibility =
+                View.GONE
+
+            showHistoryPage()
+        }
+
+        addDrawerItem(
+            "✦",
+            "Shortcuts"
+        ) {
+
+            drawer.visibility =
+                View.GONE
+
+            showShortcutsPage()
+        }
+
+        addDrawerItem(
+            "♫",
+            "Music"
+        ) {
+
+            drawer.visibility =
+                View.GONE
+
+            openUrl(
+                "https://music.youtube.com"
+            )
+        }
+
+        addDrawerItem(
+            "▦",
+            "Apps"
+        ) {
+
+            drawer.visibility =
+                View.GONE
+
+            performAppsAction()
+        }
+
+        addDrawerItem(
+            "+",
+            "New Conversation"
+        ) {
+
+            historyPrefs
+                .edit()
+                .clear()
+                .apply()
+
+            drawer.visibility =
+                View.GONE
+        }
+
+        addDrawerItem(
+            "⚙",
+            "Settings"
+        ) {
+
+            drawer.visibility =
+                View.GONE
+
+            showSettingsPage()
+        }
+
+        val spacer =
+            View(this)
+
+        drawer.addView(
+            spacer,
+            LinearLayout.LayoutParams(
+                1,
+                0,
+                1f
+            )
+        )
+
+        val account =
+            FirebaseAuth
+                .getInstance()
+                .currentUser
+
+        val accountText =
+            TextView(this).apply {
+
+                text =
+                    account?.email
+                        ?: "Google account"
+
+                textSize =
+                    9f
+
+                setTextColor(
+                    muted
+                )
+            }
+
+        drawer.addView(
+            accountText
+        )
+    }
+
+    private fun addDrawerItem(
+        icon: String,
+        label: String,
+        action: () -> Unit
+    ) {
+
+        val item =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER_VERTICAL
+
+                setPadding(
+                    dp(4),
+                    dp(4),
+                    dp(4),
+                    dp(4)
+                )
+
+                setOnClickListener {
+                    action()
+                }
+            }
+
+        drawer.addView(
+            item,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(52)
+            )
+        )
+
+        val iconView =
+            TextView(this).apply {
+
+                text =
+                    icon
+
+                textSize =
+                    19f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    cyan
+                )
+            }
+
+        item.addView(
+            iconView,
+            LinearLayout.LayoutParams(
+                dp(48),
+                dp(48)
+            )
+        )
+
+        val labelView =
+            TextView(this).apply {
+
+                text =
+                    label
+
+                textSize =
+                    12f
+
+                setTextColor(
+                    white
+                )
+            }
+
+        item.addView(
+            labelView,
+            LinearLayout.LayoutParams(
+                0,
+                dp(48),
+                1f
+            )
+        )
     }
 
     // =========================================================
@@ -1263,7 +1727,7 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // HISTORY STORAGE
+    // HISTORY
     // =========================================================
 
     private fun addHistoryItem(
@@ -1282,7 +1746,6 @@ class MainActivity : Activity() {
         while (
             items.size > 50
         ) {
-
             items.removeAt(0)
         }
 
@@ -1292,10 +1755,11 @@ class MainActivity : Activity() {
             ) {
 
                 "${it.first}\t${
-                    it.second.replace(
-                        "\n",
-                        " "
-                    )
+                    it.second
+                        .replace(
+                            "\n",
+                            " "
+                        )
                 }"
             }
 
@@ -1343,391 +1807,6 @@ class MainActivity : Activity() {
                     null
                 }
             }
-    }
-
-    // =========================================================
-    // DRAWER
-    // =========================================================
-
-    private fun toggleDrawer() {
-
-        if (
-            ::drawer.isInitialized &&
-            drawer.visibility ==
-            View.VISIBLE
-        ) {
-
-            drawer.visibility =
-                View.GONE
-
-            return
-        }
-
-        if (
-            !::drawer.isInitialized
-        ) {
-
-            createDrawer()
-        }
-
-        drawer.visibility =
-            View.VISIBLE
-    }
-
-    private fun createDrawer() {
-
-        drawer =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                setPadding(
-                    dp(20),
-                    dp(38),
-                    dp(16),
-                    dp(24)
-                )
-
-                background =
-                    GradientDrawable(
-                        GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(
-                            Color.rgb(
-                                7,
-                                14,
-                                38
-                            ),
-                            Color.rgb(
-                                18,
-                                7,
-                                39
-                            )
-                        )
-                    )
-
-                elevation =
-                    dp(18).toFloat()
-            }
-
-        root.addView(
-            drawer,
-            FrameLayout.LayoutParams(
-                dp(310),
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        val close =
-            TextView(this).apply {
-
-                text =
-                    "×"
-
-                textSize =
-                    30f
-
-                gravity =
-                    Gravity.RIGHT
-
-                setTextColor(
-                    white
-                )
-
-                setOnClickListener {
-
-                    drawer.visibility =
-                        View.GONE
-                }
-            }
-
-        drawer.addView(
-            close,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(45)
-            )
-        )
-
-        val logo =
-            TextView(this).apply {
-
-                text =
-                    "A U R I X"
-
-                textSize =
-                    27f
-
-                setTextColor(
-                    white
-                )
-            }
-
-        drawer.addView(
-            logo
-        )
-
-        val sub =
-            TextView(this).apply {
-
-                text =
-                    "INTELLIGENCE CORE"
-
-                textSize =
-                    8f
-
-                setTextColor(
-                    cyan
-                )
-
-                setPadding(
-                    0,
-                    dp(4),
-                    0,
-                    dp(24)
-                )
-            }
-
-        drawer.addView(
-            sub
-        )
-
-        addDrawerItem(
-            "⌂",
-            "Home"
-        ) {
-
-            drawer.visibility =
-                View.GONE
-
-            navigate(
-                "Home"
-            )
-        }
-
-        addDrawerItem(
-            "◷",
-            "History"
-        ) {
-
-            drawer.visibility =
-                View.GONE
-
-            navigate(
-                "History"
-            )
-        }
-
-        addDrawerItem(
-            "✦",
-            "Shortcuts"
-        ) {
-
-            drawer.visibility =
-                View.GONE
-
-            navigate(
-                "Shortcuts"
-            )
-        }
-
-        addDrawerItem(
-            "♫",
-            "Music"
-        ) {
-
-            drawer.visibility =
-                View.GONE
-
-            openUrl(
-                "https://music.youtube.com"
-            )
-        }
-
-        addDrawerItem(
-            "▦",
-            "Apps"
-        ) {
-
-            drawer.visibility =
-                View.GONE
-
-            performAppsAction()
-        }
-
-        addDrawerItem(
-            "+",
-            "New Conversation"
-        ) {
-
-            historyPrefs
-                .edit()
-                .clear()
-                .apply()
-
-            drawer.visibility =
-                View.GONE
-
-            navigate(
-                "Home"
-            )
-        }
-
-        addDrawerItem(
-            "⚙",
-            "Settings"
-        ) {
-
-            drawer.visibility =
-                View.GONE
-
-            navigate(
-                "Settings"
-            )
-        }
-
-        val spacer =
-            View(this)
-
-        drawer.addView(
-            spacer,
-            LinearLayout.LayoutParams(
-                1,
-                0,
-                1f
-            )
-        )
-
-        val account =
-            FirebaseAuth
-                .getInstance()
-                .currentUser
-
-        val accountText =
-            TextView(this).apply {
-
-                text =
-                    account?.email
-                        ?: "Google account"
-
-                textSize =
-                    9f
-
-                setTextColor(
-                    muted
-                )
-            }
-
-        drawer.addView(
-            accountText
-        )
-    }
-
-    private fun addDrawerItem(
-        icon: String,
-        label: String,
-        action: () -> Unit
-    ) {
-
-        val item =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.HORIZONTAL
-
-                gravity =
-                    Gravity.CENTER_VERTICAL
-
-                setPadding(
-                    dp(4),
-                    dp(4),
-                    dp(4),
-                    dp(4)
-                )
-
-                setOnClickListener {
-                    action()
-                }
-            }
-
-        drawer.addView(
-            item,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
-            )
-        )
-
-        val iconView =
-            TextView(this).apply {
-
-                text =
-                    icon
-
-                textSize =
-                    19f
-
-                gravity =
-                    Gravity.CENTER
-
-                setTextColor(
-                    cyan
-                )
-            }
-
-        item.addView(
-            iconView,
-            LinearLayout.LayoutParams(
-                dp(48),
-                dp(48)
-            )
-        )
-
-        val labelView =
-            TextView(this).apply {
-
-                text =
-                    label
-
-                textSize =
-                    12f
-
-                setTextColor(
-                    white
-                )
-            }
-
-        item.addView(
-            labelView,
-            LinearLayout.LayoutParams(
-                0,
-                dp(48),
-                1f
-            )
-        )
-    }
-
-    // =========================================================
-    // APPS
-    // =========================================================
-
-    private fun performAppsAction() {
-
-        try {
-
-            startActivity(
-                Intent(
-                    Intent.ACTION_MAIN
-                ).apply {
-
-                    addCategory(
-                        Intent.CATEGORY_LAUNCHER
-                    )
-                }
-            )
-
-        } catch (_: Exception) {
-        }
     }
 
     // =========================================================
@@ -1798,7 +1877,11 @@ class MainActivity : Activity() {
                     if (aurix)
                         cyan
                     else
-                        purple
+                        Color.rgb(
+                            145,
+                            80,
+                            245
+                        )
                 )
             }
 
@@ -1810,10 +1893,10 @@ class MainActivity : Activity() {
             )
         )
 
-        val text =
+        val textView =
             TextView(this).apply {
 
-                this.text =
+                text =
                     message
 
                 textSize =
@@ -1825,11 +1908,7 @@ class MainActivity : Activity() {
             }
 
         box.addView(
-            text,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            textView
         )
 
         parent.addView(
@@ -1886,179 +1965,25 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // BACKGROUND
+    // APPS
     // =========================================================
 
-    private fun roundedBackground(
-        fill: Int,
-        stroke: Int
-    ): GradientDrawable {
+    private fun performAppsAction() {
 
-        return GradientDrawable().apply {
+        try {
 
-            cornerRadius =
-                dp(18).toFloat()
+            startActivity(
+                Intent(
+                    Intent.ACTION_MAIN
+                ).apply {
 
-            setColor(
-                fill
+                    addCategory(
+                        Intent.CATEGORY_LAUNCHER
+                    )
+                }
             )
 
-            setStroke(
-                dp(1),
-                stroke
-            )
-        }
-    }
-
-    // =========================================================
-    // STATUS
-    // =========================================================
-
-    private fun updateStatus(
-        status: String
-    ) {
-
-        runOnUiThread {
-
-            if (
-                !::statusText.isInitialized
-            ) {
-                return@runOnUiThread
-            }
-
-            val clean =
-                status.uppercase(
-                    Locale.getDefault()
-                )
-
-            when {
-
-                clean.contains(
-                    "LISTEN"
-                ) -> {
-
-                    statusText.text =
-                        "VOICE  •  LISTENING"
-
-                    statusText.setTextColor(
-                        cyan
-                    )
-
-                    if (
-                        ::originalUi.isInitialized
-                    ) {
-                        originalUi
-                            .setListeningState()
-                    }
-                }
-
-                clean.contains(
-                    "THINK"
-                ) ||
-                clean.contains(
-                    "PROCESS"
-                ) -> {
-
-                    statusText.text =
-                        "VOICE  •  THINKING"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            210,
-                            145,
-                            255
-                        )
-                    )
-
-                    if (
-                        ::originalUi.isInitialized
-                    ) {
-                        originalUi
-                            .setThinkingState()
-                    }
-                }
-
-                clean.contains(
-                    "EXECUT"
-                ) -> {
-
-                    statusText.text =
-                        "VOICE  •  EXECUTING"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            110,
-                            175,
-                            255
-                        )
-                    )
-
-                    if (
-                        ::originalUi.isInitialized
-                    ) {
-                        originalUi
-                            .setThinkingState()
-                    }
-                }
-
-                clean.contains(
-                    "RESPOND"
-                ) ||
-                clean.contains(
-                    "SPEAK"
-                ) -> {
-
-                    statusText.text =
-                        "VOICE  •  RESPONDING"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            180,
-                            110,
-                            255
-                        )
-                    )
-
-                    if (
-                        ::originalUi.isInitialized
-                    ) {
-                        originalUi
-                            .setThinkingState()
-                    }
-                }
-
-                else -> {
-
-                    statusText.text =
-                        "VOICE  •  READY"
-
-                    statusText.setTextColor(
-                        cyan
-                    )
-
-                    if (
-                        ::originalUi.isInitialized
-                    ) {
-                        originalUi
-                            .setReadyState()
-                    }
-                }
-            }
-        }
-    }
-
-    // =========================================================
-    // INTERFACE STATE
-    // =========================================================
-
-    private fun updateInterface() {
-
-        if (
-            ::originalUi.isInitialized
-        ) {
-
-            originalUi
-                .setReadyState()
+        } catch (_: Exception) {
         }
     }
 
@@ -2084,7 +2009,7 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // HOME SCREEN
+    // HOME
     // =========================================================
 
     fun goToHomeScreen() {
@@ -2137,10 +2062,7 @@ class MainActivity : Activity() {
 
         } else {
 
-            @Suppress(
-                "DEPRECATION"
-            )
-
+            @Suppress("DEPRECATION")
             registerReceiver(
                 aurixReceiver,
                 filter
@@ -2157,7 +2079,7 @@ class MainActivity : Activity() {
         super.onResume()
 
         if (
-            !::statusText.isInitialized
+            !::aurixUi.isInitialized
         ) {
             return
         }
@@ -2186,6 +2108,7 @@ class MainActivity : Activity() {
     // BACK
     // =========================================================
 
+    @Suppress("DEPRECATION")
     override fun onBackPressed() {
 
         if (
@@ -2207,6 +2130,9 @@ class MainActivity : Activity() {
             root.removeView(
                 it
             )
+
+            currentPage =
+                "Home"
 
             return
         }
@@ -2255,5 +2181,30 @@ class MainActivity : Activity() {
                     .displayMetrics
                     .density
             ).toInt()
+    }
+
+    // =========================================================
+    // BACKGROUND
+    // =========================================================
+
+    private fun roundedBackground(
+        fill: Int,
+        stroke: Int
+    ): GradientDrawable {
+
+        return GradientDrawable().apply {
+
+            cornerRadius =
+                dp(18).toFloat()
+
+            setColor(
+                fill
+            )
+
+            setStroke(
+                dp(1),
+                stroke
+            )
+        }
     }
 }
