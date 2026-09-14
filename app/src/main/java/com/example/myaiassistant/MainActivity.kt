@@ -14,7 +14,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -27,7 +26,6 @@ class MainActivity : Activity() {
     private lateinit var root: FrameLayout
     private lateinit var originalUi: AurixOriginalUi
     private lateinit var statusText: TextView
-
     private lateinit var drawer: LinearLayout
 
     private var active = false
@@ -121,8 +119,7 @@ class MainActivity : Activity() {
                         Intent(
                             Intent.ACTION_SENDTO
                         ).apply {
-                            data =
-                                Uri.parse("smsto:")
+                            data = Uri.parse("smsto:")
                         }
                     )
                 } catch (_: Exception) {
@@ -311,121 +308,59 @@ class MainActivity : Activity() {
     // MAIN INTERFACE
     // =========================================================
 
-private lateinit var aurixUi: AurixOriginalUi
+    private fun createInterface() {
 
-private fun createInterface() {
+        root =
+            FrameLayout(this).apply {
 
-    root = FrameLayout(this)
+                background =
+                    GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(
+                            bgTop,
+                            Color.rgb(
+                                1,
+                                5,
+                                16
+                            ),
+                            bgBottom
+                        )
+                    )
+            }
 
-    root.background =
-        GradientDrawable(
-            GradientDrawable.Orientation.TL_BR,
-            intArrayOf(
-                bgTop,
-                Color.rgb(1, 5, 16),
-                bgBottom
+        /*
+         * AurixOriginalUi is now the ONLY
+         * master UI instance.
+         */
+        originalUi =
+            AurixOriginalUi(
+                this,
+                uiCallbacks
+            )
+
+        /*
+         * Build the original APK-style UI
+         * before accessing its views.
+         */
+        val uiView =
+            originalUi.build()
+
+        root.addView(
+            uiView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
             )
         )
 
-    val ui =
-        AurixOriginalUi(
-            this,
-            object : AurixOriginalUi.Callbacks {
+        setContentView(root)
 
-                override fun onMenu() {
-                    toggleDrawer()
-                }
-
-                override fun onVoice() {
-                    startListeningOnce()
-                }
-
-                override fun onYouTube() {
-                    openUrl("https://www.youtube.com")
-                }
-
-                override fun onSearch() {
-                    openUrl("https://www.google.com")
-                }
-
-                override fun onMusic() {
-                    openUrl("https://music.youtube.com")
-                }
-
-                override fun onWeather() {
-                    openUrl(
-                        "https://www.google.com/search?q=weather"
-                    )
-                }
-
-                override fun onCall() {
-                    startActivity(
-                        Intent(Intent.ACTION_DIAL)
-                    )
-                }
-
-                override fun onMessages() {
-                    startActivity(
-                        Intent(Intent.ACTION_SENDTO).apply {
-                            data = Uri.parse("smsto:")
-                        }
-                    )
-                }
-
-                override fun onApps() {
-                    performAppsAction()
-                }
-
-                override fun onMore() {
-                    updateStatus("READY")
-                }
-
-                override fun onHome() {
-                    navigate("Home")
-                }
-
-                override fun onHistory() {
-                    navigate("History")
-                }
-
-                override fun onAurix() {
-                    navigate("AURIX")
-                }
-
-                override fun onShortcuts() {
-                    navigate("Shortcuts")
-                }
-
-                override fun onSettings() {
-                    navigate("Settings")
-                }
-            }
-        )
-
-    /*
-     * IMPORTANT:
-     * build() MUST happen before accessing
-     * statusText / voiceButton / conversationBox.
-     */
-    val uiView = ui.build()
-
-    root.addView(
-        uiView,
-        FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        )
-    )
-
-    aurixUi = ui
-
-    setContentView(root)
-
-    /*
-     * Only AFTER ui.build()
-     */
-    statusText = ui.statusText
-}
+        /*
+         * statusText belongs to AurixOriginalUi.
+         */
+        statusText =
+            originalUi.statusText
+    }
 
     // =========================================================
     // MICROPHONE PERMISSION
@@ -466,7 +401,9 @@ private fun createInterface() {
             grantResults
         )
 
-        if (requestCode != 500) {
+        if (
+            requestCode != 500
+        ) {
             return
         }
 
@@ -669,7 +606,9 @@ private fun createInterface() {
             getRecentHistory()
                 .asReversed()
 
-        if (history.isEmpty()) {
+        if (
+            history.isEmpty()
+        ) {
 
             addMessageCard(
                 content,
@@ -1987,7 +1926,9 @@ private fun createInterface() {
             }
 
             val clean =
-                status.uppercase()
+                status.uppercase(
+                    Locale.getDefault()
+                )
 
             when {
 
@@ -2312,6 +2253,6 @@ private fun createInterface() {
                 resources
                     .displayMetrics
                     .density
-        ).toInt()
+            ).toInt()
     }
 }
