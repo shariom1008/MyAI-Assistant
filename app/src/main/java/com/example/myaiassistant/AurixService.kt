@@ -84,6 +84,10 @@ class AurixService :
     // true = passive wake-word mode, false = one-shot command mode
     private var wakeWordMode = true
 
+    // Prevent the delayed cancellation error from the previous recognizer session
+    // from changing the state of a new manual tap session.
+    private var manualListenTransition = false
+
     private var restarting = false
 
     private var serviceDestroyed = false
@@ -176,6 +180,7 @@ class AurixService :
                 isRunning = true
                 restarting = false
                 wakeWordMode = false
+                manualListenTransition = true
 
                 try {
                     speechRecognizer?.cancel()
@@ -344,8 +349,9 @@ class AurixService :
                     object : RecognitionListener {
 
                         override fun onReadyForSpeech(params: Bundle?) {
+                            manualListenTransition = false
                             listening = true
-                            sendStatus(if (wakeWordMode) "HEY AURIX READY" else "LISTENING")
+                            sendStatus(if (wakeWordMode) "AURIX READY" else "LISTENING")
                         }
 
                         override fun onBeginningOfSpeech() {
@@ -359,7 +365,13 @@ class AurixService :
                         override fun onError(error: Int) {
                             listening = false
 
-                            // One-shot mode must end after one recognition attempt.
+                            // Ignore only the delayed cancellation error from the old session.
+                            if (manualListenTransition) {
+                                manualListenTransition = false
+                                return
+                            }
+
+                            // Manual tap mode ends here. Never reopen the microphone automatically.
                             if (!wakeWordMode) {
                                 sendStatus("READY")
                                 return
@@ -377,7 +389,7 @@ class AurixService :
                                 ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                                 ?.firstOrNull()
                                 ?.trim()
-                                ?.lowercase(Locale.getDefault())
+                                ?.lowercase(Locale.ENGLISH)
                                 .orEmpty()
 
                             if (text.isBlank()) {
@@ -397,15 +409,28 @@ class AurixService :
                             }
 
                             if (wakeWordMode) {
-                                val wake = Regex("\\b(hey|hi|hello)\\s+aurix\\b")
-                                val match = wake.find(text)
+                                // STRICT WAKE WORD: user-facing wake word is ONLY "Aurix".
+                                // "Hey Aurix", "Hi Aurix", "Hello Aurix", and "Hai Aurix" are rejected.
+                                val normalizedWakeText = text
+                                    .lowercase(Locale.ENGLISH)
+                                    .replace("’", "'")
+                                    .replace(Regex("[^a-z0-9]+"), " ")
+                                    .replace(Regex("\\s+"), " ")
+                                    .trim()
 
-                                if (match == null) {
+                                val wake = Regex(
+                                    "\\b(aurix|auriks|aurics|aurik|aurixx|auryx|aurex|orix|oryx|ourix|arix|auric|aurrix|aurixs|aurek)\\b"
+                                )
+                                val match = wake.find(normalizedWakeText)
+
+                                if (match == null || match.range.first != 0) {
                                     restartListening()
                                     return
                                 }
 
-                                val command = text.substring(match.range.last + 1).trim(' ', ',', '.', ':', '-')
+                                val command = normalizedWakeText
+                                    .substring(match.range.last + 1)
+                                    .trim(' ', ',', '.', ':', '-')
 
                                 if (command.isBlank()) {
                                     wakeWordMode = false
@@ -424,8 +449,18 @@ class AurixService :
                                         processCommand(command)
                                         wakeWordMode = true
                                         handler.postDelayed({
-                                            if (isRunning && !serviceDestroyed && !listening) {
-                                                startListening()
+                                            if (
+                                                isRunning &&
+                                                !serviceDestroyed &&
+                                                !listening
+                                            ) {
+                                                val audioManager =
+                                                    getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+                                                // Do not reopen the microphone over active music.
+                                                if (!audioManager.isMusicActive) {
+                                                    startListening()
+                                                }
                                             }
                                         }, 1800)
                                     }
@@ -433,20 +468,26 @@ class AurixService :
                                 return
                             }
 
-                            // Manual tap mode: exactly one command, then return to wake mode.
+                            // Manual tap mode: exactly one command, then stop the microphone.
+                            // Do NOT restart passive SpeechRecognizer here; it can keep the
+                            // green mic indicator active and interrupt YouTube/audio playback.
                             sendCommand(text)
                             handler.postDelayed({
                                 if (isRunning && !serviceDestroyed) {
                                     processCommand(text)
-                                    wakeWordMode = true
-                                    handler.postDelayed({
-                                        if (isRunning && !serviceDestroyed && !listening) {
-                                            startListening()
-                                        }
-                                    }, 1800)
                                 }
+
+                                wakeWordMode = false
+                                listening = false
+                                manualListenTransition = false
+
+                                try {
+                                    speechRecognizer?.cancel()
+                                } catch (_: Exception) {
+                                }
+
+                                sendStatus("READY")
                             }, 300)
-                        }
 
                         override fun onPartialResults(partialResults: Bundle?) {}
                         override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -456,7 +497,9 @@ class AurixService :
 
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                // Indian English is intentional here: it keeps Hindi/Hinglish speech
+                // transcribed in the Latin script expected by the command engine.
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale("en", "IN"))
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             }
@@ -510,7 +553,7 @@ class AurixService :
             normalizeNumberWords(
                 rawCommand
                     .lowercase(
-                        Locale.getDefault()
+                        Locale.ENGLISH
                     )
                     .trim()
             )
@@ -4432,426 +4475,139 @@ private fun aurixResponse(
     text: String
 ): String {
 
-    val t =
-        text.trim()
+    val t = text.trim()
 
-    if (
-        t.isBlank()
-    ) {
-        return t
-    }
+    if (t.isBlank()) return t
 
     return when {
+        t == "Opening YouTube." -> "Boss, YouTube khol raha hoon."
+        t == "Opening camera." -> "Boss, camera khol raha hoon."
+        t == "Opening gallery." -> "Boss, gallery khol raha hoon."
+        t == "Opening music." -> "Boss, music khol raha hoon."
+        t == "Opening notes." -> "Boss, notes khol raha hoon."
+        t == "Opening calculator." -> "Boss, calculator khol raha hoon."
+        t == "Opening Chrome." -> "Boss, Chrome khol raha hoon."
+        t == "Opening Maps." -> "Boss, Maps khol raha hoon."
+        t == "Opening phone." -> "Boss, phone khol raha hoon."
+        t == "Opening settings." -> "Boss, settings khol raha hoon."
+        t == "Opening Wi-Fi settings." -> "Boss, Wi-Fi settings khol raha hoon."
 
-        // -------------------------------------------------
-        // APP OPENING
-        // -------------------------------------------------
+        t == "Volume increased." -> "Boss, volume badha diya."
+        t == "Volume decreased." -> "Boss, volume kam kar diya."
+        t == "Media control executed." -> "Boss, media control kar diya."
 
-        t == "Opening YouTube." ->
-            "AURIX response available."
+        t == "Flashlight turned on." -> "Boss, flashlight on kar di."
+        t == "Flashlight turned off." -> "Boss, flashlight off kar di."
+        t == "Flashlight is not available." -> "Boss, flashlight available nahi hai."
 
-        t == "Opening camera." ->
-            "AURIX response available."
+        t == "Camera is not available." -> "Boss, camera available nahi hai."
+        t == "Gallery is not available." -> "Boss, gallery available nahi hai."
+        t == "Music app is not available." -> "Boss, music app available nahi hai."
+        t == "Notes app is not available." -> "Boss, notes app available nahi hai."
+        t == "Calculator is not available." -> "Boss, calculator available nahi hai."
+        t == "YouTube is not available." -> "Boss, YouTube available nahi hai."
+        t == "Browser is not available." -> "Boss, browser available nahi hai."
+        t == "Maps is not available." -> "Boss, Maps available nahi hai."
+        t == "Phone app is not available." -> "Boss, phone app available nahi hai."
+        t == "Settings is not available." -> "Boss, settings available nahi hain."
+        t == "Wi-Fi settings are not available." -> "Boss, Wi-Fi settings available nahi hain."
 
-        t == "Opening gallery." ->
-            "AURIX response available."
+        t == "I could not control the flashlight." -> "Boss, main flashlight control nahi kar saka."
+        t == "I could not change the volume." -> "Boss, main volume change nahi kar saka."
+        t == "I could not control media." -> "Boss, main media control nahi kar saka."
+        t == "I could not check the battery." -> "Boss, main battery check nahi kar saka."
+        t == "I could not search that." -> "Boss, main uski search nahi kar saka."
+        t == "I could not open YouTube." -> "Boss, main YouTube nahi khol saka."
+        t == "I could not open Maps." -> "Boss, main Maps nahi khol saka."
 
-        t == "Opening music." ->
-            "AURIX response available."
+        t == "Got it. I'll remember that." -> "Got it boss, main ye yaad rakhunga."
+        t == "I've cleared my personal memory." -> "Boss, maine tumhari personal memory clear kar di."
+        t == "Okay. I'll forget that." -> "Okay boss, main ye bhool jaunga."
+        t == "Tell me what you want me to forget." -> "Boss, batao tum kya bhulwana chahte ho."
+        t == "I don't have any personal memory about you yet." -> "Boss, mere paas abhi tumhare baare mein koi personal memory nahi hai."
+        t == "All personal memory has been cleared." -> "Boss, saari personal memory clear kar di."
 
-        t == "Opening notes." ->
-            "AURIX response available."
+        Regex("(\\d+) hour timer started").matches(t) -> {
+            val value = Regex("(\\d+) hour timer started").find(t)?.groupValues?.get(1).orEmpty()
+            "Boss, $value hour ka timer start kar diya."
+        }
+        Regex("(\\d+) minute timer started").matches(t) -> {
+            val value = Regex("(\\d+) minute timer started").find(t)?.groupValues?.get(1).orEmpty()
+            "Boss, $value minute ka timer start kar diya."
+        }
+        Regex("(\\d+) second timer started").matches(t) -> {
+            val value = Regex("(\\d+) second timer started").find(t)?.groupValues?.get(1).orEmpty()
+            "Boss, $value second ka timer start kar diya."
+        }
+        t == "Please tell me the timer duration." -> "Boss, timer kitne time ka lagana hai?"
 
-        t == "Opening calculator." ->
-            "AURIX response available."
+        t == "That is not a valid alarm time." -> "Boss, ye valid alarm time nahi hai."
+        t == "Please tell me the alarm time, for example seven PM." -> "Boss, alarm ka time batao, jaise seven PM."
 
-        t == "Opening Chrome." ->
-            "AURIX response available."
-
-        t == "Opening Maps." ->
-            "AURIX response available."
-
-        t == "Opening phone." ->
-            "AURIX response available."
-
-        t == "Opening settings." ->
-            "AURIX response available."
-
-        t == "Opening Wi-Fi settings." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // VOLUME / MEDIA
-        // -------------------------------------------------
-
-        t == "Volume increased." ->
-            "AURIX response available."
-
-        t == "Volume decreased." ->
-            "AURIX response available."
-
-        t == "Media control executed." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // FLASHLIGHT
-        // -------------------------------------------------
-
-        t == "Flashlight turned on." ->
-            "AURIX response available."
-
-        t == "Flashlight turned off." ->
-            "AURIX response available."
-
-        t == "Flashlight is not available." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // DEVICE ERRORS
-        // -------------------------------------------------
-
-        t == "Camera is not available." ->
-            "AURIX response available."
-
-        t == "Gallery is not available." ->
-            "AURIX response available."
-
-        t == "Music app is not available." ->
-            "AURIX response available."
-
-        t == "Notes app is not available." ->
-            "AURIX response available."
-
-        t == "Calculator is not available." ->
-            "AURIX response available."
-
-        t == "YouTube is not available." ->
-            "AURIX response available."
-
-        t == "Browser is not available." ->
-            "AURIX response available."
-
-        t == "Maps is not available." ->
-            "AURIX response available."
-
-        t == "Phone app is not available." ->
-            "AURIX response available."
-
-        t == "Settings is not available." ->
-            "AURIX response available."
-
-        t == "Wi-Fi settings are not available." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // CONTROL ERRORS
-        // -------------------------------------------------
-
-        t == "I could not control the flashlight." ->
-            "AURIX response available."
-
-        t == "I could not change the volume." ->
-            "AURIX response available."
-
-        t == "I could not control media." ->
-            "AURIX response available."
-
-        t == "I could not check the battery." ->
-            "AURIX response available."
-
-        t == "I could not search that." ->
-            "AURIX response available."
-
-        t == "I could not open YouTube." ->
-            "AURIX response available."
-
-        t == "I could not open Maps." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // MEMORY
-        // -------------------------------------------------
-
-        t == "Got it. I'll remember that." ->
-            "AURIX response available."
-
-        t == "I've cleared my personal memory." ->
-            "AURIX response available."
-
-        t == "Okay. I'll forget that." ->
-            "AURIX response available."
-
-        t == "Tell me what you want me to forget." ->
-            "AURIX response available."
-
-        t == "I don't have any personal memory about you yet." ->
-            "AURIX response available."
-
-        t == "All personal memory has been cleared." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // TIMER
-        // -------------------------------------------------
-
-        Regex(
-            "(\\d+) hour timer started"
-        ).matches(t) -> {
-
-            val value =
-                Regex(
-                    "(\\d+) hour timer started"
-                )
-                    .find(t)
-                    ?.groupValues
-                    ?.get(1)
-                    ?: ""
-
-            "AURIX response available."
+        t.startsWith("Alarm set for ") && t.endsWith(".") -> {
+            val time = t.removePrefix("Alarm set for ").removeSuffix(".")
+            "Boss, $time ka alarm set kar diya."
+        }
+        t.startsWith("Today is ") && t.endsWith(".") -> {
+            val value = t.removePrefix("Today is ").removeSuffix(".")
+            "Boss, aaj $value hai."
+        }
+        t.startsWith("The time is ") && t.endsWith(".") -> {
+            val value = t.removePrefix("The time is ").removeSuffix(".")
+            "Boss, abhi time $value hai."
+        }
+        t.startsWith("Battery is at ") && t.endsWith(" percent.") -> {
+            val value = t.removePrefix("Battery is at ").removeSuffix(" percent.")
+            "Boss, battery $value percent hai."
         }
 
-        Regex(
-            "(\\d+) minute timer started"
-        ).matches(t) -> {
-
-            val value =
-                Regex(
-                    "(\\d+) minute timer started"
-                )
-                    .find(t)
-                    ?.groupValues
-                    ?.get(1)
-                    ?: ""
-
-            "AURIX response available."
+        t.startsWith("Searching YouTube for ") && t.endsWith(".") -> {
+            val query = t.removePrefix("Searching YouTube for ").removeSuffix(".")
+            "Boss, YouTube par $query search kar raha hoon."
+        }
+        t.startsWith("Opening YouTube search for ") && t.endsWith(".") -> {
+            val query = t.removePrefix("Opening YouTube search for ").removeSuffix(".")
+            "Boss, YouTube par $query search khol raha hoon."
+        }
+        t.startsWith("Searching Maps for ") && t.endsWith(".") -> {
+            val query = t.removePrefix("Searching Maps for ").removeSuffix(".")
+            "Boss, Maps par $query search kar raha hoon."
+        }
+        t.startsWith("Searching for ") && t.endsWith(".") -> {
+            val query = t.removePrefix("Searching for ").removeSuffix(".")
+            "Boss, $query search kar raha hoon."
         }
 
-        Regex(
-            "(\\d+) second timer started"
-        ).matches(t) -> {
+        t == "Agent completed all planned steps." -> "Boss, saare planned steps complete ho gaye."
+        t == "YouTube opened." -> "Boss, YouTube khul gaya."
+        t == "Phone opened." -> "Boss, phone khul gaya."
+        t == "Settings opened." -> "Boss, settings khul gayi."
+        t == "I couldn't open YouTube." -> "Boss, YouTube nahi khol saka."
+        t == "I couldn't open phone." -> "Boss, phone nahi khol saka."
+        t == "I couldn't open settings." -> "Boss, settings nahi khol saka."
+        t == "I couldn't execute this step." -> "Boss, main ye step execute nahi kar saka."
 
-            val value =
-                Regex(
-                    "(\\d+) second timer started"
-                )
-                    .find(t)
-                    ?.groupValues
-                    ?.get(1)
-                    ?: ""
-
-            "AURIX response available."
+        t.startsWith("I couldn't find ") && t.endsWith(" on your phone.") -> {
+            val app = t.removePrefix("I couldn't find ").removeSuffix(" on your phone.")
+            "Boss, tumhare phone mein $app nahi mila."
         }
-
-        t == "Please tell me the timer duration." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // ALARM
-        // -------------------------------------------------
-
-        t == "That is not a valid alarm time." ->
-            "AURIX response available."
-
-        t == "Please tell me the alarm time, for example seven PM." ->
-            "AURIX response available."
-
-        t.startsWith("Alarm set for ") &&
-            t.endsWith(".") -> {
-
-            val time =
-                t.removePrefix(
-                    "Alarm set for "
-                ).removeSuffix(".")
-
-            "AURIX response available."
+        t.startsWith("Opening ") && t.endsWith(".") -> {
+            val app = t.removePrefix("Opening ").removeSuffix(".")
+            "Boss, $app khol raha hoon."
         }
-
-        // -------------------------------------------------
-        // DATE / DAY / TIME
-        // -------------------------------------------------
-
-        t.startsWith("Today is ") &&
-            t.endsWith(".") -> {
-
-            val value =
-                t.removePrefix(
-                    "Today is "
-                ).removeSuffix(".")
-
-            "AURIX response available."
-        }
-
-        t.startsWith("The time is ") &&
-            t.endsWith(".") -> {
-
-            val value =
-                t.removePrefix(
-                    "The time is "
-                ).removeSuffix(".")
-
-            "AURIX response available."
-        }
-
-        // -------------------------------------------------
-        // BATTERY
-        // -------------------------------------------------
-
-        t.startsWith("Battery is at ") &&
-            t.endsWith(" percent.") -> {
-
-            val value =
-                t.removePrefix(
-                    "Battery is at "
-                ).removeSuffix(
-                    " percent."
-                )
-
-            "AURIX response available."
-        }
-
-        // -------------------------------------------------
-        // SEARCH
-        // -------------------------------------------------
-
-        t.startsWith("Searching YouTube for ") &&
-            t.endsWith(".") -> {
-
-            val query =
-                t.removePrefix(
-                    "Searching YouTube for "
-                ).removeSuffix(".")
-
-            "AURIX response available."
-        }
-
-        t.startsWith("Opening YouTube search for ") &&
-            t.endsWith(".") -> {
-
-            val query =
-                t.removePrefix(
-                    "Opening YouTube search for "
-                ).removeSuffix(".")
-
-            "AURIX response available."
-        }
-
-        t.startsWith("Searching Maps for ") &&
-            t.endsWith(".") -> {
-
-            val query =
-                t.removePrefix(
-                    "Searching Maps for "
-                ).removeSuffix(".")
-
-            "AURIX response available."
-        }
-
-        t.startsWith("Searching for ") &&
-            t.endsWith(".") -> {
-
-            val query =
-                t.removePrefix(
-                    "Searching for "
-                ).removeSuffix(".")
-
-            "AURIX response available."
-        }
-
-        // -------------------------------------------------
-        // AGENT
-        // -------------------------------------------------
-
-        t == "Agent completed all planned steps." ->
-            "AURIX response available."
-
-        t == "YouTube opened." ->
-            "AURIX response available."
-
-        t == "Phone opened." ->
-            "AURIX response available."
-
-        t == "Settings opened." ->
-            "AURIX response available."
-
-        t == "I couldn't open YouTube." ->
-            "AURIX response available."
-
-        t == "I couldn't open phone." ->
-            "AURIX response available."
-
-        t == "I couldn't open settings." ->
-            "AURIX response available."
-
-        t == "I couldn't execute this step." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // APP NOT FOUND
-        // -------------------------------------------------
-
-        t.startsWith(
-            "I couldn't find "
-        ) &&
-            t.endsWith(
-                " on your phone."
-            ) -> {
-
-            val app =
-                t.removePrefix(
-                    "I couldn't find "
-                ).removeSuffix(
-                    " on your phone."
-                )
-
-            "AURIX response available."
-        }
-
-        // -------------------------------------------------
-        // GENERIC APP OPENING
-        // -------------------------------------------------
-
-        t.startsWith("Opening ") &&
-            t.endsWith(".") -> {
-
-            val app =
-                t.removePrefix(
-                    "Opening "
-                ).removeSuffix(".")
-
-            "AURIX response available."
-        }
-
-        // -------------------------------------------------
-        // GREETING / IDENTITY
-        // -------------------------------------------------
 
         t == "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?" ->
-            "AURIX response available."
-
+            "Hello boss, main AURIX hoon. Batao, kya help chahiye?"
         t == "Main AURIX hoon, aapka personal AI assistant." ->
-            "AURIX response available."
-
-        // -------------------------------------------------
-        // HOME
-        // -------------------------------------------------
-
+            "Main AURIX hoon, aapka personal AI assistant."
         t == "Unable to go to home screen." ->
-            "AURIX response available."
+            "Boss, main home screen par nahi ja saka."
 
-            // -------------------------------------------------
-            // FALLBACK
-            // -------------------------------------------------
-
-            else ->
-                t
-        }
+        else -> t
     }
+}
 
-    // =========================================================
-    // SPEAK ONCE
-    // =========================================================
-
-    private fun speakOnce(
+private fun speakOnce(
         text: String
     ) {
 
@@ -4925,21 +4681,20 @@ private fun speakAurixGreeting() {
 
     val greeting =
         when {
-
             hour < 5 ->
-                "AURIX response available."
+                "Boss, abhi kaafi raat ho gayi hai. Batao kya karna hai?"
 
             hour < 12 ->
-                "AURIX response available."
+                "Good morning Boss. Batao, AURIX aapke liye kya kare?"
 
             hour < 17 ->
-                "AURIX response available."
+                "Good afternoon Boss. Batao, kya karna hai?"
 
             hour < 22 ->
-                "AURIX response available."
+                "Good evening Boss. Batao, AURIX aapki kya help kare?"
 
             else ->
-                "AURIX response available."
+                "Good night Boss. Batao, AURIX kya kare?"
         }
 
     speakOnce(
