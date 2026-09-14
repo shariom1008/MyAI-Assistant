@@ -1,77 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Microphone -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Camera -->
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Notifications on Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-
+    <!-- Package visibility -->
     <queries>
+
+        <!-- Speech recognition services -->
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
 
+        <!-- Camera applications -->
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
 
-        <package android:name="com.google.android.youtube" />
-        <package android:name="com.android.chrome" />
-        <package android:name="com.google.android.apps.maps" />
-        <package android:name="com.whatsapp" />
-        <package android:name="com.instagram.android" />
-        <package android:name="com.google.android.gm" />
-        <package android:name="com.facebook.katana" />
-        <package android:name="org.telegram.messenger" />
-        <package android:name="com.snapchat.android" />
-        <package android:name="com.spotify.music" />
     </queries>
 
     <application
         android:allowBackup="true"
         android:label="AURIX"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MyAI"
-        android:usesCleartextTraffic="true"
-        android:icon="@drawable/aurix_logo">
+        android:theme="@style/Theme.MyAI_Assistant">
 
+        <!-- Authentication screen / Launcher -->
         <activity
             android:name=".AuthActivity"
             android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
+        <!-- Main AURIX screen -->
         <activity
             android:name=".MainActivity"
             android:exported="false" />
 
+        <!-- AURIX voice service -->
         <service
             android:name=".AurixService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
-
-        <receiver
-            android:name=".AlarmReceiver"
-            android:enabled="true"
-            android:exported="false" />
 
     </application>
 
