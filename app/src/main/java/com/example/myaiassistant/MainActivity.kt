@@ -472,61 +472,43 @@ class MainActivity : Activity() {
     // =========================================================
     // BACKUP VOICE BUTTON
     // =========================================================
+private fun startListeningOnce() {
 
-    private fun startListeningOnce() {
-
-        if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-
-            requestMicrophonePermission()
-
-            return
-        }
-
-        val intent =
-            Intent(
-                this,
-                AurixService::class.java
-            ).apply {
-
-                action =
-                    AurixService.ACTION_LISTEN_ONCE
-            }
-
-        try {
-
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.O
-            ) {
-
-                ContextCompat.startForegroundService(
-                    this,
-                    intent
-                )
-
-            } else {
-
-                startService(intent)
-            }
-
-            active = true
-
-            updateStatus(
-                "LISTENING"
-            )
-
-        } catch (_: Exception) {
-
-            updateStatus(
-                "START FAILED"
-            )
-        }
+    if (
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) != PackageManager.PERMISSION_GRANTED
+    ) {
+        requestMicrophonePermission()
+        return
     }
+
+    val intent = Intent(
+        this,
+        AurixService::class.java
+    ).apply {
+        action = AurixService.ACTION_LISTEN_ONCE
+    }
+
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(
+                this,
+                intent
+            )
+        } else {
+            startService(intent)
+        }
+
+        active = true
+        updateStatus("LISTENING")
+
+    } catch (_: Exception) {
+        active = false
+        updateStatus("READY")
+    }
+}
 
     // =========================================================
     // STATUS
