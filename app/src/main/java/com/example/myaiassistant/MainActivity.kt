@@ -596,7 +596,7 @@ private fun startAurixService() {
             TextView(this)
 
         listening.text =
-            "  ◉  HEY AURIX  •  READY  "
+            "  ◉  AURIX  •  READY  "
 
         listening.textSize = 11f
         listening.setTextColor(cyan)
@@ -1739,7 +1739,19 @@ private fun startAurixService() {
 
         iconText.text = icon
         iconText.textSize = 19f
-        iconText.setTextColor(cyan)
+        iconText.setTextColor(
+            when (label) {
+                "YouTube" -> Color.rgb(255, 35, 65)
+                "Search" -> Color.rgb(35, 210, 255)
+                "Music" -> Color.rgb(220, 55, 245)
+                "Weather" -> Color.rgb(255, 205, 45)
+                "Call" -> Color.rgb(35, 220, 125)
+                "Messages" -> Color.rgb(75, 135, 255)
+                "Apps" -> Color.rgb(235, 65, 110)
+                "More" -> Color.rgb(145, 80, 245)
+                else -> cyan
+            }
+        )
         iconText.gravity = Gravity.CENTER
 
         tile.addView(

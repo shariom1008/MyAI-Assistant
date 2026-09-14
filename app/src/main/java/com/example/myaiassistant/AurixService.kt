@@ -88,6 +88,10 @@ class AurixService :
     // Prevent one utterance from triggering wake detection twice.
     private var wakeDetectionTriggered = false
 
+    // Set when a partial AURIX match should immediately transition
+    // from passive wake recognition into command recognition.
+    private var wakeToCommandPending = false
+
     private var restarting = false
 
     // Prevent immediate re-listening while AURIX is speaking or an action is starting.
@@ -460,6 +464,31 @@ private fun startListening() {
                             return
                         }
 
+                        if (wakeToCommandPending) {
+
+                            wakeToCommandPending = false
+                            wakeWordMode = false
+
+                            sendStatus(
+                                "LISTENING"
+                            )
+
+                            handler.postDelayed({
+
+                                if (
+                                    isRunning &&
+                                    !serviceDestroyed &&
+                                    !listening &&
+                                    !wakeWordMode
+                                ) {
+                                    startListening()
+                                }
+
+                            }, 450L)
+
+                            return
+                        }
+
                         if (!wakeWordMode) {
 
                             wakeWordMode = true
@@ -491,6 +520,10 @@ private fun startListening() {
                     ) {
 
                         listening = false
+
+                        if (wakeToCommandPending) {
+                            wakeToCommandPending = false
+                        }
 
                         if (
                             !isRunning ||
@@ -675,8 +708,24 @@ private fun startListening() {
                             if (command != null) {
 
                                 wakeDetectionTriggered = true
+                                wakeToCommandPending = true
+                                wakeWordMode = false
+                                listening = false
 
-                                // Let SpeechRecognizer finish the utterance.
+                                sendStatus(
+                                    "LISTENING"
+                                )
+
+                                // A partial result is enough to prove that the wake
+                                // word was heard. Do not wait indefinitely for a
+                                // final passive-listener result. Cancel this short
+                                // recognition session and immediately open a fresh
+                                // command-recognition session.
+                                try {
+                                    speechRecognizer?.cancel()
+                                } catch (_: Exception) {
+                                }
+
                                 return
                             }
                         }
