@@ -1,12 +1,14 @@
 package com.example.myaiassistant
 
+import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
@@ -21,14 +23,8 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Locale
-import android.Manifest
-import android.content.pm.PackageManager
 
 class MainActivity : Activity() {
-
-    // =========================================================
-    // ROOT / MASTER UI
-    // =========================================================
 
     private lateinit var root: FrameLayout
     private lateinit var aurixUi: AurixOriginalUi
@@ -88,18 +84,9 @@ class MainActivity : Activity() {
 
                 when (type) {
 
-                    // -------------------------------------------------
-                    // STATUS
-                    // -------------------------------------------------
-
                     AurixService.TYPE_STATUS -> {
-
                         updateStatus(text)
                     }
-
-                    // -------------------------------------------------
-                    // USER COMMAND
-                    // -------------------------------------------------
 
                     AurixService.TYPE_COMMAND -> {
 
@@ -121,10 +108,6 @@ class MainActivity : Activity() {
                             }
                         }
                     }
-
-                    // -------------------------------------------------
-                    // AURIX RESPONSE
-                    // -------------------------------------------------
 
                     AurixService.TYPE_SPEAK -> {
 
@@ -181,7 +164,9 @@ class MainActivity : Activity() {
         savedInstanceState: Bundle?
     ) {
 
-        super.onCreate(savedInstanceState)
+        super.onCreate(
+            savedInstanceState
+        )
 
         window.statusBarColor =
             Color.TRANSPARENT
@@ -189,13 +174,10 @@ class MainActivity : Activity() {
         window.navigationBarColor =
             Color.BLACK
 
-        // MASTER UI
         createInterface()
 
-        // AURIX SERVICE EVENTS
         registerAurixReceiver()
 
-        // GO HOME EVENTS
         registerReceiver(
             homeReceiver,
             IntentFilter(
@@ -214,6 +196,140 @@ class MainActivity : Activity() {
         requestMicrophonePermission()
 
         updateInterface()
+    }
+
+    // =========================================================
+    // MAIN UI
+    // =========================================================
+
+    private fun createInterface() {
+
+        root =
+            FrameLayout(this).apply {
+
+                background =
+                    GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(
+                            bgTop,
+                            Color.rgb(1, 5, 16),
+                            bgBottom
+                        )
+                    )
+            }
+
+        setContentView(root)
+
+        aurixUi =
+            AurixOriginalUi(
+                this,
+                object :
+                    AurixOriginalUi.Callbacks {
+
+                    override fun onMenu() {
+                        toggleDrawer()
+                    }
+
+                    override fun onVoice() {
+                        startListeningOnce()
+                    }
+
+                    override fun onYouTube() {
+                        openUrl(
+                            "https://www.youtube.com"
+                        )
+                    }
+
+                    override fun onSearch() {
+                        openUrl(
+                            "https://www.google.com"
+                        )
+                    }
+
+                    override fun onMusic() {
+                        openUrl(
+                            "https://music.youtube.com"
+                        )
+                    }
+
+                    override fun onWeather() {
+                        openUrl(
+                            "https://www.google.com/search?q=weather"
+                        )
+                    }
+
+                    override fun onCall() {
+
+                        try {
+
+                            startActivity(
+                                Intent(
+                                    Intent.ACTION_DIAL
+                                )
+                            )
+
+                        } catch (_: Exception) {
+                        }
+                    }
+
+                    override fun onMessages() {
+
+                        try {
+
+                            startActivity(
+                                Intent(
+                                    Intent.ACTION_SENDTO
+                                ).apply {
+                                    data =
+                                        Uri.parse(
+                                            "smsto:"
+                                        )
+                                }
+                            )
+
+                        } catch (_: Exception) {
+                        }
+                    }
+
+                    override fun onApps() {
+                        performAppsAction()
+                    }
+
+                    override fun onMore() {
+                        updateStatus(
+                            "READY"
+                        )
+                    }
+
+                    override fun onHome() {
+                        navigate("Home")
+                    }
+
+                    override fun onHistory() {
+                        navigate("History")
+                    }
+
+                    override fun onAurix() {
+                        navigate("AURIX")
+                    }
+
+                    override fun onShortcuts() {
+                        navigate("Shortcuts")
+                    }
+
+                    override fun onSettings() {
+                        navigate("Settings")
+                    }
+                }
+            )
+
+        root.addView(
+            aurixUi.build(),
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
     }
 
     // =========================================================
@@ -270,8 +386,6 @@ class MainActivity : Activity() {
                 startAurixService()
 
             } else {
-
-                active = false
 
                 updateStatus(
                     "READY"
@@ -334,174 +448,7 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // MASTER UI
-    // =========================================================
-
-    private fun createInterface() {
-
-        root =
-            FrameLayout(this).apply {
-
-                background =
-                    GradientDrawable(
-                        GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(
-                            bgTop,
-                            Color.rgb(
-                                1,
-                                5,
-                                16
-                            ),
-                            bgBottom
-                        )
-                    )
-            }
-
-        setContentView(root)
-
-        aurixUi =
-            AurixOriginalUi(
-                this,
-                object :
-                    AurixOriginalUi.Callbacks {
-
-                    // =================================================
-                    // HEADER
-                    // =================================================
-
-                    override fun onMenu() {
-
-                        toggleDrawer()
-                    }
-
-                    override fun onVoice() {
-
-                        startListeningOnce()
-                    }
-
-                    // =================================================
-                    // QUICK ACTIONS
-                    // =================================================
-
-                    override fun onYouTube() {
-
-                        openUrl(
-                            "https://www.youtube.com"
-                        )
-                    }
-
-                    override fun onSearch() {
-
-                        openUrl(
-                            "https://www.google.com"
-                        )
-                    }
-
-                    override fun onMusic() {
-
-                        openUrl(
-                            "https://music.youtube.com"
-                        )
-                    }
-
-                    override fun onWeather() {
-
-                        openUrl(
-                            "https://www.google.com/search?q=weather"
-                        )
-                    }
-
-                    override fun onCall() {
-
-                        try {
-
-                            startActivity(
-                                Intent(
-                                    Intent.ACTION_DIAL
-                                )
-                            )
-
-                        } catch (_: Exception) {
-                        }
-                    }
-
-                    override fun onMessages() {
-
-                        try {
-
-                            startActivity(
-                                Intent(
-                                    Intent.ACTION_SENDTO
-                                ).apply {
-
-                                    data =
-                                        Uri.parse(
-                                            "smsto:"
-                                        )
-                                }
-                            )
-
-                        } catch (_: Exception) {
-                        }
-                    }
-
-                    override fun onApps() {
-
-                        performAppsAction()
-                    }
-
-                    override fun onMore() {
-
-                        updateStatus(
-                            "READY"
-                        )
-                    }
-
-                    // =================================================
-                    // BOTTOM NAVIGATION
-                    // =================================================
-
-                    override fun onHome() {
-
-                        showHomePage()
-                    }
-
-                    override fun onHistory() {
-
-                        showHistoryPage()
-                    }
-
-                    override fun onAurix() {
-
-                        showHomePage()
-                    }
-
-                    override fun onShortcuts() {
-
-                        showShortcutsPage()
-                    }
-
-                    override fun onSettings() {
-
-                        showSettingsPage()
-                    }
-                }
-            )
-
-        val masterView =
-            aurixUi.build()
-
-        root.addView(
-            masterView,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-    }
-
-    // =========================================================
-    // VOICE BACKUP
+    // ONE-TIME VOICE LISTEN
     // =========================================================
 
     private fun startListeningOnce() {
@@ -515,7 +462,6 @@ class MainActivity : Activity() {
         ) {
 
             requestMicrophonePermission()
-
             return
         }
 
@@ -561,6 +507,83 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
+    // STATUS
+    // =========================================================
+
+    private fun updateStatus(
+        status: String
+    ) {
+
+        runOnUiThread {
+
+            if (
+                !::aurixUi.isInitialized
+            ) {
+                return@runOnUiThread
+            }
+
+            val clean =
+                status.uppercase(
+                    Locale.getDefault()
+                )
+
+            when {
+
+                clean.contains("LISTEN") -> {
+
+                    aurixUi.setListeningState()
+                }
+
+                clean.contains("THINK") ||
+                clean.contains("PROCESS") -> {
+
+                    aurixUi.setThinkingState()
+                }
+
+                clean.contains("EXECUT") -> {
+
+                    aurixUi.voiceStatus.text =
+                        "VOICE  •  EXECUTING"
+                }
+
+                clean.contains("RESPOND") ||
+                clean.contains("SPEAK") -> {
+
+                    aurixUi.voiceStatus.text =
+                        "VOICE  •  RESPONDING"
+                }
+
+                else -> {
+
+                    aurixUi.setReadyState()
+                }
+            }
+        }
+    }
+
+    // =========================================================
+    // INTERFACE STATE
+    // =========================================================
+
+    private fun updateInterface() {
+
+        if (
+            !::aurixUi.isInitialized
+        ) {
+            return
+        }
+
+        if (active) {
+
+            aurixUi.setListeningState()
+
+        } else {
+
+            aurixUi.setReadyState()
+        }
+    }
+
+    // =========================================================
     // NAVIGATION
     // =========================================================
 
@@ -601,12 +624,12 @@ class MainActivity : Activity() {
 
     private fun showHomePage() {
 
-        currentPage = "Home"
+        currentPage =
+            "Home"
 
         root.findViewWithTag<View>(
             "AURIX_PAGE"
         )?.let {
-
             root.removeView(it)
         }
     }
@@ -616,8 +639,6 @@ class MainActivity : Activity() {
     // =========================================================
 
     private fun showHistoryPage() {
-
-        currentPage = "History"
 
         val overlay =
             createPageOverlay(
@@ -670,8 +691,7 @@ class MainActivity : Activity() {
                     Gravity.CENTER
 
                 typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+                    Typeface.DEFAULT_BOLD
 
                 setTextColor(
                     Color.rgb(
@@ -713,9 +733,7 @@ class MainActivity : Activity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(50)
             ).apply {
-
-                topMargin =
-                    dp(14)
+                topMargin = dp(14)
             }
         )
     }
@@ -725,8 +743,6 @@ class MainActivity : Activity() {
     // =========================================================
 
     private fun showShortcutsPage() {
-
-        currentPage = "Shortcuts"
 
         val overlay =
             createPageOverlay(
@@ -789,7 +805,9 @@ class MainActivity : Activity() {
                 .clear()
                 .apply()
 
-            showHomePage()
+            navigate(
+                "Home"
+            )
         }
     }
 
@@ -798,8 +816,6 @@ class MainActivity : Activity() {
     // =========================================================
 
     private fun showSettingsPage() {
-
-        currentPage = "Settings"
 
         val overlay =
             createPageOverlay(
@@ -861,8 +877,7 @@ class MainActivity : Activity() {
                     Gravity.CENTER
 
                 typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+                    Typeface.DEFAULT_BOLD
 
                 setTextColor(
                     Color.rgb(
@@ -924,7 +939,6 @@ class MainActivity : Activity() {
         root.findViewWithTag<View>(
             "AURIX_PAGE"
         )?.let {
-
             root.removeView(it)
         }
 
@@ -1002,8 +1016,7 @@ class MainActivity : Activity() {
                     Gravity.CENTER_VERTICAL
 
                 typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+                    Typeface.DEFAULT_BOLD
 
                 setTextColor(
                     cyan
@@ -1014,9 +1027,6 @@ class MainActivity : Activity() {
                     root.removeView(
                         overlay
                     )
-
-                    currentPage =
-                        "Home"
                 }
             }
 
@@ -1037,8 +1047,7 @@ class MainActivity : Activity() {
                 textSize = 23f
 
                 typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+                    Typeface.DEFAULT_BOLD
 
                 letterSpacing =
                     0.12f
@@ -1166,8 +1175,7 @@ class MainActivity : Activity() {
                 textSize = 11f
 
                 typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+                    Typeface.DEFAULT_BOLD
 
                 setTextColor(
                     white
@@ -1263,8 +1271,7 @@ class MainActivity : Activity() {
                 textSize = 8f
 
                 typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+                    Typeface.DEFAULT_BOLD
 
                 letterSpacing =
                     0.16f
@@ -1339,13 +1346,16 @@ class MainActivity : Activity() {
         }
 
         val encoded =
-            items.joinToString("\n") {
+            items.joinToString(
+                "\n"
+            ) {
 
                 "${it.first}\t${
-                    it.second.replace(
-                        "\n",
-                        " "
-                    )
+                    it.second
+                        .replace(
+                            "\n",
+                            " "
+                        )
                 }"
             }
 
@@ -1369,7 +1379,9 @@ class MainActivity : Activity() {
                 )
                 .orEmpty()
 
-        if (raw.isBlank()) {
+        if (
+            raw.isBlank()
+        ) {
             return emptyList()
         }
 
@@ -1504,8 +1516,7 @@ class MainActivity : Activity() {
                 textSize = 27f
 
                 typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+                    Typeface.DEFAULT_BOLD
 
                 letterSpacing =
                     0.15f
@@ -1554,7 +1565,9 @@ class MainActivity : Activity() {
             drawer.visibility =
                 View.GONE
 
-            showHomePage()
+            navigate(
+                "Home"
+            )
         }
 
         addDrawerItem(
@@ -1565,7 +1578,9 @@ class MainActivity : Activity() {
             drawer.visibility =
                 View.GONE
 
-            showHistoryPage()
+            navigate(
+                "History"
+            )
         }
 
         addDrawerItem(
@@ -1576,7 +1591,9 @@ class MainActivity : Activity() {
             drawer.visibility =
                 View.GONE
 
-            showShortcutsPage()
+            navigate(
+                "Shortcuts"
+            )
         }
 
         addDrawerItem(
@@ -1616,7 +1633,9 @@ class MainActivity : Activity() {
             drawer.visibility =
                 View.GONE
 
-            showHomePage()
+            navigate(
+                "Home"
+            )
         }
 
         addDrawerItem(
@@ -1627,7 +1646,9 @@ class MainActivity : Activity() {
             drawer.visibility =
                 View.GONE
 
-            showSettingsPage()
+            navigate(
+                "Settings"
+            )
         }
 
         val spacer =
@@ -1665,10 +1686,6 @@ class MainActivity : Activity() {
             accountText
         )
     }
-
-    // =========================================================
-    // DRAWER ITEM
-    // =========================================================
 
     private fun addDrawerItem(
         icon: String,
@@ -1786,73 +1803,69 @@ class MainActivity : Activity() {
     ): View {
 
         val box =
-            LinearLayout(this).apply {
+            LinearLayout(this)
 
-                orientation =
-                    LinearLayout.VERTICAL
+        box.orientation =
+            LinearLayout.VERTICAL
 
-                setPadding(
-                    dp(16),
-                    dp(12),
-                    dp(16),
-                    dp(12)
-                )
+        box.setPadding(
+            dp(16),
+            dp(12),
+            dp(16),
+            dp(12)
+        )
 
-                background =
-                    roundedBackground(
-                        if (aurix) {
-                            Color.argb(
-                                35,
-                                75,
-                                150,
-                                255
-                            )
-                        } else {
-                            Color.argb(
-                                25,
-                                150,
-                                70,
-                                240
-                            )
-                        },
-                        if (aurix) {
-                            Color.rgb(
-                                45,
-                                145,
-                                230
-                            )
-                        } else {
-                            Color.rgb(
-                                110,
-                                70,
-                                200
-                            )
-                        }
+        box.background =
+            roundedBackground(
+                if (aurix)
+                    Color.argb(
+                        35,
+                        75,
+                        150,
+                        255
                     )
-            }
+                else
+                    Color.argb(
+                        25,
+                        150,
+                        70,
+                        240
+                    ),
+                if (aurix)
+                    Color.rgb(
+                        45,
+                        145,
+                        230
+                    )
+                else
+                    Color.rgb(
+                        110,
+                        70,
+                        200
+                    )
+            )
 
         val label =
-            TextView(this).apply {
+            TextView(this)
 
-                text =
-                    name
+        label.text =
+            name
 
-                textSize = 9f
+        label.textSize =
+            9f
 
-                setTextColor(
-                    if (aurix)
-                        cyan
-                    else
-                        purple
-                )
+        label.setTextColor(
+            if (aurix)
+                cyan
+            else
+                purple
+        )
 
-                typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+        label.typeface =
+            Typeface.DEFAULT_BOLD
 
-                letterSpacing =
-                    0.18f
-            }
+        label.letterSpacing =
+            0.18f
 
         box.addView(
             label,
@@ -1863,17 +1876,17 @@ class MainActivity : Activity() {
         )
 
         val text =
-            TextView(this).apply {
+            TextView(this)
 
-                this.text =
-                    message
+        text.text =
+            message
 
-                textSize = 14f
+        text.textSize =
+            14f
 
-                setTextColor(
-                    white
-                )
-            }
+        text.setTextColor(
+            white
+        )
 
         box.addView(
             text,
@@ -1913,24 +1926,23 @@ class MainActivity : Activity() {
     ) {
 
         val title =
-            TextView(this).apply {
+            TextView(this)
 
-                this.text =
-                    text
+        title.text =
+            text
 
-                textSize = 9f
+        title.textSize =
+            9f
 
-                setTextColor(
-                    muted
-                )
+        title.setTextColor(
+            muted
+        )
 
-                typeface =
-                    android.graphics.Typeface
-                        .DEFAULT_BOLD
+        title.typeface =
+            Typeface.DEFAULT_BOLD
 
-                letterSpacing =
-                    0.18f
-            }
+        title.letterSpacing =
+            0.18f
 
         val params =
             LinearLayout.LayoutParams(
@@ -1948,7 +1960,7 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // CARD PARAMS
+    // HELPERS
     // =========================================================
 
     private fun cardParams():
@@ -1969,10 +1981,6 @@ class MainActivity : Activity() {
 
         return params
     }
-
-    // =========================================================
-    // BACKGROUND
-    // =========================================================
 
     private fun roundedBackground(
         fill: Int,
@@ -1998,100 +2006,6 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // STATUS
-    // =========================================================
-
-    private fun updateStatus(
-        status: String
-    ) {
-
-        runOnUiThread {
-
-            if (
-                !::aurixUi.isInitialized
-            ) {
-                return@runOnUiThread
-            }
-
-            val clean =
-                status.uppercase(
-                    Locale.getDefault()
-                )
-
-            when {
-
-                clean.contains(
-                    "LISTEN"
-                ) -> {
-
-                    aurixUi
-                        .setListeningState()
-                }
-
-                clean.contains(
-                    "THINK"
-                ) ||
-                        clean.contains(
-                            "PROCESS"
-                        ) -> {
-
-                    aurixUi
-                        .setThinkingState()
-                }
-
-                clean.contains(
-                    "EXECUT"
-                ) -> {
-
-                    aurixUi
-                        .setThinkingState()
-                }
-
-                clean.contains(
-                    "RESPOND"
-                ) ||
-                        clean.contains(
-                            "SPEAK"
-                        ) -> {
-
-                    aurixUi
-                        .setThinkingState()
-                }
-
-                else -> {
-
-                    aurixUi
-                        .setReadyState()
-                }
-            }
-        }
-    }
-
-    // =========================================================
-    // INTERFACE STATE
-    // =========================================================
-
-    private fun updateInterface() {
-
-        if (
-            !::aurixUi.isInitialized
-        ) {
-            return
-        }
-
-        if (active) {
-
-            aurixUi
-                .setListeningState()
-
-        } else {
-
-            aurixUi
-                .setReadyState()
-        }
-    }
-
-    // =========================================================
     // OPEN URL
     // =========================================================
 
@@ -2108,14 +2022,12 @@ class MainActivity : Activity() {
                 )
             )
 
-        } catch (_: ActivityNotFoundException) {
-
         } catch (_: Exception) {
         }
     }
 
     // =========================================================
-    // ANDROID HOME
+    // HOME / DEVICE HOME
     // =========================================================
 
     fun goToHomeScreen() {
@@ -2145,7 +2057,7 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // AURIX RECEIVER
+    // RECEIVER
     // =========================================================
 
     private fun registerAurixReceiver() {
@@ -2168,10 +2080,7 @@ class MainActivity : Activity() {
 
         } else {
 
-            @Suppress(
-                "DEPRECATION"
-            )
-
+            @Suppress("DEPRECATION")
             registerReceiver(
                 aurixReceiver,
                 filter
@@ -2199,15 +2108,17 @@ class MainActivity : Activity() {
 
             active = true
 
-            aurixUi
-                .setListeningState()
+            updateStatus(
+                "LISTENING"
+            )
 
         } else {
 
             active = false
 
-            aurixUi
-                .setReadyState()
+            updateStatus(
+                "READY"
+            )
         }
     }
 
@@ -2215,9 +2126,7 @@ class MainActivity : Activity() {
     // BACK
     // =========================================================
 
-    @Suppress(
-        "DEPRECATION"
-    )
+    @Suppress("DEPRECATION")
     override fun onBackPressed() {
 
         if (
@@ -2236,7 +2145,9 @@ class MainActivity : Activity() {
             "AURIX_PAGE"
         )?.let {
 
-            root.removeView(it)
+            root.removeView(
+                it
+            )
 
             currentPage =
                 "Home"
