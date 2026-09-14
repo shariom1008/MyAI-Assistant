@@ -252,15 +252,11 @@ private fun startAurixService() {
 
         setContentView(root)
 
-        // -----------------------------------------------------
-        // SCROLL CONTENT
-        // -----------------------------------------------------
-
-        val scroll =
-            ScrollView(this)
-
-        scroll.isFillViewport = true
-        scroll.overScrollMode = View.OVER_SCROLL_NEVER
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            overScrollMode = View.OVER_SCROLL_NEVER
+            clipToPadding = false
+        }
 
         root.addView(
             scroll,
@@ -270,21 +266,17 @@ private fun startAurixService() {
             )
         )
 
-        val content =
-            LinearLayout(this)
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
 
-        content.orientation =
-            LinearLayout.VERTICAL
-
-        content.gravity =
-            Gravity.CENTER_HORIZONTAL
-
-        content.setPadding(
-            dp(18),
-            dp(28),
-            dp(18),
-            dp(30)
-        )
+            setPadding(
+                dp(18),
+                dp(18),
+                dp(18),
+                dp(12)
+            )
+        }
 
         scroll.addView(
             content,
@@ -295,17 +287,13 @@ private fun startAurixService() {
         )
 
         // =====================================================
-        // HEADER
+        // HEADER — MASTER
         // =====================================================
 
-        val header =
-            LinearLayout(this)
-
-        header.orientation =
-            LinearLayout.HORIZONTAL
-
-        header.gravity =
-            Gravity.CENTER_VERTICAL
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
 
         content.addView(
             header,
@@ -315,53 +303,39 @@ private fun startAurixService() {
             )
         )
 
-        val menu =
-            TextView(this)
-
-        menu.text = "☰"
-        menu.textSize = 25f
-        menu.setTextColor(white)
-        menu.gravity = Gravity.CENTER
-        menu.setOnClickListener { toggleDrawer() }
+        val menu = TextView(this).apply {
+            text = "☰"
+            textSize = 25f
+            setTextColor(white)
+            gravity = Gravity.CENTER
+            setOnClickListener { toggleDrawer() }
+        }
 
         header.addView(
             menu,
-            LinearLayout.LayoutParams(
-                dp(45),
-                dp(48)
-            )
+            LinearLayout.LayoutParams(dp(45), dp(48))
         )
 
-        val brand =
-            LinearLayout(this)
+        val brand = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
-        brand.orientation =
-            LinearLayout.VERTICAL
-
-        val brandParams =
+        header.addView(
+            brand,
             LinearLayout.LayoutParams(
                 0,
                 dp(52),
                 1f
             )
-
-        header.addView(
-            brand,
-            brandParams
         )
 
-        val title =
-            TextView(this)
-
-        title.text = "AURIX"
-        title.textSize = 24f
-        title.setTextColor(white)
-        title.typeface =
-            Typeface.create(
-                "sans-serif",
-                Typeface.BOLD
-            )
-        title.letterSpacing = 0.14f
+        val title = TextView(this).apply {
+            text = "A U R I X"
+            textSize = 24f
+            setTextColor(white)
+            typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.14f
+        }
 
         brand.addView(
             title,
@@ -371,15 +345,12 @@ private fun startAurixService() {
             )
         )
 
-        val tagline =
-            TextView(this)
-
-        tagline.text =
-            "INTELLIGENCE CORE"
-
-        tagline.textSize = 8f
-        tagline.setTextColor(muted)
-        tagline.letterSpacing = 0.16f
+        val tagline = TextView(this).apply {
+            text = "INTELLIGENCE CORE"
+            textSize = 8f
+            setTextColor(muted)
+            letterSpacing = 0.16f
+        }
 
         brand.addView(
             tagline,
@@ -389,300 +360,282 @@ private fun startAurixService() {
             )
         )
 
-        val online =
-            TextView(this)
-
-        online.text = "● ONLINE"
-        online.textSize = 10f
-        online.setTextColor(
-            Color.rgb(90, 235, 145)
-        )
-        online.gravity = Gravity.CENTER
+        val online = TextView(this).apply {
+            text = "● ONLINE"
+            textSize = 10f
+            setTextColor(Color.rgb(75, 235, 150))
+            gravity = Gravity.CENTER
+        }
 
         header.addView(
             online,
-            LinearLayout.LayoutParams(
-                dp(82),
-                dp(40)
-            )
+            LinearLayout.LayoutParams(dp(82), dp(40))
         )
 
-        val voiceButton = TextView(this)
-        voiceButton.text = "◎"
-        voiceButton.textSize = 29f
-        voiceButton.setTextColor(white)
-        voiceButton.gravity = Gravity.CENTER
-        voiceButton.background = roundedBackground(
-            Color.argb(42, 70, 125, 220),
-            blue
-        )
-        voiceButton.elevation = dp(8).toFloat()
-        voiceButton.setOnClickListener { startListeningOnce() }
+        val voiceButton = TextView(this).apply {
+            text = "◎"
+            textSize = 29f
+            setTextColor(white)
+            gravity = Gravity.CENTER
+            background = roundedBackground(
+                Color.argb(42, 70, 125, 220),
+                blue
+            )
+            elevation = dp(8).toFloat()
+            setOnClickListener { startListeningOnce() }
+        }
 
         header.addView(
             voiceButton,
-            LinearLayout.LayoutParams(
-                dp(58),
-                dp(58)
-            )
+            LinearLayout.LayoutParams(dp(58), dp(58))
         )
 
         // =====================================================
-        // INTELLIGENCE CORE LABEL
+        // MASTER CORE LABEL
         // =====================================================
 
-        val coreLabel =
-            TextView(this)
+        val coreLabel = TextView(this).apply {
+            text = "A U R I X   •   INTELLIGENCE CORE"
+            textSize = 9f
+            setTextColor(Color.rgb(100, 175, 225))
+            gravity = Gravity.CENTER
+            letterSpacing = 0.18f
+        }
 
-        coreLabel.text =
-            "A U R I X   •   INTELLIGENCE CORE"
-
-        coreLabel.textSize = 9f
-        coreLabel.setTextColor(
-            Color.rgb(100, 175, 225)
-        )
-        coreLabel.gravity = Gravity.CENTER
-        coreLabel.letterSpacing = 0.18f
-
-        val labelParams =
+        val coreLabelParams =
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(45)
+                dp(28)
             )
 
-        labelParams.topMargin = dp(8)
+        coreLabelParams.topMargin = dp(7)
 
         content.addView(
             coreLabel,
-            labelParams
+            coreLabelParams
         )
 
         // =====================================================
-        // CORE AREA
+        // MASTER CORE PANEL — 220dp
         // =====================================================
 
-        val coreArea =
-            FrameLayout(this)
+        val coreArea = FrameLayout(this).apply {
+            background =
+                roundedBackground(
+                    Color.rgb(4, 7, 30),
+                    Color.TRANSPARENT
+                )
+        }
 
         val coreParams =
             LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(141)
+                dp(220),
+                dp(220)
             )
+
+        coreParams.topMargin = dp(5)
 
         content.addView(
             coreArea,
             coreParams
         )
 
-        // Master screenshot: compact square AURIX core panel
-        val corePanel =
-            View(this)
+        // Outer reactor
+        val outer = View(this)
 
-        corePanel.background =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(3, 10, 35),
-                    Color.rgb(7, 9, 42),
-                    Color.rgb(3, 12, 31)
-                )
-            )
-
-        val panelLayout =
-            FrameLayout.LayoutParams(
-                dp(141),
-                dp(141)
-            )
-
-        panelLayout.gravity = Gravity.CENTER
-
-        coreArea.addView(
-            corePanel,
-            panelLayout
-        )
-
-        // Outer glow
-        val glow =
-            View(this)
-
-        glow.background =
+        outer.background =
             ovalGradient(
                 intArrayOf(
-                    Color.rgb(15, 65, 170),
-                    Color.rgb(125, 35, 215),
-                    Color.rgb(20, 150, 215)
+                    Color.rgb(35, 100, 235),
+                    Color.rgb(130, 40, 235),
+                    Color.rgb(25, 150, 225)
                 )
             )
 
-        val glowSize = dp(120)
-
-        val glowLayout =
-            FrameLayout.LayoutParams(
-                glowSize,
-                glowSize
-            )
-
-        glowLayout.gravity = Gravity.CENTER
+        val outerSize = dp(198)
 
         coreArea.addView(
-            glow,
-            glowLayout
+            outer,
+            FrameLayout.LayoutParams(
+                outerSize,
+                outerSize
+            ).apply {
+                gravity = Gravity.CENTER
+            }
         )
 
-        // Inner dark ring
-        val darkRing =
-            View(this)
+        // Dark ring
+        val ring = View(this)
 
-        darkRing.background =
+        ring.background =
             ovalGradient(
                 intArrayOf(
-                    Color.rgb(3, 18, 48),
-                    Color.rgb(13, 5, 38),
-                    Color.rgb(3, 34, 52)
+                    Color.rgb(3, 14, 42),
+                    Color.rgb(7, 5, 32),
+                    Color.rgb(3, 25, 45)
                 )
             )
 
-        val darkSize = dp(102)
-
-        val darkLayout =
-            FrameLayout.LayoutParams(
-                darkSize,
-                darkSize
-            )
-
-        darkLayout.gravity = Gravity.CENTER
+        val ringSize = dp(174)
 
         coreArea.addView(
-            darkRing,
-            darkLayout
+            ring,
+            FrameLayout.LayoutParams(
+                ringSize,
+                ringSize
+            ).apply {
+                gravity = Gravity.CENTER
+            }
         )
 
-        // Core
-        val orb =
-            View(this)
+        // Orb
+        val orb = View(this)
+        orb.background = createOrb()
 
-        orb.background =
-            createOrb()
-
-        val orbSize = dp(76)
-
-        val orbLayout =
-            FrameLayout.LayoutParams(
-                orbSize,
-                orbSize
-            )
-
-        orbLayout.gravity = Gravity.CENTER
+        val orbSize = dp(145)
 
         coreArea.addView(
             orb,
-            orbLayout
-        )
-
-        // Core text
-        coreText =
-            TextView(this)
-
-        coreText.text = "AURIX\nCORE"
-        coreText.textSize = 15f
-        coreText.setTextColor(white)
-        coreText.gravity = Gravity.CENTER
-        coreText.typeface = Typeface.DEFAULT_BOLD
-        coreText.letterSpacing = 0.18f
-
-        val coreTextLayout =
             FrameLayout.LayoutParams(
                 orbSize,
                 orbSize
-            )
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
 
-        coreTextLayout.gravity = Gravity.CENTER
+        // Orbital line 1
+        val orbit1 = View(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setStroke(dp(2), Color.rgb(55, 205, 255))
+            }
+            rotation = -18f
+        }
+
+        coreArea.addView(
+            orbit1,
+            FrameLayout.LayoutParams(
+                dp(185),
+                dp(72)
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
+
+        // Orbital line 2
+        val orbit2 = View(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setStroke(dp(2), Color.rgb(45, 180, 255))
+            }
+            rotation = 32f
+        }
+
+        coreArea.addView(
+            orbit2,
+            FrameLayout.LayoutParams(
+                dp(185),
+                dp(72)
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
+
+        coreText = TextView(this).apply {
+            text = "AURIX"
+            textSize = 22f
+            setTextColor(white)
+            gravity = Gravity.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.16f
+        }
 
         coreArea.addView(
             coreText,
-            coreTextLayout
+            FrameLayout.LayoutParams(
+                orbSize,
+                orbSize
+            ).apply {
+                gravity = Gravity.CENTER
+            }
         )
 
-        // Rotating outer ring
-        glow.animate()
-            .rotationBy(360f)
-            .setDuration(9000)
-            .withEndAction {
-                rotateCore(glow)
-            }
-            .start()
-
+        rotateCore(outer)
         pulseCore(orb)
 
         // =====================================================
-        // MASTER UI — VOICE READY
+        // READY BADGE
         // =====================================================
 
-        val listening =
-            TextView(this)
+        statusText = TextView(this).apply {
+            text = "AURIX  •  READY"
+            textSize = 11f
+            setTextColor(cyan)
+            gravity = Gravity.CENTER
+            letterSpacing = 0.08f
+            background =
+                roundedBackground(
+                    Color.argb(45, 60, 190, 255),
+                    cyan
+                )
+        }
 
-        listening.text =
-            "  •  AURIX  •  READY  "
-
-        listening.textSize = 10f
-        listening.setTextColor(cyan)
-        listening.gravity = Gravity.CENTER
-        listening.letterSpacing = 0.08f
-        listening.background =
-            roundedBackground(
-                Color.argb(45, 60, 190, 255),
-                cyan
-            )
-
-        val listeningParams =
+        val statusParams =
             LinearLayout.LayoutParams(
                 dp(210),
                 dp(38)
             )
 
-        listeningParams.topMargin = dp(7)
+        statusParams.topMargin = dp(7)
 
         content.addView(
-            listening,
-            listeningParams
+            statusText,
+            statusParams
         )
 
-        // Keep the service state internally, but hide the old diagnostic
-        // status/waveform from the master home screen.
+        // Kept initialized for service/status compatibility,
+        // but hidden because MASTER UI does not show this line.
         systemText = TextView(this).apply {
             visibility = View.GONE
         }
-        statusText = TextView(this).apply {
-            visibility = View.GONE
-        }
+
+        content.addView(
+            systemText,
+            LinearLayout.LayoutParams(1, 1)
+        )
+
         waveform = WaveformView(this).apply {
             visibility = View.GONE
         }
 
-        content.addView(systemText)
-        content.addView(statusText)
-        content.addView(waveform)
+        content.addView(
+            waveform,
+            LinearLayout.LayoutParams(1, 1)
+        )
 
         // =====================================================
-        // SAVED CONVERSATION
+        // SAVED CONVERSATION SUBTITLE
         // =====================================================
 
-        val savedLabel = TextView(this).apply {
+        val savedSubtitle = TextView(this).apply {
             text = "Saved conversation"
             textSize = 10f
             setTextColor(muted)
             gravity = Gravity.CENTER
-            letterSpacing = 0.08f
         }
 
         content.addView(
-            savedLabel,
+            savedSubtitle,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(36)
+                dp(28)
             )
         )
+
+        // =====================================================
+        // SAVED CONVERSATION HEADER
+        // =====================================================
 
         val savedHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -692,76 +645,78 @@ private fun startAurixService() {
         val savedBack = TextView(this).apply {
             text = "‹"
             textSize = 31f
-            gravity = Gravity.CENTER
             setTextColor(white)
-            background = roundedBackground(
-                Color.argb(42, 70, 125, 220),
-                blue
-            )
-        }
-
-        savedBack.setOnClickListener {
-            updateStatus("READY")
+            gravity = Gravity.CENTER
+            background =
+                roundedBackground(
+                    Color.argb(35, 45, 90, 180),
+                    blue
+                )
         }
 
         savedHeader.addView(
             savedBack,
             LinearLayout.LayoutParams(
-                dp(58),
-                dp(58)
+                dp(42),
+                dp(42)
             )
         )
 
         val savedTitle = TextView(this).apply {
             text = "SAVED CONVERSATION"
-            textSize = 11f
+            textSize = 10f
             setTextColor(cyan)
-            gravity = Gravity.CENTER_VERTICAL
             typeface = Typeface.DEFAULT_BOLD
-            letterSpacing = 0.10f
-            setPadding(dp(14), 0, 0, 0)
+            letterSpacing = 0.16f
+            gravity = Gravity.CENTER_VERTICAL
         }
+
+        val savedTitleParams =
+            LinearLayout.LayoutParams(
+                0,
+                dp(42),
+                1f
+            )
+
+        savedTitleParams.leftMargin = dp(8)
 
         savedHeader.addView(
             savedTitle,
+            savedTitleParams
+        )
+
+        content.addView(
+            savedHeader,
             LinearLayout.LayoutParams(
-                0,
-                dp(58),
-                1f
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(50)
             )
         )
 
-        val savedHeaderParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(58)
-            )
-        savedHeaderParams.topMargin = dp(2)
+        // =====================================================
+        // SAVED MESSAGE
+        // =====================================================
 
-        content.addView(savedHeader, savedHeaderParams)
-
-        val savedTime = TextView(this).apply {
+        val savedDate = TextView(this).apply {
             text = "14 Sept • 02:59 am"
-            textSize = 9f
+            textSize = 8f
             setTextColor(muted)
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(10), 0, dp(4))
         }
 
         content.addView(
-            savedTime,
+            savedDate,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(30)
+                dp(24)
             )
         )
 
-        val savedCard =
-            createMessageCard(
-                "AURIX",
-                "Good night boss, abhi kya karna hai?",
-                true
-            )
+        val savedCard = createMessageCard(
+            "AURIX",
+            "Good night boss, abhi kya karna hai?",
+            true
+        )
 
         content.addView(
             savedCard,
@@ -797,19 +752,22 @@ private fun startAurixService() {
             row1,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(76)
+                dp(58)
             )
         )
 
         addAction(row1, "▶", "YouTube") {
             openUrl("https://www.youtube.com")
         }
+
         addAction(row1, "⌕", "Search") {
             openUrl("https://www.google.com")
         }
+
         addAction(row1, "♫", "Music") {
             openUrl("https://music.youtube.com")
         }
+
         addAction(row1, "☁", "Weather") {
             openUrl("https://www.google.com/search?q=weather")
         }
@@ -822,13 +780,14 @@ private fun startAurixService() {
             row2,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(76)
+                dp(58)
             )
         )
 
         addAction(row2, "☎", "Call") {
             startActivity(Intent(Intent.ACTION_DIAL))
         }
+
         addAction(row2, "✉", "Messages") {
             startActivity(
                 Intent(Intent.ACTION_SENDTO).apply {
@@ -836,55 +795,61 @@ private fun startAurixService() {
                 }
             )
         }
+
         addAction(row2, "▦", "Apps") {
-            try {
-                startActivity(
-                    Intent(android.provider.Settings.ACTION_SETTINGS)
-                )
-            } catch (_: Exception) {
-            }
+            performAppsAction()
         }
+
         addAction(row2, "•••", "More") {
             updateStatus("READY")
         }
 
         // =====================================================
-        // BOTTOM NAV
+        // BOTTOM NAV — MASTER
         // =====================================================
 
-        val nav =
-            LinearLayout(this)
-
-        nav.orientation =
-            LinearLayout.HORIZONTAL
-
-        nav.gravity =
-            Gravity.CENTER
-
-        nav.background =
-            roundedBackground(
-                Color.argb(35, 10, 40, 75),
-                Color.rgb(35, 80, 125)
-            )
+        val nav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            background =
+                roundedBackground(
+                    Color.argb(28, 10, 40, 75),
+                    Color.rgb(35, 80, 125)
+                )
+        }
 
         val navParams =
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(68)
+                dp(46)
             )
 
-        navParams.topMargin = dp(18)
+        navParams.topMargin = dp(8)
 
         content.addView(
             nav,
             navParams
         )
 
-        addNavItem(nav, "⌂", "Home") { navigate("Home") }
-        addNavItem(nav, "◷", "History") { navigate("History") }
-        addNavItem(nav, "A", "AURIX") { navigate("AURIX") }
-        addNavItem(nav, "✦", "Shortcuts") { navigate("Shortcuts") }
-        addNavItem(nav, "⚙", "Settings") { navigate("Settings") }
+        addNavItem(nav, "⌂", "Home") {
+            navigate("Home")
+        }
+
+        addNavItem(nav, "◷", "History") {
+            navigate("History")
+        }
+
+        addNavItem(nav, "A", "AURIX") {
+            navigate("AURIX")
+        }
+
+        addNavItem(nav, "✦", "Shortcuts") {
+            navigate("Shortcuts")
+        }
+
+        addNavItem(nav, "⚙", "Settings") {
+            navigate("Settings")
+        }
     }
 
     private fun startListeningOnce() {
@@ -1921,104 +1886,52 @@ private fun startAurixService() {
     private fun updateStatus(
         status: String
     ) {
-
         runOnUiThread {
-
             val clean =
-                status.uppercase(
-                    Locale.getDefault()
-                )
+                status.uppercase(Locale.getDefault())
 
-            when {
+            statusText.text =
+                when {
+                    clean.contains("LISTEN") ->
+                        "AURIX  •  LISTENING"
 
-                clean.contains("LISTEN") -> {
+                    clean.contains("THINK") ||
+                            clean.contains("PROCESS") ->
+                        "AURIX  •  THINKING"
 
-                    statusText.text =
-                        "LISTENING"
+                    clean.contains("EXECUT") ->
+                        "AURIX  •  EXECUTING"
 
-                    coreText.text =
-                        "LISTEN"
+                    clean.contains("RESPOND") ||
+                            clean.contains("SPEAK") ->
+                        "AURIX  •  RESPONDING"
 
-                    statusText.setTextColor(
+                    else ->
+                        "AURIX  •  READY"
+                }
+
+            statusText.setTextColor(
+                when {
+                    clean.contains("THINK") ->
+                        Color.rgb(210, 145, 255)
+
+                    clean.contains("EXECUT") ->
+                        Color.rgb(110, 175, 255)
+
+                    clean.contains("RESPOND") ||
+                            clean.contains("SPEAK") ->
+                        Color.rgb(180, 110, 255)
+
+                    else ->
                         cyan
-                    )
-
-                    waveform.running = true
                 }
+            )
 
-                clean.contains("THINK") ||
-                        clean.contains("PROCESS") -> {
+            // MASTER UI keeps the core identity stable.
+            coreText.text = "AURIX"
 
-                    statusText.text =
-                        "THINKING"
-
-                    coreText.text =
-                        "THINK"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            210,
-                            145,
-                            255
-                        )
-                    )
-
-                    waveform.running = true
-                }
-
-                clean.contains("EXECUT") -> {
-
-                    statusText.text =
-                        "EXECUTING"
-
-                    coreText.text =
-                        "EXEC"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            110,
-                            175,
-                            255
-                        )
-                    )
-
-                    waveform.running = true
-                }
-
-                clean.contains("RESPOND") ||
-                        clean.contains("SPEAK") -> {
-
-                    statusText.text =
-                        "RESPONDING"
-
-                    coreText.text =
-                        "VOICE"
-
-                    statusText.setTextColor(
-                        Color.rgb(
-                            180,
-                            110,
-                            255
-                        )
-                    )
-
-                    waveform.running = true
-                }
-
-                else -> {
-
-                    statusText.text =
-                        "READY"
-
-                    coreText.text =
-                        "AURIX\nCORE"
-
-                    statusText.setTextColor(
-                        cyan
-                    )
-
-                    waveform.running = false
-                }
+            if (::waveform.isInitialized) {
+                waveform.running = false
             }
         }
     }
@@ -2028,20 +1941,23 @@ private fun startAurixService() {
     // =========================================================
 
     private fun updateInterface() {
-
-        if (active) {
+        if (::systemText.isInitialized) {
             systemText.text =
-                "SYSTEM ONLINE  •  ACTIVE"
-        } else {
-            systemText.text =
-                "SYSTEM ONLINE"
+                if (active) {
+                    "SYSTEM ONLINE  •  ACTIVE"
+                } else {
+                    "SYSTEM ONLINE"
+                }
         }
 
-        statusText.text =
-            "READY"
+        if (::statusText.isInitialized) {
+            statusText.text = "AURIX  •  READY"
+            statusText.setTextColor(cyan)
+        }
 
-        coreText.text =
-            "AURIX\nCORE"
+        if (::coreText.isInitialized) {
+            coreText.text = "AURIX"
+        }
     }
 
     // =========================================================
