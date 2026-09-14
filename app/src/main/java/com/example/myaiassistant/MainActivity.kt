@@ -467,12 +467,39 @@ private fun startAurixService() {
         val coreParams =
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(330)
+                dp(141)
             )
 
         content.addView(
             coreArea,
             coreParams
+        )
+
+        // Master screenshot: compact square AURIX core panel
+        val corePanel =
+            View(this)
+
+        corePanel.background =
+            GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(
+                    Color.rgb(3, 10, 35),
+                    Color.rgb(7, 9, 42),
+                    Color.rgb(3, 12, 31)
+                )
+            )
+
+        val panelLayout =
+            FrameLayout.LayoutParams(
+                dp(141),
+                dp(141)
+            )
+
+        panelLayout.gravity = Gravity.CENTER
+
+        coreArea.addView(
+            corePanel,
+            panelLayout
         )
 
         // Outer glow
@@ -488,7 +515,7 @@ private fun startAurixService() {
                 )
             )
 
-        val glowSize = dp(245)
+        val glowSize = dp(120)
 
         val glowLayout =
             FrameLayout.LayoutParams(
@@ -516,7 +543,7 @@ private fun startAurixService() {
                 )
             )
 
-        val darkSize = dp(218)
+        val darkSize = dp(102)
 
         val darkLayout =
             FrameLayout.LayoutParams(
@@ -538,7 +565,7 @@ private fun startAurixService() {
         orb.background =
             createOrb()
 
-        val orbSize = dp(176)
+        val orbSize = dp(76)
 
         val orbLayout =
             FrameLayout.LayoutParams(
@@ -558,7 +585,7 @@ private fun startAurixService() {
             TextView(this)
 
         coreText.text = "AURIX\nCORE"
-        coreText.textSize = 22f
+        coreText.textSize = 15f
         coreText.setTextColor(white)
         coreText.gravity = Gravity.CENTER
         coreText.typeface = Typeface.DEFAULT_BOLD
@@ -598,7 +625,7 @@ private fun startAurixService() {
         listening.text =
             "  •  AURIX  •  READY  "
 
-        listening.textSize = 11f
+        listening.textSize = 10f
         listening.setTextColor(cyan)
         listening.gravity = Gravity.CENTER
         listening.letterSpacing = 0.08f
@@ -614,7 +641,7 @@ private fun startAurixService() {
                 dp(38)
             )
 
-        listeningParams.topMargin = dp(-15)
+        listeningParams.topMargin = dp(7)
 
         content.addView(
             listening,
