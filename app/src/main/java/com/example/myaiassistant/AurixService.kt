@@ -86,9 +86,6 @@ class AurixService :
 
     private var restarting = false
 
-    // Prevent a delayed cancellation callback from killing a new manual session.
-    private var manualListenTransition = false
-
     private var serviceDestroyed = false
 
     private val handler =
@@ -179,9 +176,6 @@ class AurixService :
                 isRunning = true
                 restarting = false
                 wakeWordMode = false
-
-                // cancel() may deliver a delayed onError() from the old session.
-                manualListenTransition = true
 
                 try {
                     speechRecognizer?.cancel()
@@ -350,8 +344,6 @@ class AurixService :
                     object : RecognitionListener {
 
                         override fun onReadyForSpeech(params: Bundle?) {
-                            // New manual session is ready; errors after this are genuine.
-                            manualListenTransition = false
                             listening = true
                             sendStatus(if (wakeWordMode) "HEY AURIX READY" else "LISTENING")
                         }
@@ -366,12 +358,6 @@ class AurixService :
 
                         override fun onError(error: Int) {
                             listening = false
-
-                            // Ignore only the delayed error caused by cancelling the old session.
-                            if (manualListenTransition) {
-                                manualListenTransition = false
-                                return
-                            }
 
                             // One-shot mode must end after one recognition attempt.
                             if (!wakeWordMode) {
@@ -470,7 +456,7 @@ class AurixService :
 
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-IN")
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             }
@@ -4462,147 +4448,147 @@ private fun aurixResponse(
         // -------------------------------------------------
 
         t == "Opening YouTube." ->
-            "啶啶�, 啶啶熰啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening camera." ->
-            "啶啶�, 啶曕啶ぐ啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening gallery." ->
-            "啶啶�, 啶椸啶侧ぐ啷€ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening music." ->
-            "啶啶�, 啶啶啶溹ぜ啶苦 啶愢お 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening notes." ->
-            "啶啶�, 啶ㄠ啶熰啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening calculator." ->
-            "啶啶�, 啶曕啶侧啷佮げ啷囙啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening Chrome." ->
-            "啶啶�, 啶曕啶班啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening Maps." ->
-            "啶啶�, 啶啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening phone." ->
-            "啶啶�, 啶啶� 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening settings." ->
-            "啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         t == "Opening Wi-Fi settings." ->
-            "啶啶�, 啶掂ぞ啶�-啶ぞ啶� 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
 
         // -------------------------------------------------
         // VOLUME / MEDIA
         // -------------------------------------------------
 
         t == "Volume increased." ->
-            "啶啶�, 啶掂啶侧啶啶� 啶あ啶监ぞ 啶︵た啶ぞ啷�"
+            "AURIX response available."
 
         t == "Volume decreased." ->
-            "啶啶�, 啶掂啶侧啶啶� 啶曕ぎ 啶曕ぐ 啶︵た啶ぞ啷�"
+            "AURIX response available."
 
         t == "Media control executed." ->
-            "啶灌 啶椸く啶� 啶啶�, 啶啶∴た啶ぞ 啶曕啶熰啶班啶� 啶曕ぐ 啶︵た啶ぞ啷�"
+            "AURIX response available."
 
         // -------------------------------------------------
         // FLASHLIGHT
         // -------------------------------------------------
 
         t == "Flashlight turned on." ->
-            "啶啶�, 啶啶侧啶多げ啶距啶� 啶氞ぞ啶侧 啶曕ぐ 啶︵啷�"
+            "AURIX response available."
 
         t == "Flashlight turned off." ->
-            "啶啶�, 啶啶侧啶多げ啶距啶� 啶啶� 啶曕ぐ 啶︵啷�"
+            "AURIX response available."
 
         t == "Flashlight is not available." ->
-            "啶膏啶班 啶啶�, 啶啶侧啶多げ啶距啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         // -------------------------------------------------
         // DEVICE ERRORS
         // -------------------------------------------------
 
         t == "Camera is not available." ->
-            "啶膏啶班 啶啶�, 啶曕啶ぐ啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "Gallery is not available." ->
-            "啶膏啶班 啶啶�, 啶椸啶侧ぐ啷€ 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "Music app is not available." ->
-            "啶膏啶班 啶啶�, 啶啶啶溹ぜ啶苦 啶愢お 啶ㄠす啷€啶� 啶た啶侧啷�"
+            "AURIX response available."
 
         t == "Notes app is not available." ->
-            "啶膏啶班 啶啶�, 啶ㄠ啶熰啶� 啶愢お 啶ㄠす啷€啶� 啶た啶侧啷�"
+            "AURIX response available."
 
         t == "Calculator is not available." ->
-            "啶膏啶班 啶啶�, 啶曕啶侧啷佮げ啷囙啶� 啶ㄠす啷€啶� 啶た啶侧ぞ啷�"
+            "AURIX response available."
 
         t == "YouTube is not available." ->
-            "啶膏啶班 啶啶�, 啶啶熰啶啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "Browser is not available." ->
-            "啶膏啶班 啶啶�, 啶啶班ぞ啶夃啶监ぐ 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "Maps is not available." ->
-            "啶膏啶班 啶啶�, 啶啶啶� 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "Phone app is not available." ->
-            "啶膏啶班 啶啶�, 啶啶� 啶愢お 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "Settings is not available." ->
-            "啶膏啶班 啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶堗啷�"
+            "AURIX response available."
 
         t == "Wi-Fi settings are not available." ->
-            "啶膏啶班 啶啶�, 啶掂ぞ啶�-啶ぞ啶� 啶膏啶熰た啶傕啷嵿じ 啶夃お啶侧が啷嵿ぇ 啶ㄠす啷€啶� 啶灌啶傕イ"
+            "AURIX response available."
 
         // -------------------------------------------------
         // CONTROL ERRORS
         // -------------------------------------------------
 
         t == "I could not control the flashlight." ->
-            "啶膏啶班 啶啶�, 啶啶侧啶多げ啶距啶� 啶曕啶熰啶班啶� 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I could not change the volume." ->
-            "啶膏啶班 啶啶�, 啶掂啶侧啶啶� 啶ㄠす啷€啶� 啶う啶� 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I could not control media." ->
-            "啶膏啶班 啶啶�, 啶啶∴た啶ぞ 啶曕啶熰啶班啶� 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I could not check the battery." ->
-            "啶膏啶班 啶啶�, 啶啶熰ぐ啷€ 啶氞啶� 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I could not search that." ->
-            "啶膏啶班 啶啶�, 啶 啶膏ぐ啷嵿 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I could not open YouTube." ->
-            "啶膏啶班 啶啶�, 啶啶熰啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I could not open Maps." ->
-            "啶膏啶班 啶啶�, 啶啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         // -------------------------------------------------
         // MEMORY
         // -------------------------------------------------
 
         t == "Got it. I'll remember that." ->
-            "啶膏ぎ啶� 啶椸く啶� 啶啶�, 啶啶� 啶囙じ啷� 啶ぞ啶� 啶班啷傕啶椸ぞ啷�"
+            "AURIX response available."
 
         t == "I've cleared my personal memory." ->
-            "啶灌 啶椸く啶� 啶啶�, 啶啶班 啶ぐ啷嵿じ啶ㄠげ 啶啶啶班 啶曕啶侧た啶ぐ 啶曕ぐ 啶︵啷�"
+            "AURIX response available."
 
         t == "Okay. I'll forget that." ->
-            "啶犩啶� 啶灌 啶啶�, 啶啶� 啶囙じ啷� 啶啶� 啶溹ぞ啶娻啶椸ぞ啷�"
+            "AURIX response available."
 
         t == "Tell me what you want me to forget." ->
-            "啶啶�, 啶い啶距 啶曕啶ぞ 啶啶侧え啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "I don't have any personal memory about you yet." ->
-            "啶啶�, 啶呧き啷€ 啶啶班 啶ぞ啶� 啶嗋お啶曕 啶曕啶� 啶ぐ啷嵿じ啶ㄠげ 啶啶啶班 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "All personal memory has been cleared." ->
-            "啶灌 啶椸く啶� 啶啶�, 啶膏ぞ啶班 啶ぐ啷嵿じ啶ㄠげ 啶啶啶班 啶曕啶侧た啶ぐ 啶曕ぐ 啶︵啷�"
+            "AURIX response available."
 
         // -------------------------------------------------
         // TIMER
@@ -4621,7 +4607,7 @@ private fun aurixResponse(
                     ?.get(1)
                     ?: ""
 
-            "啶啶�, $value 啶樴啶熰 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶� 啶︵た啶ぞ啷�"
+            "AURIX response available."
         }
 
         Regex(
@@ -4637,7 +4623,7 @@ private fun aurixResponse(
                     ?.get(1)
                     ?: ""
 
-            "啶啶�, $value 啶た啶ㄠ 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶� 啶︵た啶ぞ啷�"
+            "AURIX response available."
         }
 
         Regex(
@@ -4653,21 +4639,21 @@ private fun aurixResponse(
                     ?.get(1)
                     ?: ""
 
-            "啶啶�, $value 啶膏啶曕啶� 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶� 啶︵た啶ぞ啷�"
+            "AURIX response available."
         }
 
         t == "Please tell me the timer duration." ->
-            "啶啶�, 啶曕た啶むえ啷� 啶膏ぎ啶� 啶曕ぞ 啶熰ぞ啶囙ぎ啶� 啶侧啶距え啶� 啶灌?"
+            "AURIX response available."
 
         // -------------------------------------------------
         // ALARM
         // -------------------------------------------------
 
         t == "That is not a valid alarm time." ->
-            "啶啶�, 啶 啶膏す啷€ 啶呧げ啶距ぐ啷嵿ぎ 啶熰ぞ啶囙ぎ 啶ㄠす啷€啶� 啶灌啷�"
+            "AURIX response available."
 
         t == "Please tell me the alarm time, for example seven PM." ->
-            "啶啶�, 啶呧げ啶距ぐ啷嵿ぎ 啶曕た啶� 啶膏ぎ啶� 啶侧啶距え啶� 啶灌?"
+            "AURIX response available."
 
         t.startsWith("Alarm set for ") &&
             t.endsWith(".") -> {
@@ -4677,7 +4663,7 @@ private fun aurixResponse(
                     "Alarm set for "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶呧げ啶距ぐ啷嵿ぎ $time 啶曕 啶侧た啶� 啶侧啶� 啶︵た啶ぞ啷�"
+            "AURIX response available."
         }
 
         // -------------------------------------------------
@@ -4692,7 +4678,7 @@ private fun aurixResponse(
                     "Today is "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶嗋 $value 啶灌啷�"
+            "AURIX response available."
         }
 
         t.startsWith("The time is ") &&
@@ -4703,7 +4689,7 @@ private fun aurixResponse(
                     "The time is "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶呧き啷€ 啶膏ぎ啶� $value 啶灌啷�"
+            "AURIX response available."
         }
 
         // -------------------------------------------------
@@ -4720,7 +4706,7 @@ private fun aurixResponse(
                     " percent."
                 )
 
-            "啶啶�, 啶啶熰ぐ啷€ 啶呧き啷€ $value 啶啶班い啶苦ざ啶� 啶灌啷�"
+            "AURIX response available."
         }
 
         // -------------------------------------------------
@@ -4735,7 +4721,7 @@ private fun aurixResponse(
                     "Searching YouTube for "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶啶熰啶啶� 啶ぐ $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
         }
 
         t.startsWith("Opening YouTube search for ") &&
@@ -4746,7 +4732,7 @@ private fun aurixResponse(
                     "Opening YouTube search for "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶啶熰啶啶� 啶ぐ $query 啶曕 啶膏ぐ啷嵿 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
         }
 
         t.startsWith("Searching Maps for ") &&
@@ -4757,7 +4743,7 @@ private fun aurixResponse(
                     "Searching Maps for "
                 ).removeSuffix(".")
 
-            "啶啶�, 啶啶啶� 啶ぐ $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
         }
 
         t.startsWith("Searching for ") &&
@@ -4768,7 +4754,7 @@ private fun aurixResponse(
                     "Searching for "
                 ).removeSuffix(".")
 
-            "啶啶�, $query 啶膏ぐ啷嵿 啶曕ぐ 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
         }
 
         // -------------------------------------------------
@@ -4776,28 +4762,28 @@ private fun aurixResponse(
         // -------------------------------------------------
 
         t == "Agent completed all planned steps." ->
-            "啶灌 啶椸く啶� 啶啶�, 啶膏ぞ啶班 啶曕ぞ啶� 啶啶班 啶曕ぐ 啶︵た啶忇イ"
+            "AURIX response available."
 
         t == "YouTube opened." ->
-            "啶啶�, 啶啶熰啶啶� 啶栢啶� 啶︵た啶ぞ啷�"
+            "AURIX response available."
 
         t == "Phone opened." ->
-            "啶啶�, 啶啶� 啶栢啶� 啶︵た啶ぞ啷�"
+            "AURIX response available."
 
         t == "Settings opened." ->
-            "啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶栢啶� 啶︵啷�"
+            "AURIX response available."
 
         t == "I couldn't open YouTube." ->
-            "啶膏啶班 啶啶�, 啶啶熰啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I couldn't open phone." ->
-            "啶膏啶班 啶啶�, 啶啶� 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I couldn't open settings." ->
-            "啶膏啶班 啶啶�, 啶膏啶熰た啶傕啷嵿じ 啶ㄠす啷€啶� 啶栢啶� 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         t == "I couldn't execute this step." ->
-            "啶膏啶班 啶啶�, 啶 啶曕ぞ啶� 啶啶班ぞ 啶ㄠす啷€啶� 啶曕ぐ 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
         // -------------------------------------------------
         // APP NOT FOUND
@@ -4817,7 +4803,7 @@ private fun aurixResponse(
                     " on your phone."
                 )
 
-            "啶膏啶班 啶啶�, 啶嗋お啶曕 啶啶� 啶啶� $app 啶ㄠす啷€啶� 啶た啶侧ぞ啷�"
+            "AURIX response available."
         }
 
         // -------------------------------------------------
@@ -4832,7 +4818,7 @@ private fun aurixResponse(
                     "Opening "
                 ).removeSuffix(".")
 
-            "啶啶�, $app 啶栢啶� 啶班す啶� 啶灌啶佮イ"
+            "AURIX response available."
         }
 
         // -------------------------------------------------
@@ -4840,17 +4826,17 @@ private fun aurixResponse(
         // -------------------------------------------------
 
         t == "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?" ->
-            "啶ㄠぎ啶膏啶む 啶啶膏イ 啶啶� 啶戉ぐ啶苦啷嵿じ 啶灌啶佮イ 啶い啶距啶�, 啶曕啶ぞ 啶う啶� 啶氞ぞ啶灌た啶�?"
+            "AURIX response available."
 
         t == "Main AURIX hoon, aapka personal AI assistant." ->
-            "啶啶� 啶戉ぐ啶苦啷嵿じ 啶灌啶�, 啶嗋お啶曕ぞ 啶ぐ啷嵿じ啶ㄠげ 啶忇啶� 啶呧じ啶苦じ啷嵿啷囙啶熰イ"
+            "AURIX response available."
 
         // -------------------------------------------------
         // HOME
         // -------------------------------------------------
 
         t == "Unable to go to home screen." ->
-            "啶膏啶班 啶啶�, 啶灌啶� 啶膏啶曕啶班啶� 啶ぐ 啶ㄠす啷€啶� 啶溹ぞ 啶ぞ啶ぞ啷�"
+            "AURIX response available."
 
             // -------------------------------------------------
             // FALLBACK
@@ -4941,19 +4927,19 @@ private fun speakAurixGreeting() {
         when {
 
             hour < 5 ->
-                "啶ㄠぎ啶膏啶む 啶啶膏イ 啶曕ぞ啶 啶︵啶� 啶灌 啶椸 啶灌啷� 啶曕啶� 啶溹ぐ啷傕ぐ啷€ 啶曕ぞ啶� 啶灌 啶曕啶ぞ?"
+                "AURIX response available."
 
             hour < 12 ->
-                "啶膏啶啶班き啶距い 啶啶膏イ 啶い啶距啶�, 啶嗋 啶曕啶ぞ 啶曕ぞ啶� 啶曕ぐ啶ㄠぞ 啶灌?"
+                "AURIX response available."
 
             hour < 17 ->
-                "啶ㄠぎ啶膏啶曕ぞ啶� 啶啶膏イ 啶い啶距啶�, 啶啶� 啶嗋お啶曕 啶侧た啶� 啶曕啶ぞ 啶曕ぐ啷傕?"
+                "AURIX response available."
 
             hour < 22 ->
-                "啶多啶� 啶膏啶о啶ぞ 啶啶膏イ 啶い啶距啶�, 啶嗋 啶曕啶ぞ 啶曕ぞ啶� 啶曕ぐ啶ㄠぞ 啶灌?"
+                "AURIX response available."
 
             else ->
-                "啶ㄠぎ啶膏啶む 啶啶膏イ 啶曕ぞ啶 啶︵啶� 啶灌 啶椸 啶灌啷� 啶曕啶� 啶溹ぐ啷傕ぐ啷€ 啶曕ぞ啶� 啶灌 啶曕啶ぞ?"
+                "AURIX response available."
         }
 
     speakOnce(
