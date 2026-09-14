@@ -39,20 +39,10 @@ class AurixWakeEngine(
     private var sessionId = 0L
     private var restartRunnable: Runnable? = null
 
-    // Prevent duplicate handling when a partial result detects the wake word
-    // and the final result arrives a moment later.
-    private var wakeHandledForSession = false
-
-    // A short guard prevents the engine from immediately reopening the
-    // microphone while the Android speech service is still releasing it.
-    private var lastSessionFinishedAt = 0L
-
     private val wakeVariants = setOf(
         "aurix", "auriks", "aurics", "aurik", "aurixx",
         "auryx", "aurex", "orix", "oryx", "ourix",
-        "arix", "auric", "aurrix", "aurixs", "aurek",
-        // Common Android ASR word-splitting variants.
-        "aura x", "aur ix", "auri x", "or ix", "our ix"
+        "arix", "auric", "aurrix", "aurixs", "aurek"
     )
 
     fun start() {
@@ -133,8 +123,6 @@ class AurixWakeEngine(
                         ?.trim()
                         .orEmpty()
 
-                    if (wakeHandledForSession && mode == Mode.WAKE) return
-
                     // If media starts while a wake session is open, do not
                     // interpret media audio as a wake/command.
                     if (musicIsActive() && mode == Mode.WAKE) {
@@ -149,25 +137,7 @@ class AurixWakeEngine(
                     }
                 }
 
-                override fun onPartialResults(partialResults: Bundle?) {
-                    if (!current(sessionId) || mode != Mode.WAKE || wakeHandledForSession) return
-
-                    val text = partialResults
-                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull()
-                        ?.trim()
-                        .orEmpty()
-
-                    if (text.isBlank() || musicIsActive()) return
-
-                    // React to the wake word as soon as Android exposes it in
-                    // partial speech instead of waiting for final recognition.
-                    val command = extractWakeCommand(text) ?: return
-
-                    wakeHandledForSession = true
-                    handleWakeText(command, alreadyExtracted = true)
-                }
-
+                override fun onPartialResults(partialResults: Bundle?) = Unit
                 override fun onEvent(eventType: Int, params: Bundle?) = Unit
             })
         }
@@ -188,11 +158,7 @@ class AurixWakeEngine(
                 Locale("en", "IN")
             )
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 650L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 450L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 250L)
-            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         }
     }
 
@@ -209,14 +175,6 @@ class AurixWakeEngine(
     private fun startWakeListening() {
         if (!running || starting) return
 
-        // Give Android's speech service a brief moment to release the previous
-        // audio session. This avoids "startListening too soon" failures.
-        val elapsed = System.currentTimeMillis() - lastSessionFinishedAt
-        if (elapsed in 0 until 120L) {
-            scheduleWakeRestart(140L)
-            return
-        }
-
         // Do not take the microphone while active media is playing.
         if (musicIsActive()) {
             scheduleWakeRestart(3000L)
@@ -230,7 +188,6 @@ class AurixWakeEngine(
         restartRunnable = null
         mode = Mode.WAKE
         starting = true
-        wakeHandledForSession = false
         val mySession = ++sessionId
 
         try { recognizer?.cancel() } catch (_: Exception) {}
@@ -243,7 +200,7 @@ class AurixWakeEngine(
                 starting = false
                 scheduleWakeRestart(500L)
             }
-        }, 35L)
+        }, 80L)
     }
 
     private fun startCommandListening() {
@@ -255,7 +212,6 @@ class AurixWakeEngine(
         restartRunnable = null
         mode = Mode.COMMAND
         starting = true
-        wakeHandledForSession = false
         val mySession = ++sessionId
 
         try { recognizer?.cancel() } catch (_: Exception) {}
@@ -271,17 +227,10 @@ class AurixWakeEngine(
         }, 80L)
     }
 
-    private fun handleWakeText(
-        rawText: String,
-        alreadyExtracted: Boolean = false
-    ) {
-        val command = if (alreadyExtracted) {
-            rawText.trim()
-        } else {
-            extractWakeCommand(rawText) ?: run {
-                scheduleWakeRestart(180L)
-                return
-            }
+    private fun handleWakeText(rawText: String) {
+        val command = extractWakeCommand(rawText) ?: run {
+            scheduleWakeRestart(250L)
+            return
         }
 
         callbacks.onWakeDetected(command)
@@ -309,13 +258,11 @@ class AurixWakeEngine(
         mode = Mode.IDLE
         starting = false
         sessionId++
-        wakeHandledForSession = false
-        lastSessionFinishedAt = System.currentTimeMillis()
 
         try { recognizer?.cancel() } catch (_: Exception) {}
         callbacks.onListeningChanged(false, Mode.IDLE)
 
-        scheduleWakeRestart(220L)
+        scheduleWakeRestart(400L)
     }
 
     private fun cancelCurrentSession() {
