@@ -767,13 +767,6 @@ private fun startListening() {
         listening = false
         wakeDetectionTriggered = false
         
-if (
-    System.currentTimeMillis() <
-    suppressRecognizerErrorUntil
-) {
-    return
-}
-
         if (
             isRunning &&
             !serviceDestroyed &&
