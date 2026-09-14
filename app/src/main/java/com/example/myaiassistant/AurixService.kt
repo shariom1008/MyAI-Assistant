@@ -77,6 +77,41 @@ class AurixService :
 
     private var speechRecognizer: SpeechRecognizer? = null
 
+    // Passive wake engine owns wake-mode recognition. Manual tap mode stops it
+    // first, so two SpeechRecognizer sessions never overlap.
+    private val wakeEngine by lazy {
+        AurixWakeEngine(
+            this,
+            object : AurixWakeEngine.Callbacks {
+                override fun onWakeDetected(commandAfterWake: String) { }
+
+                override fun onCommandRecognized(command: String) {
+                    if (command.isNotBlank() && isRunning && !serviceDestroyed) {
+                        sendCommand(command)
+                        processCommand(command)
+                    }
+                }
+
+                override fun onListeningChanged(
+                    listeningNow: Boolean,
+                    mode: AurixWakeEngine.Mode
+                ) {
+                    if (!isRunning || serviceDestroyed) return
+                    listening = listeningNow
+                    sendStatus(
+                        when {
+                            mode == AurixWakeEngine.Mode.WAKE && listeningNow -> "AURIX READY"
+                            mode == AurixWakeEngine.Mode.COMMAND && listeningNow -> "LISTENING"
+                            else -> "READY"
+                        }
+                    )
+                }
+
+                override fun onWakeError(errorCode: Int) { }
+            }
+        )
+    }
+
     private var textToSpeech: TextToSpeech? = null
 
     private var listening = false
@@ -142,7 +177,7 @@ class AurixService :
                 this
             )
 
-        startListening()
+        wakeEngine.start()
     }
 
     // =========================================================
@@ -169,10 +204,9 @@ class AurixService :
                 isRunning = true
                 restarting = false
                 wakeWordMode = true
-
-                if (!listening) {
-                    startListening()
-                }
+                try { speechRecognizer?.cancel() } catch (_: Exception) { }
+                listening = false
+                wakeEngine.start()
             }
 
             ACTION_LISTEN_ONCE -> {
@@ -181,6 +215,8 @@ class AurixService :
                 restarting = false
                 wakeWordMode = false
                 manualListenTransition = true
+
+                wakeEngine.stop()
 
                 try {
                     speechRecognizer?.cancel()
@@ -213,6 +249,8 @@ class AurixService :
         isRunning = false
         listening = false
         restarting = true
+
+        wakeEngine.stop()
 
         handler.removeCallbacksAndMessages(
             null
@@ -324,18 +362,11 @@ class AurixService :
     }
 
     // =========================================================
-    // SPEECH RECOGNITION
+    // MANUAL TAP SPEECH RECOGNITION
     // =========================================================
 
     private fun startListening() {
-
-        if (
-            serviceDestroyed ||
-            !isRunning
-        ) {
-            return
-        }
-
+        if (serviceDestroyed || !isRunning) return
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             sendStatus("Speech recognition unavailable")
             return
@@ -344,203 +375,76 @@ class AurixService :
         try {
             if (speechRecognizer == null) {
                 speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-
-                speechRecognizer?.setRecognitionListener(
-                    object : RecognitionListener {
-
-                        override fun onReadyForSpeech(params: Bundle?) {
-                            manualListenTransition = false
-                            listening = true
-                            sendStatus(if (wakeWordMode) "AURIX READY" else "LISTENING")
-                        }
-
-                        override fun onBeginningOfSpeech() {
-                            sendStatus("THINKING")
-                        }
-
-                        override fun onRmsChanged(rmsdB: Float) {}
-                        override fun onBufferReceived(buffer: ByteArray?) {}
-                        override fun onEndOfSpeech() {}
-
-                        override fun onError(error: Int) {
-                            listening = false
-
-                            // Ignore only the delayed cancellation error from the old session.
-                            if (manualListenTransition) {
-                                manualListenTransition = false
-                                return
-                            }
-
-                            // Manual tap mode ends here. Never reopen the microphone automatically.
-                            if (!wakeWordMode) {
-                                sendStatus("READY")
-                                return
-                            }
-
-                            if (isRunning && !serviceDestroyed) {
-                                restartListening()
-                            }
-                        }
-
-                        override fun onResults(results: Bundle?) {
-                            listening = false
-
-                            val text = results
-                                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                                ?.firstOrNull()
-                                ?.trim()
-                                ?.lowercase(Locale.ENGLISH)
-                                .orEmpty()
-
-                            if (text.isBlank()) {
-                                if (wakeWordMode && isRunning && !serviceDestroyed) {
-                                    restartListening()
-                                }
-                                return
-                            }
-
-                            // Never interpret YouTube/music audio as a command.
-                            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                            if (audioManager.isMusicActive) {
-                                if (wakeWordMode && isRunning && !serviceDestroyed) {
-                                    restartListening()
-                                }
-                                return
-                            }
-
-                            if (wakeWordMode) {
-                                // STRICT WAKE WORD: user-facing wake word is ONLY "Aurix".
-                                // "Hey Aurix", "Hi Aurix", "Hello Aurix", and "Hai Aurix" are rejected.
-                                val normalizedWakeText = text
-                                    .lowercase(Locale.ENGLISH)
-                                    .replace("’", "'")
-                                    .replace(Regex("[^a-z0-9]+"), " ")
-                                    .replace(Regex("\\s+"), " ")
-                                    .trim()
-
-                                val wake = Regex(
-                                    "\\b(aurix|auriks|aurics|aurik|aurixx|auryx|aurex|orix|oryx|ourix|arix|auric|aurrix|aurixs|aurek)\\b"
-                                )
-                                val match = wake.find(normalizedWakeText)
-
-                                if (match == null || match.range.first != 0) {
-                                    restartListening()
-                                    return
-                                }
-
-                                val command = normalizedWakeText
-                                    .substring(match.range.last + 1)
-                                    .trim(' ', ',', '.', ':', '-')
-
-                                if (command.isBlank()) {
-                                    wakeWordMode = false
-                                    sendStatus("LISTENING")
-                                    handler.postDelayed({
-                                        if (isRunning && !serviceDestroyed && !listening) {
-                                            startListening()
-                                        }
-                                    }, 1200)
-                                    return
-                                }
-
-                                sendCommand(command)
-                                handler.postDelayed({
-                                    if (isRunning && !serviceDestroyed) {
-                                        processCommand(command)
-                                        wakeWordMode = true
-                                        handler.postDelayed({
-                                            if (
-                                                isRunning &&
-                                                !serviceDestroyed &&
-                                                !listening
-                                            ) {
-                                                val audioManager =
-                                                    getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
-                                                // Do not reopen the microphone over active music.
-                                                if (!audioManager.isMusicActive) {
-                                                    startListening()
-                                                }
-                                            }
-                                        }, 1800)
-                                    }
-                                }, 300)
-                                return
-                            }
-
-                            // Manual tap mode: exactly one command, then stop the microphone.
-                            // Do NOT restart passive SpeechRecognizer here; it can keep the
-                            // green mic indicator active and interrupt YouTube/audio playback.
-                            sendCommand(text)
-                            handler.postDelayed({
-                                if (isRunning && !serviceDestroyed) {
-                                    processCommand(text)
-                                }
-
-                                wakeWordMode = false
-                                listening = false
-                                manualListenTransition = false
-
-                                try {
-                                    speechRecognizer?.cancel()
-                                } catch (_: Exception) {
-                                }
-
-                                sendStatus("READY")
-                            }, 300)
-
-                        }
-
-                        override fun onPartialResults(partialResults: Bundle?) {}
-                        override fun onEvent(eventType: Int, params: Bundle?) {}
+                speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                    override fun onReadyForSpeech(params: Bundle?) {
+                        manualListenTransition = false
+                        listening = true
+                        sendStatus("LISTENING")
                     }
-                )
+                    override fun onBeginningOfSpeech() { sendStatus("THINKING") }
+                    override fun onRmsChanged(rmsdB: Float) {}
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onEndOfSpeech() {}
+                    override fun onError(error: Int) {
+                        listening = false
+                        if (manualListenTransition) {
+                            manualListenTransition = false
+                            return
+                        }
+                        sendStatus("READY")
+                    }
+                    override fun onResults(results: Bundle?) {
+                        listening = false
+                        val text = results
+                            ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            ?.firstOrNull()?.trim()?.lowercase(Locale.ENGLISH).orEmpty()
+
+                        if (text.isBlank()) {
+                            wakeWordMode = false
+                            manualListenTransition = false
+                            sendStatus("READY")
+                            handler.postDelayed({
+                                if (isRunning && !serviceDestroyed) wakeEngine.start()
+                            }, 900)
+                            return
+                        }
+
+                        sendCommand(text)
+                        handler.postDelayed({
+                            if (isRunning && !serviceDestroyed) processCommand(text)
+                            wakeWordMode = false
+                            listening = false
+                            manualListenTransition = false
+                            try { speechRecognizer?.cancel() } catch (_: Exception) { }
+                            sendStatus("READY")
+                            handler.postDelayed({
+                                if (isRunning && !serviceDestroyed) wakeEngine.start()
+                            }, 900)
+                        }, 300)
+                    }
+                    override fun onPartialResults(partialResults: Bundle?) {}
+                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                })
             }
 
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                // Indian English is intentional here: it keeps Hindi/Hinglish speech
-                // transcribed in the Latin script expected by the command engine.
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale("en", "IN"))
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale("en", "IN"))
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             }
-
             speechRecognizer?.startListening(intent)
-
         } catch (_: Exception) {
             listening = false
-            if (wakeWordMode) {
-                restartListening()
-            }
+            sendStatus("READY")
         }
     }
 
     // =========================================================
     // SAFE RESTART
     // =========================================================
-
-    private fun restartListening() {
-
-        if (
-            restarting ||
-            !isRunning ||
-            serviceDestroyed ||
-            !wakeWordMode
-        ) {
-            return
-        }
-
-        restarting = true
-        listening = false
-
-        handler.postDelayed({
-            restarting = false
-            if (isRunning && !serviceDestroyed && wakeWordMode) {
-                startListening()
-            }
-        }, 1200)
-    }
+    // Passive wake restarts are owned by AurixWakeEngine.
 
     // =========================================================
     // MAIN COMMAND ENGINE
@@ -4669,19 +4573,19 @@ private fun speakAurixGreeting() {
     val greeting =
         when {
             hour < 5 ->
-            "Boss, अभी काफ़ी रात हो गई है। बताओ क्या करना है?"
+                "Boss, abhi kaafi raat ho gayi hai. Batao kya karna hai?"
 
-hour < 12 ->
-           "गुड मॉर्निंग Boss। बताओ, ऑरिक्स आपके लिए क्या करे?"
+            hour < 12 ->
+                "Good morning Boss. Batao, AURIX aapke liye kya kare?"
 
-hour < 17 ->
-            "गुड आफ्टरनून Boss। बताओ, क्या करना है?"
+            hour < 17 ->
+                "Good afternoon Boss. Batao, kya karna hai?"
 
-hour < 22 ->
-            "गुड ईवनिंग Boss। बताओ, आपकी क्या मदद करूं?"
+            hour < 22 ->
+                "Good evening Boss. Batao, AURIX aapki kya help kare?"
 
-  else ->
-             "गुड नाइट Boss। बताओ, हमारे लायक क्या सेवा है?"
+            else ->
+                "Good night Boss. Batao, AURIX kya kare?"
         }
 
     speakOnce(
