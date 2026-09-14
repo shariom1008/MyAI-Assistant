@@ -1751,7 +1751,7 @@ if (
         ) {
 
             speakOnce(
-                "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?"
+                "Hello Boss. Main AURIX hoon. बताओ, kya help chahiye?"
             )
 
             return
@@ -4487,8 +4487,8 @@ private fun aurixResponse(
             "Boss, $app khol raha hoon."
         }
 
-        t == "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?" ->
-            "Hello boss, main AURIX hoon. Batao, kya help chahiye?"
+        t == "Hello Boss. Main AURIX hoon. बताओ, kya help chahiye?" ->
+            "Hello boss, main AURIX hoon. बताओ, kya help chahiye?"
         t == "Main AURIX hoon, aapka personal AI assistant." ->
             "Main AURIX hoon, aapka personal AI assistant."
         t == "Unable to go to home screen." ->
@@ -4573,19 +4573,19 @@ private fun speakAurixGreeting() {
     val greeting =
         when {
             hour < 5 ->
-                "Boss, abhi kaafi raat ho gayi hai. Batao kya karna hai?"
+                "Boss, abhi kaafi raat ho gayi hai. बताओ kya karna hai?"
 
             hour < 12 ->
-                "Good morning Boss. Batao, AURIX aapke liye kya kare?"
+                "Good morning Boss. बताओ, AURIX aapke liye kya kare?"
 
             hour < 17 ->
-                "Good afternoon Boss. Batao, kya karna hai?"
+                "Good afternoon Boss. बताओ, kya karna hai?"
 
             hour < 22 ->
-                "Good evening Boss. Batao, AURIX aapki kya help kare?"
+                "Good evening Boss. बताओ, AURIX aapki kya help kare?"
 
             else ->
-                "Good night Boss. Batao, AURIX kya kare?"
+                "Good night Boss. बताओ, AURIX kya kare?"
         }
 
     speakOnce(
