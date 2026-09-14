@@ -7,27 +7,20 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
+import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
-import java.util.Locale
 
 class MainActivity : Activity() {
 
     private lateinit var root: FrameLayout
-    private lateinit var aurixUi: AurixOriginalUi
+    private lateinit var originalUi: AurixOriginalUi
     private lateinit var drawer: LinearLayout
 
     private var active = false
@@ -39,19 +32,6 @@ class MainActivity : Activity() {
             MODE_PRIVATE
         )
     }
-
-    // =========================================================
-    // COLORS
-    // =========================================================
-
-    private val bgTop = Color.rgb(2, 12, 28)
-    private val bgBottom = Color.rgb(9, 2, 25)
-
-    private val cyan = Color.rgb(80, 220, 255)
-    private val blue = Color.rgb(45, 120, 255)
-    private val purple = Color.rgb(145, 55, 240)
-    private val white = Color.WHITE
-    private val muted = Color.rgb(105, 155, 190)
 
     // =========================================================
     // AURIX EVENT RECEIVER
@@ -90,19 +70,20 @@ class MainActivity : Activity() {
 
                     AurixService.TYPE_COMMAND -> {
 
-                        updateStatus("THINKING")
+                        updateStatus(
+                            "THINKING"
+                        )
 
                         if (text.isNotBlank()) {
-
                             addHistoryItem(
                                 "YOU",
                                 text
                             )
 
                             if (
-                                ::aurixUi.isInitialized
+                                ::originalUi.isInitialized
                             ) {
-                                aurixUi.addUserMessage(
+                                originalUi.addUserMessage(
                                     text
                                 )
                             }
@@ -111,19 +92,20 @@ class MainActivity : Activity() {
 
                     AurixService.TYPE_SPEAK -> {
 
-                        updateStatus("RESPONDING")
+                        updateStatus(
+                            "RESPONDING"
+                        )
 
                         if (text.isNotBlank()) {
-
                             addHistoryItem(
                                 "AURIX",
                                 text
                             )
 
                             if (
-                                ::aurixUi.isInitialized
+                                ::originalUi.isInitialized
                             ) {
-                                aurixUi.addAurixMessage(
+                                originalUi.addAurixMessage(
                                     text
                                 )
                             }
@@ -169,10 +151,10 @@ class MainActivity : Activity() {
         )
 
         window.statusBarColor =
-            Color.TRANSPARENT
+            android.graphics.Color.TRANSPARENT
 
         window.navigationBarColor =
-            Color.BLACK
+            android.graphics.Color.BLACK
 
         createInterface()
 
@@ -194,8 +176,6 @@ class MainActivity : Activity() {
         )
 
         requestMicrophonePermission()
-
-        updateInterface()
     }
 
     // =========================================================
@@ -205,22 +185,23 @@ class MainActivity : Activity() {
     private fun createInterface() {
 
         root =
-            FrameLayout(this).apply {
+            FrameLayout(this)
 
-                background =
-                    GradientDrawable(
-                        GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(
-                            bgTop,
-                            Color.rgb(1, 5, 16),
-                            bgBottom
-                        )
-                    )
-            }
+        root.setBackgroundColor(
+            android.graphics.Color.rgb(
+                5,
+                8,
+                28
+            )
+        )
 
         setContentView(root)
 
-        aurixUi =
+        // -----------------------------------------------------
+        // ORIGINAL APK UI
+        // -----------------------------------------------------
+
+        originalUi =
             AurixOriginalUi(
                 this,
                 object :
@@ -261,13 +242,11 @@ class MainActivity : Activity() {
                     override fun onCall() {
 
                         try {
-
                             startActivity(
                                 Intent(
                                     Intent.ACTION_DIAL
                                 )
                             )
-
                         } catch (_: Exception) {
                         }
                     }
@@ -302,29 +281,29 @@ class MainActivity : Activity() {
                     }
 
                     override fun onHome() {
-                        navigate("Home")
+                        showHomePage()
                     }
 
                     override fun onHistory() {
-                        navigate("History")
+                        showHistoryPage()
                     }
 
                     override fun onAurix() {
-                        navigate("AURIX")
+                        showHomePage()
                     }
 
                     override fun onShortcuts() {
-                        navigate("Shortcuts")
+                        showShortcutsPage()
                     }
 
                     override fun onSettings() {
-                        navigate("Settings")
+                        showSettingsPage()
                     }
                 }
             )
 
         root.addView(
-            aurixUi.build(),
+            originalUi.build(),
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -359,10 +338,6 @@ class MainActivity : Activity() {
         }
     }
 
-    // =========================================================
-    // PERMISSION RESULT
-    // =========================================================
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -387,6 +362,8 @@ class MainActivity : Activity() {
 
             } else {
 
+                active = false
+
                 updateStatus(
                     "READY"
                 )
@@ -405,7 +382,6 @@ class MainActivity : Activity() {
                 this,
                 AurixService::class.java
             ).apply {
-
                 action =
                     AurixService.ACTION_START
             }
@@ -433,8 +409,6 @@ class MainActivity : Activity() {
                 "LISTENING"
             )
 
-            updateInterface()
-
         } catch (_: Exception) {
 
             active = false
@@ -442,13 +416,11 @@ class MainActivity : Activity() {
             updateStatus(
                 "START FAILED"
             )
-
-            updateInterface()
         }
     }
 
     // =========================================================
-    // ONE-TIME VOICE LISTEN
+    // ONE-TIME VOICE BACKUP
     // =========================================================
 
     private fun startListeningOnce() {
@@ -462,6 +434,7 @@ class MainActivity : Activity() {
         ) {
 
             requestMicrophonePermission()
+
             return
         }
 
@@ -470,7 +443,6 @@ class MainActivity : Activity() {
                 this,
                 AurixService::class.java
             ).apply {
-
                 action =
                     AurixService.ACTION_LISTEN_ONCE
             }
@@ -517,69 +489,48 @@ class MainActivity : Activity() {
         runOnUiThread {
 
             if (
-                !::aurixUi.isInitialized
+                !::originalUi.isInitialized
             ) {
                 return@runOnUiThread
             }
 
             val clean =
-                status.uppercase(
-                    Locale.getDefault()
-                )
+                status.uppercase()
 
             when {
 
-                clean.contains("LISTEN") -> {
+                clean.contains(
+                    "LISTEN"
+                ) -> {
 
-                    aurixUi.setListeningState()
+                    originalUi.setListeningState()
                 }
 
-                clean.contains("THINK") ||
-                clean.contains("PROCESS") -> {
+                clean.contains(
+                    "THINK"
+                ) ||
+                clean.contains(
+                    "PROCESS"
+                ) -> {
 
-                    aurixUi.setThinkingState()
+                    originalUi.setThinkingState()
                 }
 
-                clean.contains("EXECUT") -> {
+                clean.contains(
+                    "RESPOND"
+                ) ||
+                clean.contains(
+                    "SPEAK"
+                ) -> {
 
-                    aurixUi.voiceStatus.text =
-                        "VOICE  •  EXECUTING"
-                }
-
-                clean.contains("RESPOND") ||
-                clean.contains("SPEAK") -> {
-
-                    aurixUi.voiceStatus.text =
-                        "VOICE  •  RESPONDING"
+                    originalUi.setThinkingState()
                 }
 
                 else -> {
 
-                    aurixUi.setReadyState()
+                    originalUi.setReadyState()
                 }
             }
-        }
-    }
-
-    // =========================================================
-    // INTERFACE STATE
-    // =========================================================
-
-    private fun updateInterface() {
-
-        if (
-            !::aurixUi.isInitialized
-        ) {
-            return
-        }
-
-        if (active) {
-
-            aurixUi.setListeningState()
-
-        } else {
-
-            aurixUi.setReadyState()
         }
     }
 
@@ -597,35 +548,26 @@ class MainActivity : Activity() {
 
             "Home",
             "AURIX" -> {
-
                 showHomePage()
             }
 
             "History" -> {
-
                 showHistoryPage()
             }
 
             "Shortcuts" -> {
-
                 showShortcutsPage()
             }
 
             "Settings" -> {
-
                 showSettingsPage()
             }
         }
     }
 
-    // =========================================================
-    // HOME
-    // =========================================================
-
     private fun showHomePage() {
 
-        currentPage =
-            "Home"
+        currentPage = "Home"
 
         root.findViewWithTag<View>(
             "AURIX_PAGE"
@@ -680,7 +622,9 @@ class MainActivity : Activity() {
         }
 
         val clear =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     "CLEAR LOCAL HISTORY"
@@ -691,10 +635,10 @@ class MainActivity : Activity() {
                     Gravity.CENTER
 
                 typeface =
-                    Typeface.DEFAULT_BOLD
+                    android.graphics.Typeface.DEFAULT_BOLD
 
                 setTextColor(
-                    Color.rgb(
+                    android.graphics.Color.rgb(
                         255,
                         125,
                         155
@@ -703,13 +647,13 @@ class MainActivity : Activity() {
 
                 background =
                     roundedBackground(
-                        Color.argb(
+                        android.graphics.Color.argb(
                             28,
                             180,
                             40,
                             80
                         ),
-                        Color.rgb(
+                        android.graphics.Color.rgb(
                             180,
                             65,
                             100
@@ -805,9 +749,7 @@ class MainActivity : Activity() {
                 .clear()
                 .apply()
 
-            navigate(
-                "Home"
-            )
+            showHomePage()
         }
     }
 
@@ -866,7 +808,9 @@ class MainActivity : Activity() {
         )
 
         val signOut =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     "SIGN OUT OF AURIX"
@@ -877,10 +821,10 @@ class MainActivity : Activity() {
                     Gravity.CENTER
 
                 typeface =
-                    Typeface.DEFAULT_BOLD
+                    android.graphics.Typeface.DEFAULT_BOLD
 
                 setTextColor(
-                    Color.rgb(
+                    android.graphics.Color.rgb(
                         255,
                         145,
                         170
@@ -889,13 +833,13 @@ class MainActivity : Activity() {
 
                 background =
                     roundedBackground(
-                        Color.argb(
+                        android.graphics.Color.argb(
                             30,
                             180,
                             40,
                             80
                         ),
-                        Color.rgb(
+                        android.graphics.Color.rgb(
                             180,
                             65,
                             100
@@ -934,7 +878,11 @@ class MainActivity : Activity() {
 
     private fun createPageOverlay(
         title: String
-    ): Pair<FrameLayout, LinearLayout> {
+    ):
+        Pair<
+            FrameLayout,
+            LinearLayout
+        > {
 
         root.findViewWithTag<View>(
             "AURIX_PAGE"
@@ -949,18 +897,29 @@ class MainActivity : Activity() {
                     "AURIX_PAGE"
 
                 background =
-                    GradientDrawable(
-                        GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(
-                            bgTop,
-                            Color.rgb(
-                                1,
-                                5,
-                                18
-                            ),
-                            bgBottom
+                    android.graphics.drawable
+                        .GradientDrawable(
+                            android.graphics.drawable
+                                .GradientDrawable
+                                .Orientation.TL_BR,
+                            intArrayOf(
+                                android.graphics.Color.rgb(
+                                    5,
+                                    8,
+                                    28
+                                ),
+                                android.graphics.Color.rgb(
+                                    1,
+                                    5,
+                                    18
+                                ),
+                                android.graphics.Color.rgb(
+                                    9,
+                                    2,
+                                    25
+                                )
+                            )
                         )
-                    )
             }
 
         root.addView(
@@ -972,8 +931,9 @@ class MainActivity : Activity() {
         )
 
         val scroll =
-            ScrollView(this).apply {
-
+            android.widget.ScrollView(
+                this
+            ).apply {
                 overScrollMode =
                     View.OVER_SCROLL_NEVER
             }
@@ -1005,7 +965,9 @@ class MainActivity : Activity() {
         )
 
         val back =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     "‹   AURIX"
@@ -1016,14 +978,18 @@ class MainActivity : Activity() {
                     Gravity.CENTER_VERTICAL
 
                 typeface =
-                    Typeface.DEFAULT_BOLD
+                    android.graphics.Typeface
+                        .DEFAULT_BOLD
 
                 setTextColor(
-                    cyan
+                    android.graphics.Color.rgb(
+                        80,
+                        220,
+                        255
+                    )
                 )
 
                 setOnClickListener {
-
                     root.removeView(
                         overlay
                     )
@@ -1039,7 +1005,9 @@ class MainActivity : Activity() {
         )
 
         val heading =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     title
@@ -1047,13 +1015,14 @@ class MainActivity : Activity() {
                 textSize = 23f
 
                 typeface =
-                    Typeface.DEFAULT_BOLD
+                    android.graphics.Typeface
+                        .DEFAULT_BOLD
 
                 letterSpacing =
                     0.12f
 
                 setTextColor(
-                    white
+                    android.graphics.Color.WHITE
                 )
 
                 setPadding(
@@ -1101,13 +1070,13 @@ class MainActivity : Activity() {
 
                 background =
                     roundedBackground(
-                        Color.argb(
+                        android.graphics.Color.argb(
                             34,
                             40,
                             90,
                             155
                         ),
-                        Color.rgb(
+                        android.graphics.Color.rgb(
                             45,
                             120,
                             185
@@ -1120,7 +1089,9 @@ class MainActivity : Activity() {
             }
 
         val iconView =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     icon
@@ -1131,7 +1102,11 @@ class MainActivity : Activity() {
                     Gravity.CENTER
 
                 setTextColor(
-                    cyan
+                    android.graphics.Color.rgb(
+                        80,
+                        220,
+                        255
+                    )
                 )
             }
 
@@ -1167,7 +1142,9 @@ class MainActivity : Activity() {
         )
 
         val titleView =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     title
@@ -1175,10 +1152,11 @@ class MainActivity : Activity() {
                 textSize = 11f
 
                 typeface =
-                    Typeface.DEFAULT_BOLD
+                    android.graphics.Typeface
+                        .DEFAULT_BOLD
 
                 setTextColor(
-                    white
+                    android.graphics.Color.WHITE
                 )
             }
 
@@ -1187,7 +1165,9 @@ class MainActivity : Activity() {
         )
 
         val desc =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     description
@@ -1195,7 +1175,11 @@ class MainActivity : Activity() {
                 textSize = 9f
 
                 setTextColor(
-                    muted
+                    android.graphics.Color.rgb(
+                        105,
+                        155,
+                        190
+                    )
                 )
 
                 setPadding(
@@ -1216,7 +1200,6 @@ class MainActivity : Activity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(82)
             ).apply {
-
                 bottomMargin =
                     dp(10)
             }
@@ -1248,13 +1231,13 @@ class MainActivity : Activity() {
 
                 background =
                     roundedBackground(
-                        Color.argb(
+                        android.graphics.Color.argb(
                             32,
                             40,
                             85,
                             145
                         ),
-                        Color.rgb(
+                        android.graphics.Color.rgb(
                             35,
                             100,
                             155
@@ -1263,7 +1246,9 @@ class MainActivity : Activity() {
             }
 
         val titleView =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     title
@@ -1271,13 +1256,18 @@ class MainActivity : Activity() {
                 textSize = 8f
 
                 typeface =
-                    Typeface.DEFAULT_BOLD
+                    android.graphics.Typeface
+                        .DEFAULT_BOLD
 
                 letterSpacing =
                     0.16f
 
                 setTextColor(
-                    cyan
+                    android.graphics.Color.rgb(
+                        80,
+                        220,
+                        255
+                    )
                 )
             }
 
@@ -1286,7 +1276,9 @@ class MainActivity : Activity() {
         )
 
         val valueView =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     value
@@ -1294,7 +1286,7 @@ class MainActivity : Activity() {
                 textSize = 13f
 
                 setTextColor(
-                    white
+                    android.graphics.Color.WHITE
                 )
 
                 setPadding(
@@ -1315,7 +1307,6 @@ class MainActivity : Activity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-
                 bottomMargin =
                     dp(10)
             }
@@ -1323,85 +1314,199 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // HISTORY
+    // SECTION TITLE
     // =========================================================
 
-    private fun addHistoryItem(
-        role: String,
+    private fun addSectionTitle(
+        parent: LinearLayout,
         text: String
     ) {
 
-        val items =
-            getRecentHistory()
-                .toMutableList()
+        val titleView =
+            android.widget.TextView(
+                this
+            ).apply {
 
-        items.add(
-            role to text
-        )
+                this.text =
+                    text
 
-        while (
-            items.size > 50
-        ) {
-            items.removeAt(0)
-        }
+                textSize = 9f
 
-        val encoded =
-            items.joinToString(
-                "\n"
-            ) {
+                setTextColor(
+                    android.graphics.Color.rgb(
+                        105,
+                        170,
+                        225
+                    )
+                )
 
-                "${it.first}\t${
-                    it.second
-                        .replace(
-                            "\n",
-                            " "
-                        )
-                }"
+                typeface =
+                    android.graphics.Typeface
+                        .DEFAULT_BOLD
+
+                letterSpacing =
+                    0.18f
             }
 
-        historyPrefs
-            .edit()
-            .putString(
-                "items",
-                encoded
-            )
-            .apply()
+        parent.addView(
+            titleView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(30)
+            ).apply {
+                topMargin =
+                    dp(15)
+            }
+        )
     }
 
-    private fun getRecentHistory():
-        List<Pair<String, String>> {
+    // =========================================================
+    // MESSAGE CARD
+    // =========================================================
 
-        val raw =
-            historyPrefs
-                .getString(
-                    "items",
-                    ""
+    private fun createMessageCard(
+        name: String,
+        message: String,
+        aurix: Boolean
+    ): View {
+
+        val box =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(16),
+                    dp(12),
+                    dp(16),
+                    dp(12)
                 )
-                .orEmpty()
 
-        if (
-            raw.isBlank()
-        ) {
-            return emptyList()
-        }
-
-        return raw.lines()
-            .mapNotNull { line ->
-
-                val split =
-                    line.split(
-                        "\t",
-                        limit = 2
+                background =
+                    roundedBackground(
+                        if (aurix)
+                            android.graphics.Color.argb(
+                                35,
+                                75,
+                                150,
+                                255
+                            )
+                        else
+                            android.graphics.Color.argb(
+                                25,
+                                150,
+                                70,
+                                240
+                            ),
+                        if (aurix)
+                            android.graphics.Color.rgb(
+                                45,
+                                145,
+                                230
+                            )
+                        else
+                            android.graphics.Color.rgb(
+                                110,
+                                70,
+                                200
+                            )
                     )
-
-                if (
-                    split.size == 2
-                ) {
-                    split[0] to split[1]
-                } else {
-                    null
-                }
             }
+
+        val label =
+            android.widget.TextView(
+                this
+            ).apply {
+
+                text =
+                    name
+
+                textSize = 9f
+
+                setTextColor(
+                    if (aurix)
+                        android.graphics.Color.rgb(
+                            80,
+                            220,
+                            255
+                        )
+                    else
+                        android.graphics.Color.rgb(
+                            145,
+                            55,
+                            240
+                        )
+                )
+
+                typeface =
+                    android.graphics.Typeface
+                        .DEFAULT_BOLD
+
+                letterSpacing =
+                    0.18f
+            }
+
+        box.addView(
+            label,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(22)
+            )
+        )
+
+        val text =
+            android.widget.TextView(
+                this
+            ).apply {
+
+                this.text =
+                    message
+
+                textSize = 14f
+
+                setTextColor(
+                    android.graphics.Color.WHITE
+                )
+            }
+
+        box.addView(
+            text,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        return box
+    }
+
+    private fun addMessageCard(
+        parent: LinearLayout,
+        name: String,
+        message: String,
+        aurix: Boolean
+    ) {
+
+        parent.addView(
+            createMessageCard(
+                name,
+                message,
+                aurix
+            ),
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+
+                setMargins(
+                    0,
+                    dp(4),
+                    0,
+                    dp(4)
+                )
+            }
+        )
     }
 
     // =========================================================
@@ -1449,21 +1554,24 @@ class MainActivity : Activity() {
                 )
 
                 background =
-                    GradientDrawable(
-                        GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(
-                            Color.rgb(
-                                7,
-                                14,
-                                38
-                            ),
-                            Color.rgb(
-                                18,
-                                7,
-                                39
+                    android.graphics.drawable
+                        .GradientDrawable(
+                            android.graphics.drawable
+                                .GradientDrawable
+                                .Orientation.TL_BR,
+                            intArrayOf(
+                                android.graphics.Color.rgb(
+                                    7,
+                                    14,
+                                    38
+                                ),
+                                android.graphics.Color.rgb(
+                                    18,
+                                    7,
+                                    39
+                                )
                             )
                         )
-                    )
 
                 elevation =
                     dp(18).toFloat()
@@ -1478,7 +1586,9 @@ class MainActivity : Activity() {
         )
 
         val close =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     "×"
@@ -1489,11 +1599,10 @@ class MainActivity : Activity() {
                     Gravity.RIGHT
 
                 setTextColor(
-                    white
+                    android.graphics.Color.WHITE
                 )
 
                 setOnClickListener {
-
                     drawer.visibility =
                         View.GONE
                 }
@@ -1508,7 +1617,9 @@ class MainActivity : Activity() {
         )
 
         val logo =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     "A U R I X"
@@ -1516,13 +1627,14 @@ class MainActivity : Activity() {
                 textSize = 27f
 
                 typeface =
-                    Typeface.DEFAULT_BOLD
+                    android.graphics.Typeface
+                        .DEFAULT_BOLD
 
                 letterSpacing =
                     0.15f
 
                 setTextColor(
-                    white
+                    android.graphics.Color.WHITE
                 )
             }
 
@@ -1531,7 +1643,9 @@ class MainActivity : Activity() {
         )
 
         val sub =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     "INTELLIGENCE CORE"
@@ -1542,7 +1656,11 @@ class MainActivity : Activity() {
                     0.16f
 
                 setTextColor(
-                    cyan
+                    android.graphics.Color.rgb(
+                        80,
+                        220,
+                        255
+                    )
                 )
 
                 setPadding(
@@ -1561,46 +1679,36 @@ class MainActivity : Activity() {
             "⌂",
             "Home"
         ) {
-
             drawer.visibility =
                 View.GONE
 
-            navigate(
-                "Home"
-            )
+            showHomePage()
         }
 
         addDrawerItem(
             "◷",
             "History"
         ) {
-
             drawer.visibility =
                 View.GONE
 
-            navigate(
-                "History"
-            )
+            showHistoryPage()
         }
 
         addDrawerItem(
             "✦",
             "Shortcuts"
         ) {
-
             drawer.visibility =
                 View.GONE
 
-            navigate(
-                "Shortcuts"
-            )
+            showShortcutsPage()
         }
 
         addDrawerItem(
             "♫",
             "Music"
         ) {
-
             drawer.visibility =
                 View.GONE
 
@@ -1613,7 +1721,6 @@ class MainActivity : Activity() {
             "▦",
             "Apps"
         ) {
-
             drawer.visibility =
                 View.GONE
 
@@ -1633,9 +1740,7 @@ class MainActivity : Activity() {
             drawer.visibility =
                 View.GONE
 
-            navigate(
-                "Home"
-            )
+            showHomePage()
         }
 
         addDrawerItem(
@@ -1646,9 +1751,7 @@ class MainActivity : Activity() {
             drawer.visibility =
                 View.GONE
 
-            navigate(
-                "Settings"
-            )
+            showSettingsPage()
         }
 
         val spacer =
@@ -1669,7 +1772,9 @@ class MainActivity : Activity() {
                 .currentUser
 
         val accountText =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     account?.email
@@ -1678,7 +1783,11 @@ class MainActivity : Activity() {
                 textSize = 9f
 
                 setTextColor(
-                    muted
+                    android.graphics.Color.rgb(
+                        105,
+                        155,
+                        190
+                    )
                 )
             }
 
@@ -1723,7 +1832,9 @@ class MainActivity : Activity() {
         )
 
         val iconView =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     icon
@@ -1734,7 +1845,11 @@ class MainActivity : Activity() {
                     Gravity.CENTER
 
                 setTextColor(
-                    cyan
+                    android.graphics.Color.rgb(
+                        80,
+                        220,
+                        255
+                    )
                 )
             }
 
@@ -1747,7 +1862,9 @@ class MainActivity : Activity() {
         )
 
         val labelView =
-            TextView(this).apply {
+            android.widget.TextView(
+                this
+            ).apply {
 
                 text =
                     label
@@ -1755,7 +1872,7 @@ class MainActivity : Activity() {
                 textSize = 12f
 
                 setTextColor(
-                    white
+                    android.graphics.Color.WHITE
                 )
             }
 
@@ -1793,220 +1910,89 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // MESSAGE CARD
+    // HISTORY
     // =========================================================
 
-    private fun createMessageCard(
-        name: String,
-        message: String,
-        aurix: Boolean
-    ): View {
-
-        val box =
-            LinearLayout(this)
-
-        box.orientation =
-            LinearLayout.VERTICAL
-
-        box.setPadding(
-            dp(16),
-            dp(12),
-            dp(16),
-            dp(12)
-        )
-
-        box.background =
-            roundedBackground(
-                if (aurix)
-                    Color.argb(
-                        35,
-                        75,
-                        150,
-                        255
-                    )
-                else
-                    Color.argb(
-                        25,
-                        150,
-                        70,
-                        240
-                    ),
-                if (aurix)
-                    Color.rgb(
-                        45,
-                        145,
-                        230
-                    )
-                else
-                    Color.rgb(
-                        110,
-                        70,
-                        200
-                    )
-            )
-
-        val label =
-            TextView(this)
-
-        label.text =
-            name
-
-        label.textSize =
-            9f
-
-        label.setTextColor(
-            if (aurix)
-                cyan
-            else
-                purple
-        )
-
-        label.typeface =
-            Typeface.DEFAULT_BOLD
-
-        label.letterSpacing =
-            0.18f
-
-        box.addView(
-            label,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(22)
-            )
-        )
-
-        val text =
-            TextView(this)
-
-        text.text =
-            message
-
-        text.textSize =
-            14f
-
-        text.setTextColor(
-            white
-        )
-
-        box.addView(
-            text,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        return box
-    }
-
-    private fun addMessageCard(
-        parent: LinearLayout,
-        name: String,
-        message: String,
-        aurix: Boolean
-    ) {
-
-        parent.addView(
-            createMessageCard(
-                name,
-                message,
-                aurix
-            ),
-            cardParams()
-        )
-    }
-
-    // =========================================================
-    // SECTION TITLE
-    // =========================================================
-
-    private fun addSectionTitle(
-        parent: LinearLayout,
+    private fun addHistoryItem(
+        role: String,
         text: String
     ) {
 
-        val title =
-            TextView(this)
+        val items =
+            getRecentHistory()
+                .toMutableList()
 
-        title.text =
-            text
-
-        title.textSize =
-            9f
-
-        title.setTextColor(
-            muted
+        items.add(
+            role to text
         )
 
-        title.typeface =
-            Typeface.DEFAULT_BOLD
+        while (
+            items.size > 50
+        ) {
+            items.removeAt(0)
+        }
 
-        title.letterSpacing =
-            0.18f
+        val encoded =
+            items.joinToString(
+                "\n"
+            ) {
 
-        val params =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(30)
+                "${it.first}\t${
+                    it.second.replace(
+                        "\n",
+                        " "
+                    )
+                }"
+            }
+
+        historyPrefs
+            .edit()
+            .putString(
+                "items",
+                encoded
             )
+            .apply()
+    }
 
-        params.topMargin =
-            dp(15)
+    private fun getRecentHistory():
+        List<Pair<String, String>> {
 
-        parent.addView(
-            title,
-            params
-        )
+        val raw =
+            historyPrefs
+                .getString(
+                    "items",
+                    ""
+                )
+                .orEmpty()
+
+        if (
+            raw.isBlank()
+        ) {
+            return emptyList()
+        }
+
+        return raw
+            .lines()
+            .mapNotNull { line ->
+
+                val split =
+                    line.split(
+                        "\t",
+                        limit = 2
+                    )
+
+                if (
+                    split.size == 2
+                ) {
+                    split[0] to split[1]
+                } else {
+                    null
+                }
+            }
     }
 
     // =========================================================
-    // HELPERS
-    // =========================================================
-
-    private fun cardParams():
-        LinearLayout.LayoutParams {
-
-        val params =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-
-        params.setMargins(
-            0,
-            dp(4),
-            0,
-            dp(4)
-        )
-
-        return params
-    }
-
-    private fun roundedBackground(
-        fill: Int,
-        stroke: Int
-    ): GradientDrawable {
-
-        val drawable =
-            GradientDrawable()
-
-        drawable.cornerRadius =
-            dp(18).toFloat()
-
-        drawable.setColor(
-            fill
-        )
-
-        drawable.setStroke(
-            dp(1),
-            stroke
-        )
-
-        return drawable
-    }
-
-    // =========================================================
-    // OPEN URL
+    // URL
     // =========================================================
 
     private fun openUrl(
@@ -2027,7 +2013,7 @@ class MainActivity : Activity() {
     }
 
     // =========================================================
-    // HOME / DEVICE HOME
+    // HOME SCREEN
     // =========================================================
 
     fun goToHomeScreen() {
@@ -2080,7 +2066,10 @@ class MainActivity : Activity() {
 
         } else {
 
-            @Suppress("DEPRECATION")
+            @Suppress(
+                "DEPRECATION"
+            )
+
             registerReceiver(
                 aurixReceiver,
                 filter
@@ -2097,7 +2086,7 @@ class MainActivity : Activity() {
         super.onResume()
 
         if (
-            !::aurixUi.isInitialized
+            !::originalUi.isInitialized
         ) {
             return
         }
@@ -2126,7 +2115,6 @@ class MainActivity : Activity() {
     // BACK
     // =========================================================
 
-    @Suppress("DEPRECATION")
     override fun onBackPressed() {
 
         if (
@@ -2145,12 +2133,7 @@ class MainActivity : Activity() {
             "AURIX_PAGE"
         )?.let {
 
-            root.removeView(
-                it
-            )
-
-            currentPage =
-                "Home"
+            root.removeView(it)
 
             return
         }
@@ -2198,6 +2181,34 @@ class MainActivity : Activity() {
                 resources
                     .displayMetrics
                     .density
-            ).toInt()
+        ).toInt()
+    }
+
+    // =========================================================
+    // BACKGROUND HELPER
+    // =========================================================
+
+    private fun roundedBackground(
+        fill: Int,
+        stroke: Int
+    ):
+        android.graphics.drawable.GradientDrawable {
+
+        return android.graphics.drawable
+            .GradientDrawable()
+            .apply {
+
+                cornerRadius =
+                    dp(18).toFloat()
+
+                setColor(
+                    fill
+                )
+
+                setStroke(
+                    dp(1),
+                    stroke
+                )
+            }
     }
 }
