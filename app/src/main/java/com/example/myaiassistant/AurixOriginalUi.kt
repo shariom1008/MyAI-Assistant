@@ -164,6 +164,7 @@ class AurixOriginalUi(
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.rgb(90, 210, 255))
         }
+        statusText = voiceStatus
 
         core.addView(
             voiceStatus,
