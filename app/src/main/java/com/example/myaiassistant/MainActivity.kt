@@ -375,7 +375,7 @@ private fun startAurixService() {
             TextView(this)
 
         tagline.text =
-            "YOUR VOICE  •  YOUR AI"
+            "INTELLIGENCE CORE"
 
         tagline.textSize = 8f
         tagline.setTextColor(muted)
@@ -557,8 +557,8 @@ private fun startAurixService() {
         coreText =
             TextView(this)
 
-        coreText.text = "AURIX"
-        coreText.textSize = 23f
+        coreText.text = "AURIX\nCORE"
+        coreText.textSize = 22f
         coreText.setTextColor(white)
         coreText.gravity = Gravity.CENTER
         coreText.typeface = Typeface.DEFAULT_BOLD
@@ -589,20 +589,19 @@ private fun startAurixService() {
         pulseCore(orb)
 
         // =====================================================
-        // LISTENING BADGE
+        // MASTER UI — VOICE READY
         // =====================================================
 
         val listening =
             TextView(this)
 
         listening.text =
-            "  ◉  AURIX  •  READY  "
+            "  •  AURIX  •  READY  "
 
         listening.textSize = 11f
         listening.setTextColor(cyan)
         listening.gravity = Gravity.CENTER
         listening.letterSpacing = 0.08f
-
         listening.background =
             roundedBackground(
                 Color.argb(45, 60, 190, 255),
@@ -622,116 +621,123 @@ private fun startAurixService() {
             listeningParams
         )
 
+        // Keep the service state internally, but hide the old diagnostic
+        // status/waveform from the master home screen.
+        systemText = TextView(this).apply {
+            visibility = View.GONE
+        }
+        statusText = TextView(this).apply {
+            visibility = View.GONE
+        }
+        waveform = WaveformView(this).apply {
+            visibility = View.GONE
+        }
+
+        content.addView(systemText)
+        content.addView(statusText)
+        content.addView(waveform)
+
         // =====================================================
-        // STATUS
+        // SAVED CONVERSATION
         // =====================================================
 
-        systemText =
-            TextView(this)
-
-        systemText.text =
-            "SYSTEM ONLINE"
-
-        systemText.textSize = 9f
-        systemText.setTextColor(muted)
-        systemText.gravity = Gravity.CENTER
-        systemText.letterSpacing = 0.20f
+        val savedLabel = TextView(this).apply {
+            text = "Saved conversation"
+            textSize = 10f
+            setTextColor(muted)
+            gravity = Gravity.CENTER
+            letterSpacing = 0.08f
+        }
 
         content.addView(
-            systemText,
+            savedLabel,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(28)
+                dp(36)
             )
         )
 
-        statusText =
-            TextView(this)
+        val savedHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
 
-        statusText.text =
-            "READY"
+        val savedBack = TextView(this).apply {
+            text = "‹"
+            textSize = 31f
+            gravity = Gravity.CENTER
+            setTextColor(white)
+            background = roundedBackground(
+                Color.argb(42, 70, 125, 220),
+                blue
+            )
+        }
 
-        statusText.textSize = 14f
-        statusText.setTextColor(cyan)
-        statusText.gravity = Gravity.CENTER
-        statusText.typeface = Typeface.DEFAULT_BOLD
-        statusText.letterSpacing = 0.20f
+        savedBack.setOnClickListener {
+            updateStatus("READY")
+        }
 
-        content.addView(
-            statusText,
+        savedHeader.addView(
+            savedBack,
+            LinearLayout.LayoutParams(
+                dp(58),
+                dp(58)
+            )
+        )
+
+        val savedTitle = TextView(this).apply {
+            text = "SAVED CONVERSATION"
+            textSize = 11f
+            setTextColor(cyan)
+            gravity = Gravity.CENTER_VERTICAL
+            typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.10f
+            setPadding(dp(14), 0, 0, 0)
+        }
+
+        savedHeader.addView(
+            savedTitle,
+            LinearLayout.LayoutParams(
+                0,
+                dp(58),
+                1f
+            )
+        )
+
+        val savedHeaderParams =
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(35)
+                dp(58)
             )
-        )
+        savedHeaderParams.topMargin = dp(2)
 
-        // =====================================================
-        // WAVEFORM
-        // =====================================================
+        content.addView(savedHeader, savedHeaderParams)
 
-        waveform =
-            WaveformView(this)
+        val savedTime = TextView(this).apply {
+            text = "14 Sept • 02:59 am"
+            textSize = 9f
+            setTextColor(muted)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(10), 0, dp(4))
+        }
 
-        val waveformParams =
+        content.addView(
+            savedTime,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(45)
+                dp(30)
             )
-
-        waveformParams.topMargin = dp(3)
-
-        content.addView(
-            waveform,
-            waveformParams
         )
 
-        // =====================================================
-        // CONVERSATION
-        // =====================================================
-
-        addSectionTitle(
-            content,
-            "CONVERSATION"
-        )
-
-        val userCard =
-            createMessageCard(
-                "YOU",
-                "Hey Aurix, Man Bharrya song chalao.",
-                false
-            )
-
-        content.addView(
-            userCard,
-            cardParams()
-        )
-
-        val aurixCard =
+        val savedCard =
             createMessageCard(
                 "AURIX",
-                "Sure! Playing Man Bharrya on YouTube.",
+                "Good night boss, abhi kya karna hai?",
                 true
             )
 
         content.addView(
-            aurixCard,
-            cardParams()
-        )
-
-        // =====================================================
-        // MEDIA CARD
-        // =====================================================
-
-        addSectionTitle(
-            content,
-            "NOW PLAYING"
-        )
-
-        val media =
-            createMediaCard()
-
-        content.addView(
-            media,
+            savedCard,
             cardParams()
         )
 
@@ -744,11 +750,9 @@ private fun startAurixService() {
             "QUICK ACTIONS"
         )
 
-        val actions =
-            LinearLayout(this)
-
-        actions.orientation =
-            LinearLayout.VERTICAL
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
         content.addView(
             actions,
@@ -758,11 +762,9 @@ private fun startAurixService() {
             )
         )
 
-        val row1 =
-            LinearLayout(this)
-
-        row1.orientation =
-            LinearLayout.HORIZONTAL
+        val row1 = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
 
         actions.addView(
             row1,
@@ -772,51 +774,22 @@ private fun startAurixService() {
             )
         )
 
-        addAction(
-            row1,
-            "▶",
-            "YouTube"
-        ) {
-            openUrl(
-                "https://www.youtube.com"
-            )
+        addAction(row1, "▶", "YouTube") {
+            openUrl("https://www.youtube.com")
+        }
+        addAction(row1, "⌕", "Search") {
+            openUrl("https://www.google.com")
+        }
+        addAction(row1, "♫", "Music") {
+            openUrl("https://music.youtube.com")
+        }
+        addAction(row1, "☁", "Weather") {
+            openUrl("https://www.google.com/search?q=weather")
         }
 
-        addAction(
-            row1,
-            "⌕",
-            "Search"
-        ) {
-            openUrl(
-                "https://www.google.com"
-            )
+        val row2 = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
         }
-
-        addAction(
-            row1,
-            "♫",
-            "Music"
-        ) {
-            openUrl(
-                "https://music.youtube.com"
-            )
-        }
-
-        addAction(
-            row1,
-            "☁",
-            "Weather"
-        ) {
-            openUrl(
-                "https://www.google.com/search?q=weather"
-            )
-        }
-
-        val row2 =
-            LinearLayout(this)
-
-        row2.orientation =
-            LinearLayout.HORIZONTAL
 
         actions.addView(
             row2,
@@ -826,126 +799,27 @@ private fun startAurixService() {
             )
         )
 
-        addAction(
-            row2,
-            "☎",
-            "Call"
-        ) {
-            val intent =
-                Intent(
-                    Intent.ACTION_DIAL
-                )
-            startActivity(intent)
+        addAction(row2, "☎", "Call") {
+            startActivity(Intent(Intent.ACTION_DIAL))
         }
-
-        addAction(
-            row2,
-            "✉",
-            "Messages"
-        ) {
-            val intent =
-                Intent(
-                    Intent.ACTION_SENDTO
-                )
-            intent.data =
-                Uri.parse("smsto:")
-            startActivity(intent)
+        addAction(row2, "✉", "Messages") {
+            startActivity(
+                Intent(Intent.ACTION_SENDTO).apply {
+                    data = Uri.parse("smsto:")
+                }
+            )
         }
-
-        addAction(
-            row2,
-            "▦",
-            "Apps"
-        ) {
+        addAction(row2, "▦", "Apps") {
             try {
                 startActivity(
-                    Intent(
-                        android.provider.Settings.ACTION_SETTINGS
-                    )
+                    Intent(android.provider.Settings.ACTION_SETTINGS)
                 )
             } catch (_: Exception) {
             }
         }
-
-        addAction(
-            row2,
-            "•••",
-            "More"
-        ) {
+        addAction(row2, "•••", "More") {
             updateStatus("READY")
         }
-
-        // =====================================================
-        // VOICE INPUT
-        // =====================================================
-
-        val input =
-            TextView(this)
-
-        input.text =
-            "  🎙   Say AURIX to speak  •  tap for backup"
-
-        input.textSize = 12f
-        input.setTextColor(white)
-        input.gravity = Gravity.CENTER_VERTICAL
-        input.background =
-            roundedBackground(
-                Color.argb(35, 70, 190, 255),
-                Color.rgb(55, 130, 210)
-            )
-
-        input.setOnClickListener {
-
-    if (
-        ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECORD_AUDIO
-        ) != PackageManager.PERMISSION_GRANTED
-    ) {
-
-        requestMicrophonePermission()
-
-        return@setOnClickListener
-    }
-
-    val intent =
-        Intent(
-            this,
-            AurixService::class.java
-        ).apply {
-            action =
-                AurixService.ACTION_LISTEN_ONCE
-        }
-
-    try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ContextCompat.startForegroundService(
-                this,
-                intent
-            )
-        } else {
-            startService(intent)
-        }
-
-        active = true
-        updateStatus("LISTENING")
-    } catch (_: Exception) {
-        updateStatus("START FAILED")
-    }
-        }
-
-        val inputParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(55)
-            )
-
-        inputParams.topMargin = dp(18)
-
-        content.addView(
-            input,
-            inputParams
-        )
 
         // =====================================================
         // BOTTOM NAV
@@ -2110,7 +1984,7 @@ private fun startAurixService() {
                         "READY"
 
                     coreText.text =
-                        "AURIX"
+                        "AURIX\nCORE"
 
                     statusText.setTextColor(
                         cyan
@@ -2140,7 +2014,7 @@ private fun startAurixService() {
             "READY"
 
         coreText.text =
-            "AURIX"
+            "AURIX\nCORE"
     }
 
     // =========================================================
