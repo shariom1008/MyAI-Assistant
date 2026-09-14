@@ -4669,19 +4669,19 @@ private fun speakAurixGreeting() {
     val greeting =
         when {
             hour < 5 ->
-                "Boss, abhi kaafi raat ho gayi hai. Batao kya karna hai?"
+            "Boss, अभी काफ़ी रात हो गई है। बताओ क्या करना है?"
 
-            hour < 12 ->
-                "Good morning Boss. Batao, AURIX aapke liye kya kare?"
+hour < 12 ->
+           "गुड मॉर्निंग Boss। बताओ, ऑरिक्स आपके लिए क्या करे?"
 
-            hour < 17 ->
-                "Good afternoon Boss. Batao, kya karna hai?"
+hour < 17 ->
+            "गुड आफ्टरनून Boss। बताओ, क्या करना है?"
 
-            hour < 22 ->
-                "Good evening Boss. Batao, AURIX aapki kya help kare?"
+hour < 22 ->
+            "गुड ईवनिंग Boss। बताओ, आपकी क्या मदद करूं?"
 
-            else ->
-                "Good night Boss. Batao, AURIX kya kare?"
+  else ->
+             "गुड नाइट Boss। बताओ, हमारे लायक क्या सेवा है?"
         }
 
     speakOnce(
