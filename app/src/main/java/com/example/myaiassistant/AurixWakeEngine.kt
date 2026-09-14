@@ -2,6 +2,7 @@ package com.example.myaiassistant
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
@@ -80,7 +81,12 @@ class AurixWakeEngine(
             return
         }
 
-        recognizer = SpeechRecognizer.createSpeechRecognizer(context).also { sr ->
+        recognizer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
+            SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+        } else {
+            SpeechRecognizer.createSpeechRecognizer(context)
+        }.also { sr ->
             sr.setRecognitionListener(object : RecognitionListener {
                 private fun current(id: Long) = id == sessionId && running
 
