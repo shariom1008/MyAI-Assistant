@@ -120,9 +120,6 @@ class MainActivity : Activity() {
                 performAppsAction()
             }
 
-            override fun onMore() {
-                // More button remains intentionally lightweight.
-                // Future advanced actions can be attached here.
                 override fun onMore() {
                     showMoreApps()
                 }
