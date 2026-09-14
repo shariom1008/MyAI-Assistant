@@ -123,8 +123,9 @@ class MainActivity : Activity() {
             override fun onMore() {
                 // More button remains intentionally lightweight.
                 // Future advanced actions can be attached here.
-                aurixUi.setReadyState()
-            }
+                override fun onMore() {
+                    showMoreApps()
+                }
 
             override fun onHome() {
                 navigate("Home")
