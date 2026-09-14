@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import java.util.Locale
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
