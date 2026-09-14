@@ -346,92 +346,32 @@ private fun extractWakeCommand(
         return null
     }
 
-    // SpeechRecognizer can transcribe the AURIX brand in several
-    // phonetically similar ways. Keep the wake gate strict enough to
-    // require a wake word, but accept common recognizer variants.
-    val wakePatterns =
-        listOf(
-            Regex("\\bhey\\s+(aurix|aurics|auriks|orix|oryx|aurex|auryx|ourix|ouriks|oriks|a rix|arix)\\b"),
-            Regex("\\bhi\\s+(aurix|aurics|auriks|orix|oryx|aurex|auryx|ourix|ouriks|oriks|a rix|arix)\\b"),
-            Regex("\\bhello\\s+(aurix|aurics|auriks|orix|oryx|aurex|auryx|ourix|ouriks|oriks|a rix|arix)\\b")
+    // AURIX is the ONLY wake word.
+    // "Hey AURIX" is no longer required.
+    // SpeechRecognizer may return several close spellings, so accept
+    // common AURIX variants without accepting unrelated words like "lyrics".
+    val wakePattern =
+        Regex(
+            "\\b(aurix|auriks|aurics|aurik|aurixx|auryx|aurex|orix|oryx|ourix|arix|auric|aurrix|aurixs)\\b"
         )
 
-    for (pattern in wakePatterns) {
-        val match = pattern.find(text) ?: continue
+    val match =
+        wakePattern.find(text)
+            ?: run {
 
-        return text
-            .substring(match.range.last + 1)
-            .trim()
-    }
+                // Some recognizers split the name into multiple words.
+                val splitWakePattern =
+                    Regex(
+                        "\\b(au\\s*rix|a\\s*rix|or\\s*ix|our\\s*ix|aur\\s*iks|aur\\s*ics)\\b"
+                    )
 
-    // Some recognizers insert spaces or punctuation into the brand,
-    // for example "hey a rix" or "hey aur ix".
-    val compact =
-        text.replace(
-            Regex("\\s+"),
-            ""
-        )
-
-    val compactWakePrefixes =
-        listOf(
-            "hey",
-            "hi",
-            "hello"
-        )
-
-    for (prefix in compactWakePrefixes) {
-
-        if (!compact.startsWith(prefix)) {
-            continue
-        }
-
-        val remainder =
-            compact.substring(prefix.length)
-
-        if (
-            remainder.startsWith("aurix") ||
-            remainder.startsWith("aurics") ||
-            remainder.startsWith("auriks") ||
-            remainder.startsWith("orix") ||
-            remainder.startsWith("oryx") ||
-            remainder.startsWith("aurex") ||
-            remainder.startsWith("auryx") ||
-            remainder.startsWith("ourix") ||
-            remainder.startsWith("ouriks") ||
-            remainder.startsWith("oriks") ||
-            remainder.startsWith("arix")
-        ) {
-            // Recover the command from the original normalized text.
-            val spokenWake =
-                Regex(
-                    "\\b(hey|hi|hello)\\b"
-                ).find(text)
-
-            if (spokenWake != null) {
-
-                val afterWake =
-                    text
-                        .substring(
-                            spokenWake.range.last + 1
-                        )
-                        .trim()
-
-                val command =
-                    afterWake
-                        .replace(
-                            Regex(
-                                "^(aurix|aurics|auriks|orix|oryx|aurex|auryx|ourix|ouriks|oriks|a\\s+rix|a\\s+ur\\s+ix|arix)\\s*"
-                            ),
-                            ""
-                        )
-                        .trim()
-
-                return command
+                splitWakePattern.find(text)
             }
-        }
-    }
+            ?: return null
 
-    return null
+    return text
+        .substring(match.range.last + 1)
+        .trim()
 }
 
 private fun createAurixSpeechRecognizer(): SpeechRecognizer {
@@ -483,7 +423,7 @@ private fun startListening() {
 
                         sendStatus(
                             if (wakeWordMode)
-                                "HEY AURIX READY"
+                                "AURIX READY"
                             else
                                 "LISTENING"
                         )
@@ -525,7 +465,7 @@ private fun startListening() {
                             wakeWordMode = true
 
                             sendStatus(
-                                "HEY AURIX READY"
+                                "AURIX READY"
                             )
 
                             handler.postDelayed({
@@ -670,7 +610,7 @@ private fun startListening() {
                             wakeWordMode = true
 
                             sendStatus(
-                                "HEY AURIX READY"
+                                "AURIX READY"
                             )
 
                             restartListening()
@@ -776,23 +716,6 @@ private fun startListening() {
                     RecognizerIntent.EXTRA_PARTIAL_RESULTS,
                     wakeWordMode
                 )
-
-                if (wakeWordMode) {
-                    putExtra(
-                        RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
-                        900L
-                    )
-
-                    putExtra(
-                        RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
-                        700L
-                    )
-
-                    putExtra(
-                        RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,
-                        400L
-                    )
-                }
 
                 putExtra(
                     RecognizerIntent.EXTRA_MAX_RESULTS,
