@@ -91,7 +91,6 @@ class AurixService :
     // Set when a partial AURIX match should immediately transition
     // from passive wake recognition into command recognition.
     private var wakeToCommandPending = false
-    private var suppressRecognizerErrorUntil = 0L
 
     private var restarting = false
 
@@ -177,20 +176,20 @@ class AurixService :
                 }
             }
 
-            ACTION_LISTEN_ONCE -> {
+ACTION_LISTEN_ONCE -> {
 
     isRunning = true
     restarting = false
     wakeWordMode = false
 
-    // Prevent a delayed SpeechRecognizer cancel-error
-    // from switching LISTENING back to AURIX READY.
-    suppressRecognizerErrorUntil =
-        System.currentTimeMillis() + 1200L
+    try {
+        speechRecognizer?.cancel()
+    } catch (_: Exception) {
+    }
 
     listening = false
     startListening()
-            }
+}
 
             else -> {
 
@@ -767,8 +766,7 @@ private fun startListening() {
 
         listening = false
         wakeDetectionTriggered = false
-        // Ignore delayed errors caused by the intentional
-// recognizer transition into tap-to-speak mode.
+        
 if (
     System.currentTimeMillis() <
     suppressRecognizerErrorUntil
@@ -913,7 +911,7 @@ if (
 ) {
 
     speakOnce(
-        "Mujhe mere owner Kushal Haryana ne banaya hai."
+        "Mujhe mere Boss Kushal Haryana ne banaya hai."
     )
 
     return
