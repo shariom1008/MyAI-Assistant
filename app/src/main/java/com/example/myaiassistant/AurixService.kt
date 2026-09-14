@@ -91,6 +91,7 @@ class AurixService :
     // Set when a partial AURIX match should immediately transition
     // from passive wake recognition into command recognition.
     private var wakeToCommandPending = false
+    private var suppressRecognizerErrorUntil = 0L
 
     private var restarting = false
 
@@ -178,17 +179,17 @@ class AurixService :
 
             ACTION_LISTEN_ONCE -> {
 
-                isRunning = true
-                restarting = false
-                wakeWordMode = false
+    isRunning = true
+    restarting = false
+    wakeWordMode = false
 
-                try {
-                    speechRecognizer?.cancel()
-                } catch (_: Exception) {
-                }
+    // Prevent a delayed SpeechRecognizer cancel-error
+    // from switching LISTENING back to AURIX READY.
+    suppressRecognizerErrorUntil =
+        System.currentTimeMillis() + 1200L
 
-                listening = false
-                startListening()
+    listening = false
+    startListening()
             }
 
             else -> {
@@ -347,7 +348,7 @@ private fun extractWakeCommand(value: String): String? {
     //
     // These extra forms are only ASR-error tolerance.
     val wakePattern = Regex(
-        "\\b(aurix|auriks|aurics|aurik|aurixx|auryx|aurex|orix|oryx|ourix|arix|auric|aurrix|aurixs)\\b"
+        "\\b(aurix|auriks|aurics|aurik|aurixx|auryx|aurex|orix|oryx|ourix|arix|auric|aurrix|aurixs|aurek)\\b"
     )
 
     val match = wakePattern.find(text)
@@ -766,6 +767,14 @@ private fun startListening() {
 
         listening = false
         wakeDetectionTriggered = false
+        // Ignore delayed errors caused by the intentional
+// recognizer transition into tap-to-speak mode.
+if (
+    System.currentTimeMillis() <
+    suppressRecognizerErrorUntil
+) {
+    return
+}
 
         if (
             isRunning &&
