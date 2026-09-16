@@ -88,6 +88,42 @@ class AurixWakeEngine(
         callbacks.onListeningChanged(false, Mode.IDLE)
     }
 
+    /**
+     * Temporarily pause passive recognition while AURIX is speaking
+     * or another audio operation owns the microphone.
+     */
+    fun pause() {
+        if (!running) return
+
+        commandTimeoutRunnable?.let(handler::removeCallbacks)
+        commandTimeoutRunnable = null
+        restartRunnable?.let(handler::removeCallbacks)
+        restartRunnable = null
+
+        wakeLatched = false
+        commandDispatched = false
+        mode = Mode.IDLE
+
+        stopSpeech()
+        callbacks.onListeningChanged(false, Mode.IDLE)
+    }
+
+    /**
+     * Resume passive wake recognition after a temporary pause.
+     */
+    fun resume() {
+        if (!running) return
+
+        wakeLatched = false
+        commandDispatched = false
+        mode = Mode.IDLE
+
+        commandTimeoutRunnable?.let(handler::removeCallbacks)
+        commandTimeoutRunnable = null
+
+        restartWakeListening(150L)
+    }
+
     fun resumeWakeListening() {
         if (!running) return
         wakeLatched = false
