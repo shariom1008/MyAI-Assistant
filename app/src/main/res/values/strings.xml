@@ -1,0 +1,5 @@
+<resources>
+    <string name="aurix_app_name">AURIX</string>
+    <string name="aurix_tagline">YOUR VOICE • MY MISSION</string>
+    <string name="aurix_wake_word">Aurix</string>
+</resources>
