@@ -277,48 +277,6 @@ class AurixService :
     // START COMMAND
     // =========================================================
 
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int
-    ): Int {
-
-        when (intent?.action) {
-
-            ACTION_STOP -> {
-
-                stopAurix()
-
-                return START_NOT_STICKY
-            }
-
-            ACTION_START -> {
-
-                isRunning = true
-                restarting = false
-                wakeWordMode = true
-                try { speechRecognizer?.cancel() } catch (_: Exception) { }
-                listening = false
-                wakeEngine.start()
-            }
-
-            ACTION_LISTEN_ONCE -> {
-
-                isRunning = true
-                restarting = false
-                wakeWordMode = false
-                manualListenTransition = true
-
-                wakeEngine.stop()
-
-                try {
-                    speechRecognizer?.cancel()
-                } catch (_: Exception) {
-                }
-
-                listening = false
-                startListening()
-            }
 override fun onStartCommand(
     intent: Intent?,
     flags: Int,
