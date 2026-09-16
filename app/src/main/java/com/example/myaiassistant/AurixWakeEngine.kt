@@ -3,7 +3,6 @@ package com.example.myaiassistant
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -13,16 +12,26 @@ import android.speech.SpeechRecognizer
 import java.util.Locale
 
 /**
- * AURIX — Original + Stable Wake Engine
+ * AURIX V2 Wake Engine
  *
- * AURIX passive wake engine.
- * Designed to be owned by AurixService so only one passive SpeechRecognizer
- * session exists at a time. Wake word is strictly "Aurix" with controlled ASR variants.
+ * Responsibilities:
+ * - Passive wake recognition
+ * - Command capture after wake
+ * - Single SpeechRecognizer ownership
+ * - Session/generation protection
+ * - Automatic recovery with backoff
+ * - Command timeout
+ * - Duplicate/debounce protection
+ *
+ * IMPORTANT:
+ * SpeechRecognizer is ASR, not a true low-power hotword engine.
+ * This version stabilizes the existing architecture.
  */
 class AurixWakeEngine(
     private val context: Context,
     private val callbacks: Callbacks
 ) {
+
     interface Callbacks {
         fun onWakeDetected(commandAfterWake: String)
         fun onCommandRecognized(command: String)
@@ -30,295 +39,926 @@ class AurixWakeEngine(
         fun onWakeError(errorCode: Int)
     }
 
-    enum class Mode { IDLE, WAKE, COMMAND }
+    enum class Mode {
+        IDLE,
+        WAKE,
+        COMMAND
+    }
 
     private val handler = Handler(Looper.getMainLooper())
+
     private var recognizer: SpeechRecognizer? = null
+
     private var mode = Mode.IDLE
+
     private var running = false
     private var starting = false
-    private var sessionId = 0L
+
+    /**
+     * Every recognition session gets a unique generation.
+     * Old callbacks are ignored.
+     */
+    private var generation = 0L
+
     private var restartRunnable: Runnable? = null
+    private var commandTimeoutRunnable: Runnable? = null
+
+    /**
+     * Consecutive failures.
+     * Used for progressive recovery instead of hammering
+     * SpeechRecognizer continuously.
+     */
+    private var consecutiveErrors = 0
+
+    private var lastCommand: String = ""
+    private var lastCommandTime = 0L
+
+    private var lastWakeTime = 0L
 
     private val wakeVariants = setOf(
-        "aurix", "auriks", "aurics", "aurik", "aurixx",
-        "auryx", "aurex", "orix", "oryx", "ourix",
-        "arix", "auric", "aurrix", "aurixs", "aurek"
+        "aurix",
+        "auriks",
+        "aurics",
+        "aurik",
+        "aurixx",
+        "auryx",
+        "aurex",
+        "orix",
+        "oryx",
+        "ourix",
+        "arix",
+        "auric",
+        "aurrix",
+        "aurixs",
+        "aurek"
     )
 
+    companion object {
+        private const val COMMAND_TIMEOUT_MS = 6000L
+
+        private const val INITIAL_RESTART_MS = 350L
+        private const val MAX_RESTART_MS = 8000L
+
+        private const val COMMAND_DEBOUNCE_MS = 900L
+        private const val WAKE_DEBOUNCE_MS = 700L
+
+        private const val START_DELAY_MS = 100L
+    }
+
+    // =========================================================
+    // PUBLIC API
+    // =========================================================
+
     fun start() {
-        if (running) return
-        running = true
-        createRecognizerIfNeeded()
-        startWakeListening()
+        runOnMain {
+            if (running) {
+                /*
+                 * If the service is already running, don't create
+                 * another recognizer/session.
+                 */
+                return@runOnMain
+            }
+
+            running = true
+            starting = false
+
+            consecutiveErrors = 0
+            lastCommand = ""
+            lastCommandTime = 0L
+
+            createRecognizerIfNeeded()
+            scheduleWakeRestart(100L)
+        }
     }
 
     fun stop() {
-        running = false
-        mode = Mode.IDLE
-        starting = false
-        sessionId++
-        restartRunnable?.let(handler::removeCallbacks)
-        restartRunnable = null
-        try {
-            recognizer?.cancel()
-            recognizer?.destroy()
-        } catch (_: Exception) {}
-        recognizer = null
-        callbacks.onListeningChanged(false, Mode.IDLE)
+        runOnMain {
+            stopInternal()
+        }
     }
 
+    /**
+     * Existing service compatibility.
+     */
     fun resumeWakeListening() {
-        if (!running) return
-        cancelCurrentSession()
-        scheduleWakeRestart(250L)
+        runOnMain {
+            if (!running) return@runOnMain
+
+            cancelRestart()
+            cancelCommandTimeout()
+
+            invalidateSession()
+
+            safeCancelRecognizer()
+
+            mode = Mode.IDLE
+            starting = false
+
+            callbacks.onListeningChanged(false, Mode.IDLE)
+
+            scheduleWakeRestart(250L)
+        }
     }
 
-    private fun createRecognizerIfNeeded() {
-        if (recognizer != null) return
+    /**
+     * Optional pause API.
+     *
+     * Useful later when AURIX speaks through TTS.
+     */
+    fun pause() {
+        runOnMain {
+            if (!running) return@runOnMain
+
+            cancelRestart()
+            cancelCommandTimeout()
+
+            invalidateSession()
+
+            safeCancelRecognizer()
+
+            starting = false
+            mode = Mode.IDLE
+
+            callbacks.onListeningChanged(false, Mode.IDLE)
+        }
+    }
+
+    // =========================================================
+    // RECOGNIZER CREATION
+    // =========================================================
+
+    private fun createRecognizerIfNeeded(): Boolean {
+
+        if (recognizer != null) {
+            return true
+        }
+
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
             callbacks.onWakeError(-1)
-            return
+            return false
         }
 
-        recognizer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
-            SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
-        } else {
-            SpeechRecognizer.createSpeechRecognizer(context)
-        }.also { sr ->
-            sr.setRecognitionListener(object : RecognitionListener {
-                private fun current(id: Long) = id == sessionId && running
-
-                override fun onReadyForSpeech(params: Bundle?) {
-                    starting = false
-                    callbacks.onListeningChanged(true, mode)
-                }
-
-                override fun onBeginningOfSpeech() {
-                    callbacks.onListeningChanged(true, mode)
-                }
-
-                override fun onRmsChanged(rmsdB: Float) = Unit
-                override fun onBufferReceived(buffer: ByteArray?) = Unit
-
-                override fun onEndOfSpeech() {
-                    callbacks.onListeningChanged(false, mode)
-                }
-
-                override fun onError(error: Int) {
-                    starting = false
-                    if (!current(sessionId)) return
-                    callbacks.onWakeError(error)
-                    if (!running) return
-
-                    when (mode) {
-                        Mode.WAKE -> scheduleWakeRestart(350L)
-                        Mode.COMMAND -> finishCommand()
-                        Mode.IDLE -> Unit
-                    }
-                }
-
-                override fun onResults(results: Bundle?) {
-                    starting = false
-                    if (!current(sessionId)) return
-
-                    val text = results
-                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull()
-                        ?.trim()
-                        .orEmpty()
-
-                    // If media starts while a wake session is open, do not
-                    // interpret media audio as a wake/command.
-                    if (musicIsActive() && mode == Mode.WAKE) {
-                        scheduleWakeRestart(3000L)
-                        return
-                    }
-
-                    when (mode) {
-                        Mode.WAKE -> handleWakeText(text)
-                        Mode.COMMAND -> handleCommandText(text)
-                        Mode.IDLE -> Unit
-                    }
-                }
-
-                override fun onPartialResults(partialResults: Bundle?) = Unit
-                override fun onEvent(eventType: Int, params: Bundle?) = Unit
-            })
-        }
-    }
-
-    private fun buildIntent(): Intent {
-        return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-            )
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE,
-                Locale("en", "IN")
-            )
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
-                Locale("en", "IN")
-            )
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-        }
-    }
-
-    private fun musicIsActive(): Boolean {
         return try {
-            val audioManager =
-                context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            audioManager.isMusicActive
+
+            recognizer =
+                if (
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+                ) {
+                    SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+                } else {
+                    SpeechRecognizer.createSpeechRecognizer(context)
+                }
+
+            recognizer?.setRecognitionListener(
+                object : RecognitionListener {
+
+                    override fun onReadyForSpeech(params: Bundle?) {
+
+                        if (!isCurrentSession()) return
+
+                        starting = false
+                        consecutiveErrors = 0
+
+                        callbacks.onListeningChanged(
+                            true,
+                            mode
+                        )
+                    }
+
+                    override fun onBeginningOfSpeech() {
+
+                        if (!isCurrentSession()) return
+
+                        callbacks.onListeningChanged(
+                            true,
+                            mode
+                        )
+                    }
+
+                    override fun onRmsChanged(rmsdB: Float) {
+                        // Reserved for future waveform/UI.
+                    }
+
+                    override fun onBufferReceived(buffer: ByteArray?) {
+                        // Not used.
+                    }
+
+                    override fun onEndOfSpeech() {
+
+                        if (!isCurrentSession()) return
+
+                        callbacks.onListeningChanged(
+                            false,
+                            mode
+                        )
+                    }
+
+                    override fun onError(error: Int) {
+
+                        if (!isCurrentSession()) return
+
+                        starting = false
+                        consecutiveErrors++
+
+                        callbacks.onWakeError(error)
+
+                        when (mode) {
+
+                            Mode.WAKE -> {
+                                scheduleRecovery()
+                            }
+
+                            Mode.COMMAND -> {
+                                finishCommand()
+                            }
+
+                            Mode.IDLE -> {
+                                scheduleWakeRestart(
+                                    calculateBackoff()
+                                )
+                            }
+                        }
+                    }
+
+                    override fun onResults(results: Bundle?) {
+
+                        if (!isCurrentSession()) return
+
+                        starting = false
+                        consecutiveErrors = 0
+
+                        val text =
+                            results
+                                ?.getStringArrayList(
+                                    SpeechRecognizer.RESULTS_RECOGNITION
+                                )
+                                ?.firstOrNull()
+                                ?.trim()
+                                .orEmpty()
+
+                        when (mode) {
+
+                            Mode.WAKE -> {
+                                handleWakeResult(text)
+                            }
+
+                            Mode.COMMAND -> {
+                                handleCommandResult(text)
+                            }
+
+                            Mode.IDLE -> {
+                                scheduleWakeRestart(250L)
+                            }
+                        }
+                    }
+
+                    override fun onPartialResults(
+                        partialResults: Bundle?
+                    ) {
+                        // Disabled intentionally.
+                    }
+
+                    override fun onEvent(
+                        eventType: Int,
+                        params: Bundle?
+                    ) {
+                        // Not used.
+                    }
+                }
+            )
+
+            true
+
         } catch (_: Exception) {
+
+            recognizer = null
+            callbacks.onWakeError(-2)
+
             false
         }
     }
 
-    private fun startWakeListening() {
-        if (!running || starting) return
+    // =========================================================
+    // INTENT
+    // =========================================================
 
-        // Do not take the microphone while active media is playing.
-        if (musicIsActive()) {
-            scheduleWakeRestart(3000L)
+    private fun buildIntent(): Intent {
+
+        return Intent(
+            RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+        ).apply {
+
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE,
+                Locale("en", "IN")
+            )
+
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
+                Locale("en", "IN")
+            )
+
+            putExtra(
+                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                false
+            )
+
+            putExtra(
+                RecognizerIntent.EXTRA_MAX_RESULTS,
+                5
+            )
+
+            /*
+             * Don't terminate command capture too aggressively.
+             */
+            putExtra(
+                RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS,
+                1000L
+            )
+        }
+    }
+
+    // =========================================================
+    // WAKE LISTENING
+    // =========================================================
+
+    private fun startWakeListening() {
+
+        if (!running) return
+
+        if (starting) return
+
+        if (mode == Mode.COMMAND) return
+
+        cancelRestart()
+        cancelCommandTimeout()
+
+        if (!createRecognizerIfNeeded()) {
+
+            scheduleWakeRestart(
+                calculateBackoff()
+            )
+
             return
         }
 
-        createRecognizerIfNeeded()
-        if (recognizer == null) return
-
-        restartRunnable?.let(handler::removeCallbacks)
-        restartRunnable = null
         mode = Mode.WAKE
         starting = true
-        val mySession = ++sessionId
 
-        try { recognizer?.cancel() } catch (_: Exception) {}
+        val myGeneration = ++generation
 
-        handler.postDelayed({
-            if (!running || mySession != sessionId) return@postDelayed
-            try {
-                recognizer?.startListening(buildIntent())
-            } catch (_: Exception) {
-                starting = false
-                scheduleWakeRestart(500L)
-            }
-        }, 80L)
+        safeCancelRecognizer()
+
+        handler.postDelayed(
+            {
+
+                if (!running) return@postDelayed
+
+                if (myGeneration != generation) {
+                    return@postDelayed
+                }
+
+                if (mode != Mode.WAKE) {
+                    return@postDelayed
+                }
+
+                try {
+
+                    recognizer?.startListening(
+                        buildIntent()
+                    )
+
+                } catch (_: Exception) {
+
+                    if (myGeneration != generation) {
+                        return@postDelayed
+                    }
+
+                    starting = false
+                    consecutiveErrors++
+
+                    recreateRecognizer()
+
+                    scheduleWakeRestart(
+                        calculateBackoff()
+                    )
+                }
+
+            },
+            START_DELAY_MS
+        )
     }
+
+    // =========================================================
+    // COMMAND LISTENING
+    // =========================================================
 
     private fun startCommandListening() {
-        if (!running || starting) return
-        createRecognizerIfNeeded()
-        if (recognizer == null) return
 
-        restartRunnable?.let(handler::removeCallbacks)
-        restartRunnable = null
+        if (!running) return
+
+        if (starting) return
+
+        if (!createRecognizerIfNeeded()) {
+
+            finishCommand()
+
+            return
+        }
+
+        cancelRestart()
+
         mode = Mode.COMMAND
         starting = true
-        val mySession = ++sessionId
 
-        try { recognizer?.cancel() } catch (_: Exception) {}
+        cancelCommandTimeout()
 
-        handler.postDelayed({
-            if (!running || mySession != sessionId) return@postDelayed
-            try {
-                recognizer?.startListening(buildIntent())
-            } catch (_: Exception) {
-                starting = false
-                finishCommand()
-            }
-        }, 80L)
+        val myGeneration = ++generation
+
+        safeCancelRecognizer()
+
+        /*
+         * Give Android a tiny amount of time to complete
+         * cancellation before starting the next recognition.
+         */
+        handler.postDelayed(
+            {
+
+                if (!running) return@postDelayed
+
+                if (myGeneration != generation) {
+                    return@postDelayed
+                }
+
+                if (mode != Mode.COMMAND) {
+                    return@postDelayed
+                }
+
+                try {
+
+                    recognizer?.startListening(
+                        buildIntent()
+                    )
+
+                    commandTimeoutRunnable =
+                        Runnable {
+
+                            if (
+                                running &&
+                                mode == Mode.COMMAND &&
+                                myGeneration == generation
+                            ) {
+                                finishCommand()
+                            }
+                        }
+
+                    handler.postDelayed(
+                        commandTimeoutRunnable!!,
+                        COMMAND_TIMEOUT_MS
+                    )
+
+                } catch (_: Exception) {
+
+                    starting = false
+                    finishCommand()
+                }
+
+            },
+            START_DELAY_MS
+        )
     }
 
-    private fun handleWakeText(rawText: String) {
-        val command = extractWakeCommand(rawText) ?: run {
+    // =========================================================
+    // WAKE RESULT
+    // =========================================================
+
+    private fun handleWakeResult(
+        rawText: String
+    ) {
+
+        val command =
+            extractWakeCommand(rawText)
+
+        if (command == null) {
+
+            scheduleWakeRestart(
+                calculateBackoff()
+            )
+
+            return
+        }
+
+        val now = System.currentTimeMillis()
+
+        /*
+         * Prevent immediate duplicate wake events.
+         */
+        if (
+            now - lastWakeTime <
+            WAKE_DEBOUNCE_MS
+        ) {
             scheduleWakeRestart(250L)
             return
         }
 
-        callbacks.onWakeDetected(command)
+        lastWakeTime = now
+        consecutiveErrors = 0
+
+        callbacks.onWakeDetected(
+            command
+        )
 
         if (command.isNotBlank()) {
-            callbacks.onCommandRecognized(command)
+
+            if (isDuplicateCommand(command)) {
+                finishCommand()
+                return
+            }
+
+            rememberCommand(command)
+
+            callbacks.onCommandRecognized(
+                command
+            )
+
             finishCommand()
+
         } else {
+
             startCommandListening()
         }
     }
 
-    private fun handleCommandText(rawText: String) {
-        val command = normalizeCommand(rawText)
-        if (command.isNotBlank()) callbacks.onCommandRecognized(command)
-        finishCommand()
-    }
+    // =========================================================
+    // COMMAND RESULT
+    // =========================================================
 
-    private fun finishCommand() {
-        if (!running) {
-            mode = Mode.IDLE
+    private fun handleCommandResult(
+        rawText: String
+    ) {
+
+        cancelCommandTimeout()
+
+        val command =
+            normalizeCommand(rawText)
+
+        if (command.isBlank()) {
+
+            finishCommand()
+
             return
         }
 
-        mode = Mode.IDLE
-        starting = false
-        sessionId++
+        if (isDuplicateCommand(command)) {
 
-        try { recognizer?.cancel() } catch (_: Exception) {}
-        callbacks.onListeningChanged(false, Mode.IDLE)
+            finishCommand()
 
-        scheduleWakeRestart(400L)
-    }
-
-    private fun cancelCurrentSession() {
-        starting = false
-        sessionId++
-        try { recognizer?.cancel() } catch (_: Exception) {}
-        mode = Mode.IDLE
-        callbacks.onListeningChanged(false, Mode.IDLE)
-    }
-
-    private fun scheduleWakeRestart(delayMs: Long) {
-        if (!running) return
-        restartRunnable?.let(handler::removeCallbacks)
-
-        val runnable = Runnable {
-            restartRunnable = null
-            if (running && mode != Mode.COMMAND) startWakeListening()
+            return
         }
-        restartRunnable = runnable
-        handler.postDelayed(runnable, delayMs)
+
+        rememberCommand(command)
+
+        callbacks.onCommandRecognized(
+            command
+        )
+
+        finishCommand()
     }
 
-    private fun normalizeWakeText(value: String): String =
-        value.lowercase(Locale.ENGLISH)
+    // =========================================================
+    // COMMAND FINISH
+    // =========================================================
+
+    private fun finishCommand() {
+
+        cancelCommandTimeout()
+
+        invalidateSession()
+
+        safeCancelRecognizer()
+
+        starting = false
+        mode = Mode.IDLE
+
+        callbacks.onListeningChanged(
+            false,
+            Mode.IDLE
+        )
+
+        if (!running) return
+
+        /*
+         * Small cooldown prevents:
+         *
+         * AURIX command
+         * ↓
+         * TTS
+         * ↓
+         * recognizer hears itself
+         *
+         * from immediately causing another cycle.
+         */
+        scheduleWakeRestart(700L)
+    }
+
+    // =========================================================
+    // RECOVERY
+    // =========================================================
+
+    private fun scheduleRecovery() {
+
+        if (!running) return
+
+        val delay =
+            calculateBackoff()
+
+        /*
+         * After several failures, recreate the recognizer.
+         * This is important for OEM-specific SpeechRecognizer
+         * failures where the same instance stops behaving.
+         */
+        if (consecutiveErrors >= 3) {
+            recreateRecognizer()
+        }
+
+        scheduleWakeRestart(delay)
+    }
+
+    private fun calculateBackoff(): Long {
+
+        val exponent =
+            (consecutiveErrors - 1)
+                .coerceAtLeast(0)
+                .coerceAtMost(4)
+
+        val delay =
+            INITIAL_RESTART_MS *
+                (1L shl exponent)
+
+        return delay.coerceAtMost(
+            MAX_RESTART_MS
+        )
+    }
+
+    // =========================================================
+    // RESTART
+    // =========================================================
+
+    private fun scheduleWakeRestart(
+        delayMs: Long
+    ) {
+
+        if (!running) return
+
+        cancelRestart()
+
+        val safeDelay =
+            delayMs.coerceAtLeast(100L)
+
+        val runnable =
+            Runnable {
+
+                restartRunnable = null
+
+                if (!running) return@Runnable
+
+                if (mode == Mode.COMMAND) {
+                    return@Runnable
+                }
+
+                startWakeListening()
+            }
+
+        restartRunnable = runnable
+
+        handler.postDelayed(
+            runnable,
+            safeDelay
+        )
+    }
+
+    private fun cancelRestart() {
+
+        restartRunnable?.let {
+            handler.removeCallbacks(it)
+        }
+
+        restartRunnable = null
+    }
+
+    // =========================================================
+    // COMMAND TIMEOUT
+    // =========================================================
+
+    private fun cancelCommandTimeout() {
+
+        commandTimeoutRunnable?.let {
+            handler.removeCallbacks(it)
+        }
+
+        commandTimeoutRunnable = null
+    }
+
+    // =========================================================
+    // SESSION CONTROL
+    // =========================================================
+
+    private fun invalidateSession() {
+        generation++
+    }
+
+    private fun isCurrentSession(): Boolean {
+
+        return running
+    }
+
+    // =========================================================
+    // RECOGNIZER CONTROL
+    // =========================================================
+
+    private fun safeCancelRecognizer() {
+
+        try {
+            recognizer?.cancel()
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun recreateRecognizer() {
+
+        safeCancelRecognizer()
+
+        try {
+            recognizer?.destroy()
+        } catch (_: Exception) {
+        }
+
+        recognizer = null
+        starting = false
+
+        createRecognizerIfNeeded()
+    }
+
+    // =========================================================
+    // DUPLICATE PROTECTION
+    // =========================================================
+
+    private fun isDuplicateCommand(
+        command: String
+    ): Boolean {
+
+        val normalized =
+            normalizeCommand(command)
+
+        if (normalized.isBlank()) {
+            return true
+        }
+
+        val now =
+            System.currentTimeMillis()
+
+        return normalized == lastCommand &&
+            now - lastCommandTime <
+            COMMAND_DEBOUNCE_MS
+    }
+
+    private fun rememberCommand(
+        command: String
+    ) {
+
+        lastCommand =
+            normalizeCommand(command)
+
+        lastCommandTime =
+            System.currentTimeMillis()
+    }
+
+    // =========================================================
+    // WAKE EXTRACTION
+    // =========================================================
+
+    private fun normalizeWakeText(
+        value: String
+    ): String {
+
+        return value
+            .lowercase(Locale.ENGLISH)
             .replace("’", "'")
-            .replace(Regex("[^a-z0-9]+"), " ")
-            .replace(Regex("\\s+"), " ")
+            .replace(
+                Regex("[^a-z0-9]+"),
+                " "
+            )
+            .replace(
+                Regex("\\s+"),
+                " "
+            )
             .trim()
+    }
 
     /**
-     * Strict:
-     *   "Aurix"              -> accepted
-     *   "Aurix play music"  -> accepted
-     *   "Hey Aurix"         -> rejected
-     *   "Hi Aurix"          -> rejected
-     *   "Hello Aurix"       -> rejected
-     *   "Hai Aurix"         -> rejected
+     * Current strict wake behavior:
+     *
+     * "Aurix"
+     * "Aurix play music"
+     *
+     * accepted.
+     *
+     * "Hey Aurix"
+     * "Hi Aurix"
+     *
+     * rejected.
      */
-    private fun extractWakeCommand(value: String): String? {
-        val text = normalizeWakeText(value)
-        if (text.isBlank()) return null
+    private fun extractWakeCommand(
+        value: String
+    ): String? {
 
-        val tokens = text.split(" ")
-        if (tokens.firstOrNull() !in wakeVariants) return null
+        val text =
+            normalizeWakeText(value)
 
-        return tokens.drop(1).joinToString(" ").trim()
+        if (text.isBlank()) {
+            return null
+        }
+
+        val tokens =
+            text.split(" ")
+
+        if (
+            tokens.firstOrNull()
+                !in wakeVariants
+        ) {
+            return null
+        }
+
+        return tokens
+            .drop(1)
+            .joinToString(" ")
+            .trim()
     }
 
-    private fun normalizeCommand(value: String): String =
-        value.lowercase(Locale.ENGLISH)
-            .replace(Regex("\\s+"), " ")
+    private fun normalizeCommand(
+        value: String
+    ): String {
+
+        return value
+            .lowercase(Locale.ENGLISH)
+            .replace(
+                Regex("\\s+"),
+                " "
+            )
             .trim()
+    }
+
+    // =========================================================
+    // STOP
+    // =========================================================
+
+    private fun stopInternal() {
+
+        running = false
+
+        cancelRestart()
+        cancelCommandTimeout()
+
+        invalidateSession()
+
+        starting = false
+        mode = Mode.IDLE
+
+        safeCancelRecognizer()
+
+        try {
+            recognizer?.destroy()
+        } catch (_: Exception) {
+        }
+
+        recognizer = null
+
+        callbacks.onListeningChanged(
+            false,
+            Mode.IDLE
+        )
+    }
+
+    // =========================================================
+    // MAIN THREAD
+    // =========================================================
+
+    private fun runOnMain(
+        block: () -> Unit
+    ) {
+
+        if (Looper.myLooper() ==
+            Looper.getMainLooper()
+        ) {
+            block()
+        } else {
+            handler.post(block)
+        }
+    }
 }
