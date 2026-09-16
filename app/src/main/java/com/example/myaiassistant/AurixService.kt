@@ -82,35 +82,128 @@ class AurixService :
     // first, so two SpeechRecognizer sessions never overlap.
     private val wakeEngine by lazy {
         AurixWakeEngine(
-            this,
-            object : AurixWakeEngine.Callbacks {
-                override fun onWakeDetected(commandAfterWake: String) { }
+    private val wakeEngine by lazy {
+    AurixWakeEngine(
+        this,
+        object : AurixWakeEngine.Callbacks {
 
-                override fun onCommandRecognized(command: String) {
-                    if (command.isNotBlank() && isRunning && !serviceDestroyed) {
-                        sendCommand(command)
-                        processCommand(command)
+            override fun onWakeDetected(
+                commandAfterWake: String
+            ) {
+
+                if (
+                    !isRunning ||
+                    serviceDestroyed
+                ) {
+                    return
+                }
+
+                sendStatus(
+                    if (commandAfterWake.isBlank()) {
+                        "WAKE DETECTED"
+                    } else {
+                        "WAKE: $commandAfterWake"
+                    }
+                )
+            }
+
+            override fun onCommandRecognized(
+                command: String
+            ) {
+
+                if (
+                    command.isBlank() ||
+                    !isRunning ||
+                    serviceDestroyed
+                ) {
+                    return
+                }
+
+                /**
+                 * Keep the existing command pipeline.
+                 *
+                 * Wake engine ONLY recognizes speech.
+                 * AurixService decides what the command means.
+                 */
+                sendCommand(
+                    command
+                )
+
+                processCommand(
+                    command
+                )
+            }
+
+            override fun onListeningChanged(
+                listeningNow: Boolean,
+                mode: AurixWakeEngine.Mode
+            ) {
+
+                if (
+                    !isRunning ||
+                    serviceDestroyed
+                ) {
+                    return
+                }
+
+                listening =
+                    listeningNow
+
+                when {
+
+                    mode ==
+                        AurixWakeEngine.Mode.WAKE &&
+                        listeningNow -> {
+
+                        sendStatus(
+                            "AURIX READY"
+                        )
+                    }
+
+                    mode ==
+                        AurixWakeEngine.Mode.COMMAND &&
+                        listeningNow -> {
+
+                        sendStatus(
+                            "LISTENING"
+                        )
+                    }
+
+                    else -> {
+
+                        sendStatus(
+                            "READY"
+                        )
                     }
                 }
+            }
 
-                override fun onListeningChanged(
-                    listeningNow: Boolean,
-                    mode: AurixWakeEngine.Mode
+            override fun onWakeError(
+                errorCode: Int
+            ) {
+
+                if (
+                    !isRunning ||
+                    serviceDestroyed
                 ) {
-                    if (!isRunning || serviceDestroyed) return
-                    listening = listeningNow
-                    sendStatus(
-                        when {
-                            mode == AurixWakeEngine.Mode.WAKE && listeningNow -> "AURIX READY"
-                            mode == AurixWakeEngine.Mode.COMMAND && listeningNow -> "LISTENING"
-                            else -> "READY"
-                        }
-                    )
+                    return
                 }
 
-                override fun onWakeError(errorCode: Int) { }
+                /**
+                 * Visible diagnostic status.
+                 *
+                 * 1001 = command timeout
+                 * -1  = recognition unavailable
+                 * -2  = recognizer creation failure
+                 * -3  = startListening failure
+                 * other values = Android SpeechRecognizer error
+                 */
+                sendStatus(
+                    "WAKE ERROR: $errorCode"
+                )
             }
-        )
+        }
+    )
     }
 
     private var textToSpeech: TextToSpeech? = null
