@@ -1963,6 +1963,117 @@ private fun setFlashlight(
         }
     }
 
+// =========================================================
+// ALERT
+// =========================================================
+
+private fun scheduleAlert(
+    triggerTime: Long,
+    type: String,
+    message: String
+) {
+
+    val alarmManager =
+        getSystemService(
+            Context.ALARM_SERVICE
+        ) as AlarmManager
+
+    val intent =
+        Intent(
+            this,
+            AlarmReceiver::class.java
+        ).apply {
+
+            putExtra(
+                AlarmReceiver.EXTRA_TYPE,
+                type
+            )
+
+            putExtra(
+                AlarmReceiver.EXTRA_MESSAGE,
+                message
+            )
+        }
+
+    val requestCode =
+        if (
+            type == "timer"
+        ) {
+            7001
+        } else {
+            7002
+        }
+
+    val flags =
+        PendingIntent.FLAG_UPDATE_CURRENT or
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.M
+            ) {
+                PendingIntent.FLAG_IMMUTABLE
+            } else {
+                0
+            }
+
+    val pendingIntent =
+        PendingIntent.getBroadcast(
+            this,
+            requestCode,
+            intent,
+            flags
+        )
+
+    try {
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.M
+        ) {
+
+            try {
+
+                alarmManager
+                    .setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTime,
+                        pendingIntent
+                    )
+
+            } catch (
+                _: SecurityException
+            ) {
+
+                alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
+            }
+
+        } else {
+
+            alarmManager.setExact(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
+        }
+
+    } catch (_: Exception) {
+
+        try {
+
+            alarmManager.set(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
+
+        } catch (_: Exception) {
+        }
+    }
+}
+
 private fun setAurixTimer(
         command: String
     ) {
