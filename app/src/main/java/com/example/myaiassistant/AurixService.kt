@@ -320,19 +320,88 @@ class AurixService :
                 listening = false
                 startListening()
             }
+override fun onStartCommand(
+    intent: Intent?,
+    flags: Int,
+    startId: Int
+): Int {
 
-            else -> {
+    when (intent?.action) {
 
-                wakeWordMode = true
+        ACTION_STOP -> {
 
-if (!listening) {
-    wakeEngine.start()
-}
-            }
+            stopAurix()
+
+            return START_NOT_STICKY
         }
 
-        return START_STICKY
+        ACTION_START -> {
+
+            isRunning = true
+            restarting = false
+            wakeWordMode = true
+
+            try {
+                speechRecognizer?.cancel()
+            } catch (_: Exception) {
+            }
+
+            listening = false
+
+            wakeEngine.start()
+        }
+
+        ACTION_LISTEN_ONCE -> {
+
+            isRunning = true
+            restarting = false
+            wakeWordMode = false
+
+            manualListenTransition = true
+
+            /**
+             * Passive wake recognition must stop
+             * before manual recognition starts.
+             */
+            wakeEngine.stop()
+
+            try {
+                speechRecognizer?.cancel()
+            } catch (_: Exception) {
+            }
+
+            listening = false
+
+            startListening()
+        }
+
+        else -> {
+
+            /**
+             * IMPORTANT:
+             *
+             * Service restart/default launch must return
+             * to passive AURIX wake mode.
+             *
+             * Do NOT call startListening() here.
+             */
+            isRunning = true
+            restarting = false
+            wakeWordMode = true
+
+            try {
+                speechRecognizer?.cancel()
+            } catch (_: Exception) {
+            }
+
+            listening = false
+
+            wakeEngine.start()
+        }
     }
+
+    return START_STICKY
+}
 
     // =========================================================
     // STOP AURIX
@@ -4459,7 +4528,90 @@ override fun onInit(
     } catch (_: Exception) {
     }
 }
+private fun speakOnce(
+    text: String
+) {
 
+    if (
+        text.isBlank()
+    ) {
+        return
+    }
+
+    if (
+        currentResponseSent
+    ) {
+        return
+    }
+
+    currentResponseSent =
+        true
+
+    /**
+     * Stop passive recognition while
+     * AURIX is speaking.
+     */
+    wakeEngine.pause()
+
+    val finalText =
+        aurixResponse(
+            text
+        )
+
+    sendStatus(
+        "SPEAKING"
+    )
+
+    sendSpeak(
+        finalText
+    )
+
+    try {
+
+        textToSpeech?.speak(
+            finalText,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "AURIX"
+        )
+
+    } catch (_: Exception) {
+    }
+
+    try {
+
+        AurixMemoryBridge.saveTurn(
+            this,
+            currentUserCommand,
+            finalText
+        )
+
+    } catch (_: Exception) {
+    }
+
+    /**
+     * Resume passive wake listening after
+     * enough time for TTS to finish.
+     */
+    val resumeDelay =
+        (finalText.length * 55L)
+            .coerceIn(
+                1800L,
+                7000L
+            )
+
+    handler.postDelayed(
+        {
+            if (
+                isRunning &&
+                !serviceDestroyed
+            ) {
+                wakeEngine.resume()
+            }
+        },
+        resumeDelay
+    )
+}
 // =========================================================
 // AURIX RESPONSE LOCALIZATION
 // =========================================================
@@ -4600,65 +4752,7 @@ private fun aurixResponse(
     }
 }
 
-private fun speakOnce(
-        text: String
-    ) {
 
-        if (
-            text.isBlank()
-        ) {
-            return
-        }
-
-        if (
-            currentResponseSent
-        ) {
-            return
-        }
-
-        currentResponseSent =
-            true
-
-        val finalText =
-            aurixResponse(
-                text
-            )
-
-        sendStatus(
-            "SPEAKING"
-        )
-
-        sendSpeak(
-            finalText
-        )
-
-        try {
-
-            textToSpeech?.speak(
-                finalText,
-                TextToSpeech.QUEUE_FLUSH,
-                null,
-                "AURIX"
-            )
-
-        } catch (_: Exception) {
-        }
-
-        try {
-
-            AurixMemoryBridge.saveTurn(
-                this,
-                currentUserCommand,
-                finalText
-            )
-
-        } catch (_: Exception) {
-        }
-
-        // IMPORTANT:
-        // Do NOT immediately send LISTENING here.
-        // TTS needs time to finish.
-    }
 
  // =========================================================
 // AURIX GREETING
@@ -4694,6 +4788,7 @@ private fun speakAurixGreeting() {
         greeting
     )
 }
+
 
     // =========================================================
     // EVENTS
