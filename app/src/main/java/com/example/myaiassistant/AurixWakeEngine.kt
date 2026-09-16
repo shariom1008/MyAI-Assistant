@@ -68,6 +68,11 @@ class AurixWakeEngine(
         callbacks.onListeningChanged(false, Mode.IDLE)
     }
 
+    fun pause() {
+        if (!running) return
+        cancelCurrentSession()
+    }
+
     fun resumeWakeListening() {
         if (!running) return
         cancelCurrentSession()
