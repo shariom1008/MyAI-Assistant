@@ -1,22 +1,26 @@
 package com.example.myaiassistant
 
 import android.content.Context
-import android.content.Intent
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.RecognitionListener
+import org.vosk.android.SpeechService
+import org.vosk.android.StorageService
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * AURIX — Stable Wake + Command Voice Engine
+ * AURIX offline voice engine.
  *
- * Wake mode listens for "Aurix".
- * Command mode uses the normal SpeechRecognizer service so Hindi/Hinglish
- * commands and song names are not limited by an on-device ASR model.
+ * IMPORTANT:
+ * - This file intentionally does NOT use android.speech.SpeechRecognizer.
+ * - Vosk handles microphone audio and offline speech recognition.
+ * - Put a Vosk model directory named "model-en-in" in app/src/main/assets/.
+ * - Existing AurixService command routing remains unchanged.
  */
 class AurixWakeEngine(
     private val context: Context,
@@ -31,357 +35,247 @@ class AurixWakeEngine(
 
     enum class Mode { IDLE, WAKE, COMMAND }
 
+    companion object {
+        private const val MODEL_ASSET = "model-en-in"
+        private const val SAMPLE_RATE = 16000.0f
+        private const val COMMAND_GRACE_MS = 8000L
+        private const val RESTART_DELAY_MS = 250L
+    }
+
     private val handler = Handler(Looper.getMainLooper())
-    private var recognizer: SpeechRecognizer? = null
+    private var model: Model? = null
+    private var speechService: SpeechService? = null
+    private var recognizer: Recognizer? = null
     private var mode = Mode.IDLE
     private var running = false
-    private var starting = false
-    private var sessionId = 0L
-    private var restartRunnable: Runnable? = null
+    private var modelLoading = false
+    private var commandTimeout: Runnable? = null
+    private var lastWakeAt = 0L
+    private val destroyed = AtomicBoolean(false)
 
-    // Common ASR spellings of AURIX, including Hindi-script variants.
     private val wakeVariants = setOf(
         "aurix", "auriks", "aurics", "aurik", "aurixx",
         "auryx", "aurex", "orix", "oryx", "ourix",
-        "arix", "auric", "aurrix", "aurixs", "aurek",
-        "ऑरिक्स", "औरिक्स", "ओरिक्स", "अरिक्स"
+        "arix", "auric", "aurrix", "aurixs", "aurek"
     )
 
     fun start() {
-        if (running) return
+        if (destroyed.get() || running) return
         running = true
-        createRecognizerIfNeeded()
-        startWakeListening()
+        loadModelAndStart()
     }
 
     fun stop() {
         running = false
         mode = Mode.IDLE
-        starting = false
-        sessionId++
-        restartRunnable?.let(handler::removeCallbacks)
-        restartRunnable = null
-        try {
-            recognizer?.cancel()
-            recognizer?.destroy()
-        } catch (_: Exception) {}
+        commandTimeout?.let(handler::removeCallbacks)
+        commandTimeout = null
+        try { speechService?.stop() } catch (_: Exception) {}
+        try { speechService?.shutdown() } catch (_: Exception) {}
+        speechService = null
+        try { recognizer?.close() } catch (_: Exception) {}
         recognizer = null
         callbacks.onListeningChanged(false, Mode.IDLE)
     }
 
     fun pause() {
         if (!running) return
-        cancelCurrentSession()
+        stopListeningOnly()
     }
 
     fun resumeWakeListening() {
         if (!running) return
-        cancelCurrentSession()
-        scheduleWakeRestart(250L)
+        stopListeningOnly()
+        handler.postDelayed({ if (running) startRecognition() }, RESTART_DELAY_MS)
     }
 
-    private fun createRecognizerIfNeeded() {
-        if (recognizer != null) return
-
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            callbacks.onWakeError(-1)
+    private fun loadModelAndStart() {
+        if (model != null) {
+            startRecognition()
             return
         }
+        if (modelLoading) return
+        modelLoading = true
 
-        // IMPORTANT:
-        // Do NOT force createOnDeviceSpeechRecognizer() here.
-        // The tap/manual voice path already uses the normal recognizer and
-        // handles Hindi/Hinglish song names better. Wake command recognition
-        // should use the same ASR path for consistent results.
-        recognizer = SpeechRecognizer.createSpeechRecognizer(context).also { sr ->
-            sr.setRecognitionListener(object : RecognitionListener {
-                private fun current(id: Long) = id == sessionId && running
-
-                override fun onReadyForSpeech(params: Bundle?) {
-                    starting = false
-                    callbacks.onListeningChanged(true, mode)
-                }
-
-                override fun onBeginningOfSpeech() {
-                    callbacks.onListeningChanged(true, mode)
-                }
-
-                override fun onRmsChanged(rmsdB: Float) = Unit
-                override fun onBufferReceived(buffer: ByteArray?) = Unit
-
-                override fun onEndOfSpeech() {
-                    callbacks.onListeningChanged(false, mode)
-                }
-
-                override fun onError(error: Int) {
-                    starting = false
-                    if (!current(sessionId)) return
-
-                    callbacks.onWakeError(error)
-                    if (!running) return
-
-                    when (mode) {
-                        Mode.WAKE -> scheduleWakeRestart(350L)
-                        Mode.COMMAND -> finishCommand()
-                        Mode.IDLE -> Unit
-                    }
-                }
-
-                override fun onResults(results: Bundle?) {
-                    starting = false
-                    if (!current(sessionId)) return
-
-                    val text = bestResult(results)
-
-                    // If media starts while a wake session is open, do not
-                    // interpret media audio as a wake/command.
-                    if (musicIsActive() && mode == Mode.WAKE) {
-                        scheduleWakeRestart(3000L)
-                        return
-                    }
-
-                    when (mode) {
-                        Mode.WAKE -> handleWakeText(text)
-                        Mode.COMMAND -> handleCommandText(text)
-                        Mode.IDLE -> Unit
-                    }
-                }
-
-                override fun onPartialResults(partialResults: Bundle?) = Unit
-                override fun onEvent(eventType: Int, params: Bundle?) = Unit
-            })
-        }
-    }
-
-    /**
-     * Select the highest-confidence recognition candidate when the recognizer
-     * provides confidence values; otherwise use the first candidate.
-     */
-    private fun bestResult(results: Bundle?): String {
-        val candidates = results
-            ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            .orEmpty()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-
-        if (candidates.isEmpty()) return ""
-
-        val confidence = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
-        if (confidence == null || confidence.isEmpty()) {
-            return candidates.first()
-        }
-
-        var bestIndex = 0
-        var bestScore = Float.NEGATIVE_INFINITY
-        candidates.indices.forEach { index ->
-            val score = confidence.getOrNull(index) ?: Float.NEGATIVE_INFINITY
-            if (score > bestScore) {
-                bestScore = score
-                bestIndex = index
+        StorageService.unpack(
+            context,
+            MODEL_ASSET,
+            "aurix-vosk-model",
+            { loaded ->
+                modelLoading = false
+                model = loaded
+                if (running) startRecognition()
+            },
+            { error ->
+                modelLoading = false
+                callbacks.onWakeError(-1001)
             }
-        }
-
-        return candidates.getOrElse(bestIndex) { candidates.first() }
+        )
     }
 
-    private fun buildIntent(): Intent {
-        return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-            )
-
-            // Hindi/Hinglish command recognition. This matches the working
-            // manual/tap recognizer used by AurixService.
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE,
-                Locale("hi", "IN")
-            )
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
-                Locale("hi", "IN")
-            )
-
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-
-            // Give a spoken command a little more room before the recognizer
-            // decides that the utterance is complete.
-            putExtra(
-                RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
-                1400L
-            )
-            putExtra(
-                RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
-                1800L
-            )
-        }
-    }
-
-    private fun musicIsActive(): Boolean {
-        return try {
-            val audioManager =
-                context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            audioManager.isMusicActive
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun startWakeListening() {
-        if (!running || starting) return
+    private fun startRecognition() {
+        if (!running || model == null || speechService != null) return
 
         if (musicIsActive()) {
-            scheduleWakeRestart(3000L)
+            handler.postDelayed({ if (running) startRecognition() }, 1500L)
             return
         }
 
-        createRecognizerIfNeeded()
-        if (recognizer == null) return
-
-        restartRunnable?.let(handler::removeCallbacks)
-        restartRunnable = null
-        mode = Mode.WAKE
-        starting = true
-        val mySession = ++sessionId
-
         try {
-            recognizer?.cancel()
-        } catch (_: Exception) {}
+            recognizer = Recognizer(model, SAMPLE_RATE)
+            speechService = SpeechService(recognizer, SAMPLE_RATE)
+            mode = Mode.WAKE
+            callbacks.onListeningChanged(true, Mode.WAKE)
+            speechService?.startListening(listener)
+        } catch (_: Exception) {
+            speechService = null
+            recognizer = null
+            callbacks.onWakeError(-1002)
+            handler.postDelayed({ if (running) startRecognition() }, 1000L)
+        }
+    }
 
-        handler.postDelayed({
-            if (!running || mySession != sessionId) return@postDelayed
-            try {
-                recognizer?.startListening(buildIntent())
-            } catch (_: Exception) {
-                starting = false
-                scheduleWakeRestart(500L)
+    private val listener = object : RecognitionListener {
+        override fun onPartialResult(hypothesis: String?) {
+            val text = extractText(hypothesis)
+            if (text.isBlank()) return
+
+            when (mode) {
+                Mode.WAKE -> {
+                    val command = extractWakeCommand(text)
+                    if (command != null) {
+                        lastWakeAt = System.currentTimeMillis()
+                        callbacks.onWakeDetected(command)
+                        if (command.isNotBlank()) {
+                            callbacks.onCommandRecognized(command)
+                            resetCommandWindow()
+                        } else {
+                            enterCommandMode()
+                        }
+                    }
+                }
+                Mode.COMMAND -> {
+                    // Vosk partials are only used as a responsiveness signal.
+                    // Final results are dispatched to the existing command router.
+                    callbacks.onListeningChanged(true, Mode.COMMAND)
+                }
+                Mode.IDLE -> Unit
             }
-        }, 80L)
+        }
+
+        override fun onResult(hypothesis: String?) {
+            handleRecognizedText(extractText(hypothesis), false)
+        }
+
+        override fun onFinalResult(hypothesis: String?) {
+            handleRecognizedText(extractText(hypothesis), true)
+        }
+
+        override fun onError(exception: Exception?) {
+            if (!running) return
+            callbacks.onWakeError(-1003)
+            restartRecognition()
+        }
+
+        override fun onTimeout() {
+            if (!running) return
+            restartRecognition()
+        }
     }
 
-    private fun startCommandListening() {
-        if (!running || starting) return
-        createRecognizerIfNeeded()
-        if (recognizer == null) return
+    private fun handleRecognizedText(text: String, finalResult: Boolean) {
+        if (!running || text.isBlank()) return
 
-        restartRunnable?.let(handler::removeCallbacks)
-        restartRunnable = null
-        mode = Mode.COMMAND
-        starting = true
-        val mySession = ++sessionId
-
-        try {
-            recognizer?.cancel()
-        } catch (_: Exception) {}
-
-        handler.postDelayed({
-            if (!running || mySession != sessionId) return@postDelayed
-            try {
-                recognizer?.startListening(buildIntent())
-            } catch (_: Exception) {
-                starting = false
-                finishCommand()
+        when (mode) {
+            Mode.WAKE -> {
+                val command = extractWakeCommand(text)
+                if (command != null) {
+                    lastWakeAt = System.currentTimeMillis()
+                    callbacks.onWakeDetected(command)
+                    if (command.isNotBlank()) {
+                        callbacks.onCommandRecognized(command)
+                        restartRecognition()
+                    } else {
+                        enterCommandMode()
+                    }
+                }
             }
-        }, 80L)
-    }
-
-    private fun handleWakeText(rawText: String) {
-        val command = extractWakeCommand(rawText) ?: run {
-            scheduleWakeRestart(250L)
-            return
-        }
-
-        callbacks.onWakeDetected(command)
-
-        if (command.isNotBlank()) {
-            callbacks.onCommandRecognized(normalizeCommand(command))
-            finishCommand()
-        } else {
-            startCommandListening()
+            Mode.COMMAND -> {
+                val command = normalizeCommand(text)
+                if (command.isNotBlank()) {
+                    callbacks.onCommandRecognized(command)
+                    restartRecognition()
+                } else if (finalResult) {
+                    restartRecognition()
+                }
+            }
+            Mode.IDLE -> Unit
         }
     }
 
-    private fun handleCommandText(rawText: String) {
-        val command = normalizeCommand(rawText)
-        if (command.isNotBlank()) {
-            callbacks.onCommandRecognized(command)
-        }
-        finishCommand()
-    }
-
-    private fun finishCommand() {
-        if (!running) {
-            mode = Mode.IDLE
-            return
-        }
-
-        mode = Mode.IDLE
-        starting = false
-        sessionId++
-
-        try {
-            recognizer?.cancel()
-        } catch (_: Exception) {}
-
-        callbacks.onListeningChanged(false, Mode.IDLE)
-        scheduleWakeRestart(400L)
-    }
-
-    private fun cancelCurrentSession() {
-        starting = false
-        sessionId++
-        try {
-            recognizer?.cancel()
-        } catch (_: Exception) {}
-        mode = Mode.IDLE
-        callbacks.onListeningChanged(false, Mode.IDLE)
-    }
-
-    private fun scheduleWakeRestart(delayMs: Long) {
+    private fun enterCommandMode() {
         if (!running) return
-        restartRunnable?.let(handler::removeCallbacks)
-
-        val runnable = Runnable {
-            restartRunnable = null
-            if (running && mode != Mode.COMMAND) {
-                startWakeListening()
-            }
-        }
-
-        restartRunnable = runnable
-        handler.postDelayed(runnable, delayMs)
+        mode = Mode.COMMAND
+        callbacks.onListeningChanged(true, Mode.COMMAND)
+        resetCommandWindow()
     }
 
-    private fun normalizeWakeText(value: String): String =
-        value.lowercase(Locale.ENGLISH)
-            .replace("’", "'")
-            // Keep Unicode letters/numbers so Hindi-script ASR output is not
-            // deleted before wake-word matching.
-            .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
-            .replace(Regex("\\s+"), " ")
-            .trim()
+    private fun resetCommandWindow() {
+        commandTimeout?.let(handler::removeCallbacks)
+        val timeout = Runnable {
+            if (running && mode == Mode.COMMAND) restartRecognition()
+        }
+        commandTimeout = timeout
+        handler.postDelayed(timeout, COMMAND_GRACE_MS)
+    }
 
-    /**
-     * Accepted:
-     *   "Aurix"
-     *   "Aurix play music"
-     *
-     * Deliberately does not accept arbitrary leading phrases such as
-     * "Hey Aurix" so background audio is less likely to trigger AURIX.
-     */
+    private fun restartRecognition() {
+        if (!running) return
+        commandTimeout?.let(handler::removeCallbacks)
+        commandTimeout = null
+        stopListeningOnly()
+        handler.postDelayed({ if (running) startRecognition() }, RESTART_DELAY_MS)
+    }
+
+    private fun stopListeningOnly() {
+        try { speechService?.stop() } catch (_: Exception) {}
+        try { speechService?.shutdown() } catch (_: Exception) {}
+        speechService = null
+        try { recognizer?.close() } catch (_: Exception) {}
+        recognizer = null
+        mode = Mode.IDLE
+        callbacks.onListeningChanged(false, Mode.IDLE)
+    }
+
     private fun extractWakeCommand(value: String): String? {
-        val text = normalizeWakeText(value)
+        val text = normalizeCommand(value)
         if (text.isBlank()) return null
 
         val tokens = text.split(" ")
-        if (tokens.firstOrNull() !in wakeVariants) return null
-
+        val first = tokens.firstOrNull() ?: return null
+        if (first !in wakeVariants) return null
         return tokens.drop(1).joinToString(" ").trim()
+    }
+
+    private fun extractText(hypothesis: String?): String {
+        if (hypothesis.isNullOrBlank()) return ""
+        return Regex("\\\"text\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"")
+            .find(hypothesis)?.groupValues?.getOrNull(1)
+            ?: hypothesis
+                .replace(Regex("[{}\\\"]"), " ")
+                .replace(Regex("\\s+"), " ")
+                .trim()
     }
 
     private fun normalizeCommand(value: String): String =
         value.lowercase(Locale.ENGLISH)
             .replace(Regex("\\s+"), " ")
             .trim()
+
+    private fun musicIsActive(): Boolean = try {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.isMusicActive
+    } catch (_: Exception) {
+        false
+    }
 }
