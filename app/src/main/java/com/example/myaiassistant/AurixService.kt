@@ -232,9 +232,9 @@ class AurixService :
 
                 wakeWordMode = true
 
-                if (!listening) {
-                    startListening()
-                }
+if (!listening) {
+    wakeEngine.start()
+}
             }
         }
 
