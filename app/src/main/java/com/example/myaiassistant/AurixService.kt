@@ -2586,7 +2586,7 @@ private fun speakOnce(
                 isRunning &&
                 !serviceDestroyed
             ) {
-                wakeEngine.resume()
+                wakeEngine.resumeWakeListening()
             }
         },
         resumeDelay

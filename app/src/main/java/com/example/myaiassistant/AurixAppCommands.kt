@@ -2066,7 +2066,7 @@ class AurixAppCommands(
         )
 
         aliases.forEach { (from, to) ->
-            c = c.replace(Regex("\\b" + Regex.escape(from) + "\\b"), to.trim(), ignoreCase = true)
+            c = c.replace(Regex("\\b" + Regex.escape(from) + "\\b", RegexOption.IGNORE_CASE), to.trim())
         }
 
         return c.replace(Regex("\\s+"), " ").trim()
