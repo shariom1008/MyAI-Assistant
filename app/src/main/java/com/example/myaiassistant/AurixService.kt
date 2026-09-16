@@ -568,8 +568,8 @@ override fun onStartCommand(
 
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale("en", "IN"))
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale("en", "IN"))
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale("hi", "IN"))
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale("hi", "IN"))
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             }
