@@ -1773,6 +1773,446 @@ private fun askFinalAI(
         }
     }
 
+private fun normalizeNumberWords(
+        input: String
+    ): String {
+
+        var text =
+            input
+
+        val compounds =
+            mapOf(
+
+                "twenty one" to "21",
+                "twenty two" to "22",
+                "twenty three" to "23",
+                "twenty four" to "24",
+                "twenty five" to "25",
+                "twenty six" to "26",
+                "twenty seven" to "27",
+                "twenty eight" to "28",
+                "twenty nine" to "29",
+
+                "thirty one" to "31",
+                "thirty two" to "32",
+                "thirty three" to "33",
+                "thirty four" to "34",
+                "thirty five" to "35",
+                "thirty six" to "36",
+                "thirty seven" to "37",
+                "thirty eight" to "38",
+                "thirty nine" to "39",
+
+                "forty one" to "41",
+                "forty two" to "42",
+                "forty three" to "43",
+                "forty four" to "44",
+                "forty five" to "45",
+                "forty six" to "46",
+                "forty seven" to "47",
+                "forty eight" to "48",
+                "forty nine" to "49",
+
+                "fifty one" to "51",
+                "fifty two" to "52",
+                "fifty three" to "53",
+                "fifty four" to "54",
+                "fifty five" to "55",
+                "fifty six" to "56",
+                "fifty seven" to "57",
+                "fifty eight" to "58",
+                "fifty nine" to "59"
+            )
+
+        compounds.forEach {
+            (word, number) ->
+
+            text =
+                text.replace(
+                    Regex(
+                        "\\b${Regex.escape(word)}\\b"
+                    ),
+                    number
+                )
+        }
+
+        val numbers =
+            mapOf(
+
+                "zero" to "0",
+                "one" to "1",
+                "two" to "2",
+                "three" to "3",
+                "four" to "4",
+                "five" to "5",
+                "six" to "6",
+                "seven" to "7",
+                "eight" to "8",
+                "nine" to "9",
+                "ten" to "10",
+                "eleven" to "11",
+                "twelve" to "12",
+                "thirteen" to "13",
+                "fourteen" to "14",
+                "fifteen" to "15",
+                "sixteen" to "16",
+                "seventeen" to "17",
+                "eighteen" to "18",
+                "nineteen" to "19",
+                "twenty" to "20",
+                "thirty" to "30",
+                "forty" to "40",
+                "fifty" to "50",
+                "sixty" to "60"
+            )
+
+        numbers.forEach {
+            (word, number) ->
+
+            text =
+                text.replace(
+                    Regex(
+                        "\\b${Regex.escape(word)}\\b"
+                    ),
+                    number
+                )
+        }
+
+        return text
+    }
+
+private fun setFlashlight(
+        enabled: Boolean
+    ) {
+
+        try {
+
+            val manager =
+                getSystemService(
+                    Context.CAMERA_SERVICE
+                ) as CameraManager
+
+            var cameraId: String? =
+                null
+
+            for (
+                id in manager.cameraIdList
+            ) {
+
+                val characteristics =
+                    manager
+                        .getCameraCharacteristics(
+                            id
+                        )
+
+                val flash =
+                    characteristics.get(
+                        CameraCharacteristics
+                            .FLASH_INFO_AVAILABLE
+                    ) ?: false
+
+                val facing =
+                    characteristics.get(
+                        CameraCharacteristics
+                            .LENS_FACING
+                    )
+
+                if (
+                    flash &&
+                    facing ==
+                    CameraCharacteristics
+                        .LENS_FACING_BACK
+                ) {
+
+                    cameraId =
+                        id
+
+                    break
+                }
+            }
+
+            if (
+                cameraId == null
+            ) {
+
+                speakOnce(
+                    "Flashlight is not available."
+                )
+
+                return
+            }
+
+            manager.setTorchMode(
+                cameraId,
+                enabled
+            )
+
+            speakOnce(
+                if (enabled) {
+                    "Flashlight turned on."
+                } else {
+                    "Flashlight turned off."
+                }
+            )
+
+        } catch (_: Exception) {
+
+            speakOnce(
+                "I could not control the flashlight."
+            )
+        }
+    }
+
+private fun setAurixTimer(
+        command: String
+    ) {
+
+        var seconds =
+            0L
+
+        val hour =
+            Pattern.compile(
+                "(\\d+)\\s*(hour|hours|hr|hrs)"
+            ).matcher(
+                command
+            )
+
+        if (
+            hour.find()
+        ) {
+
+            seconds +=
+                hour.group(1)!!
+                    .toLong() * 3600L
+        }
+
+        val minute =
+            Pattern.compile(
+                "(\\d+)\\s*(minute|minutes|min|mins)"
+            ).matcher(
+                command
+            )
+
+        if (
+            minute.find()
+        ) {
+
+            seconds +=
+                minute.group(1)!!
+                    .toLong() * 60L
+        }
+
+        val second =
+            Pattern.compile(
+                "(\\d+)\\s*(second|seconds|sec|secs)"
+            ).matcher(
+                command
+            )
+
+        if (
+            second.find()
+        ) {
+
+            seconds +=
+                second.group(1)!!
+                    .toLong()
+        }
+
+        if (
+            seconds == 0L
+        ) {
+
+            val number =
+                Pattern.compile(
+                    "(?:timer|for)\\s+(\\d+)"
+                ).matcher(
+                    command
+                )
+
+            if (
+                number.find()
+            ) {
+
+                val value =
+                    number.group(1)!!
+                        .toLong()
+
+                seconds =
+                    if (
+                        command.contains(
+                            "second"
+                        ) ||
+                        command.contains(
+                            "sec"
+                        )
+                    ) {
+
+                        value
+
+                    } else {
+
+                        value * 60L
+                    }
+            }
+        }
+
+        if (
+            seconds <= 0L
+        ) {
+
+            speakOnce(
+                "Please tell me the timer duration."
+            )
+
+            return
+        }
+
+        val trigger =
+            System.currentTimeMillis() +
+                seconds * 1000L
+
+        scheduleAlert(
+            trigger,
+            "timer",
+            "Your AURIX timer is finished."
+        )
+
+        val message =
+            when {
+
+                seconds >= 3600L ->
+                    "${seconds / 3600L} hour timer started"
+
+                seconds >= 60L ->
+                    "${seconds / 60L} minute timer started"
+
+                else ->
+                    "$seconds second timer started"
+            }
+
+        speakOnce(
+            message
+        )
+    }
+
+private fun setAurixAlarm(
+        command: String
+    ) {
+
+        val matcher =
+            Pattern.compile(
+                "(\\d{1,2})(?:\\s*[:.]\\s*(\\d{1,2}))?\\s*(am|pm)?"
+            ).matcher(
+                command
+            )
+
+        if (
+            !matcher.find()
+        ) {
+
+            speakOnce(
+                "Please tell me the alarm time, for example seven PM."
+            )
+
+            return
+        }
+
+        var hour =
+            matcher.group(1)!!
+                .toInt()
+
+        val minute =
+            matcher.group(2)
+                ?.toIntOrNull()
+                ?: 0
+
+        val ampm =
+            matcher.group(3)
+                ?.lowercase(
+                    Locale.getDefault()
+                )
+
+        if (
+            ampm == "pm" &&
+            hour < 12
+        ) {
+
+            hour += 12
+        }
+
+        if (
+            ampm == "am" &&
+            hour == 12
+        ) {
+
+            hour = 0
+        }
+
+        if (
+            hour !in 0..23 ||
+            minute !in 0..59
+        ) {
+
+            speakOnce(
+                "That is not a valid alarm time."
+            )
+
+            return
+        }
+
+        val calendar =
+            Calendar.getInstance()
+
+        calendar.set(
+            Calendar.HOUR_OF_DAY,
+            hour
+        )
+
+        calendar.set(
+            Calendar.MINUTE,
+            minute
+        )
+
+        calendar.set(
+            Calendar.SECOND,
+            0
+        )
+
+        calendar.set(
+            Calendar.MILLISECOND,
+            0
+        )
+
+        if (
+            calendar.timeInMillis <=
+            System.currentTimeMillis()
+        ) {
+
+            calendar.add(
+                Calendar.DAY_OF_YEAR,
+                1
+            )
+        }
+
+        scheduleAlert(
+            calendar.timeInMillis,
+            "alarm",
+            "Your AURIX alarm is ringing."
+        )
+
+        val formatted =
+            SimpleDateFormat(
+                "hh:mm a",
+                Locale.getDefault()
+            ).format(
+                calendar.time
+            )
+
+        speakOnce(
+            "Alarm set for $formatted."
+        )
+    }
+
     // =========================================================
     // HOME / CLOSE
     // =========================================================
