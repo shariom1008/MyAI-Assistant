@@ -80,8 +80,7 @@ class AurixService :
 
     // Passive wake engine owns wake-mode recognition. Manual tap mode stops it
     // first, so two SpeechRecognizer sessions never overlap.
-    private val wakeEngine by lazy {
-        AurixWakeEngine(
+    
     private val wakeEngine by lazy {
     AurixWakeEngine(
         this,
