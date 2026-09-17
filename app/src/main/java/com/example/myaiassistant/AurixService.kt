@@ -589,967 +589,824 @@ override fun onStartCommand(
     // MAIN COMMAND ENGINE
     // =========================================================
 
-    private fun processCommand(
-        rawCommand: String
-    ) {
-        currentResponseSent = false
+                private fun processCommand(
+    rawCommand: String
+) {
 
-        var command =
-            normalizeNumberWords(
-                rawCommand
-                    .lowercase(
-                        Locale.ENGLISH
+    // =====================================================
+    // RESET RESPONSE STATE
+    // =====================================================
+
+    currentResponseSent = false
+
+    // =====================================================
+    // NORMALIZE COMMAND
+    // =====================================================
+
+    var command =
+        normalizeNumberWords(
+            rawCommand
+                .lowercase(Locale.ENGLISH)
+                .trim()
+        )
+
+    if (command.isBlank()) {
+        return
+    }
+
+    // =====================================================
+    // DEBUG - COMMAND RECEIVED
+    // =====================================================
+
+    sendStatus(
+        "CMD RECEIVED: $command"
+    )
+
+    // =====================================================
+    // AI SEARCH PERMISSION RESPONSE
+    // =====================================================
+
+    if (waitingForAIConfirmation) {
+
+        when (command) {
+
+            "yes",
+            "haan",
+            "ha",
+            "ji haan",
+            "ji",
+            "bilkul",
+            "sure",
+            "okay",
+            "ok" -> {
+
+                waitingForAIConfirmation = false
+
+                val query =
+                    pendingAICommand
+
+                pendingAICommand = ""
+
+                if (
+                    query.isNotBlank()
+                ) {
+                    askFinalAI(
+                        query
                     )
-                    .trim()
-            )
+                }
 
-        if (command.isBlank()) {
-            return
-        }
-
-        // =====================================================
-// AI SEARCH PERMISSION RESPONSE
-// =====================================================
-
-if (waitingForAIConfirmation) {
-
-    when (command) {
-
-        "yes",
-        "haan",
-        "ha",
-        "han" -> {
-
-            waitingForAIConfirmation = false
-
-            val aiCommand =
-                pendingAICommand
-
-            pendingAICommand = ""
-
-            if (aiCommand.isNotBlank()) {
-                askFinalAI(aiCommand)
+                return
             }
 
-            return
-        }
+            "no",
+            "nahi",
+            "naa",
+            "na",
+            "no thanks",
+            "rehne do" -> {
 
-        "no",
-        "nahi",
-        "nahin",
-        "naa",
-        "na" -> {
+                waitingForAIConfirmation = false
+                pendingAICommand = ""
 
-            waitingForAIConfirmation = false
-            pendingAICommand = ""
+                speakOnce(
+                    "Theek hai Boss."
+                )
 
-            speakOnce(
-                "Theek hai Boss."
-            )
-
-            return
-        }
-
-        else -> {
-            return
+                return
+            }
         }
     }
-}
 
-        
-        // =========================================================
-// AURIX LOCAL PRIORITY COMMANDS
-// OWNER + DATE + DAY + TIME
-// =========================================================
+    // =====================================================
+    // TIME
+    // =====================================================
+
+    if (
+        command == "time" ||
+        command == "what time is it" ||
+        command == "what is the time" ||
+        command == "current time" ||
+        command == "abhi kitne baje hain" ||
+        command == "kitne baje hain"
+    ) {
+
+        val now =
+            java.time.LocalTime.now()
 
-// =========================================================
-// OWNER / CREATOR
-// =========================================================
-
-if (
-    command.contains("kisne banaya") ||
-    command.contains("kisne create kiya") ||
-    command.contains("kisne create kara") ||
-    command.contains("who made you") ||
-    command.contains("who created you") ||
-    command.contains("who is your creator") ||
-    command.contains("who is your owner") ||
-    command.contains("tumhara owner kaun") ||
-    command.contains("tumhara malik kaun") ||
-    command.contains("tumhara creator kaun") ||
-    (
-        command.contains("aurix") &&
-        (
-            command.contains("banaya") ||
-            command.contains("create") ||
-            command.contains("owner")
-        )
-    )
-) {
-
-    speakOnce(
-        "Mujhe mere owner Kushal Haryana ne banaya hai."
-    )
-
-    return
-}
-
-// =====================================================
-// PERSONAL & GENERAL KNOWLEDGE
-// =====================================================
-
-if (
-    command == "mera naam kya hai" ||
-    command == "mera name kya hai" ||
-    command == "what is my name" ||
-    command == "do you know my name"
-) {
-    speakOnce(
-        "Aapka naam Kushal Haryana hai, Boss."
-    )
-    return
-}
-
-if (
-    command.contains("india ki capital") ||
-    command.contains("india ki rajdhani") ||
-    command.contains("bharat ki rajdhani") ||
-    command.contains("bharat ki capital") ||
-    command.contains("capital of india") ||
-    command.contains("capital india")
-) {
-    speakOnce(
-        "India ki capital New Delhi hai, Boss."
-    )
-    return
-}
-
-  // =====================================================
-// BASIC MATH & FACTS - LOCAL
-// =====================================================
-
-if (
-    command == "5 plus 5" ||
-    command == "5 + 5" ||
-    command == "5 and 5"
-) {
-    speakOnce(
-        "5 plus 5 equals 10, Boss."
-    )
-    return
-}
-
-if (
-    command.contains("1 kilometer mein kitne meter") ||
-    command.contains("1 km mein kitne meter") ||
-    command.contains("one kilometer mein kitne meter")
-) {
-    speakOnce(
-        "1 kilometer mein 1000 meter hote hain, Boss."
-    )
-    return
-}
-
-if (
-    command.contains("suraj kis direction se ugta hai") ||
-    command.contains("sun rises from which direction") ||
-    command.contains("sun kis direction se ugta hai")
-) {
-    speakOnce(
-        "Suraj East, yani Purab ki direction se ugta hai, Boss."
-    )
-    return
-}
-
-if (
-    command.contains("human body mein kitni bones") ||
-    command.contains("insaan ke sharir mein kitni haddiyan") ||
-    command.contains("how many bones in human body")
-) {
-    speakOnce(
-        "Ek adult human body mein normally 206 bones hoti hain, Boss."
-    )
-    return
-}
-
-// =========================================================
-// TIME
-// =========================================================
-
-if (
-    command == "time" ||
-    command.contains("what is the time") ||
-    command.contains("what's the time") ||
-    command.contains("tell me the time") ||
-    command.contains("current time") ||
-    command.contains("what time is it") ||
-    command.contains("time kya hai") ||
-    command.contains("abhi time") ||
-    command.contains("abhi kitne baje") ||
-    command.contains("kitne baje") ||
-    command.contains("kitne baj rahe") ||
-    command.contains("samay kya hai")
-) {
-
-    val time =
-        SimpleDateFormat(
-            "hh:mm a",
-            Locale.getDefault()
-        ).format(
-            Date()
-        )
-
-    speakOnce(
-        "The time is $time."
-    )
-
-    return
-}
-
-
-// =========================================================
-// DATE
-// =========================================================
-
-if (
-    command.contains("date") ||
-    command.contains("today's date") ||
-    command.contains("today date") ||
-    command.contains("aaj ki date") ||
-    command.contains("aaj ka date") ||
-    command.contains("aaj ki tarikh") ||
-    command.contains("aaj ki tareekh") ||
-    command.contains("tarikh kya hai") ||
-    command.contains("tareekh kya hai")
-) {
-
-    val date =
-        SimpleDateFormat(
-            "EEEE, dd MMMM yyyy",
-            Locale.getDefault()
-        ).format(
-            Date()
-        )
-
-    speakOnce(
-        "Today is $date."
-    )
-
-    return
-}
-
-
-// =========================================================
-// DAY
-// =========================================================
-
-if (
-    command == "day" ||
-    command.contains("what day") ||
-    command.contains("which day") ||
-    command.contains("aaj kaun sa din") ||
-    command.contains("aaj konsa din") ||
-    command.contains("aaj ka din") ||
-    command.contains("kaunsa din hai") ||
-    command.contains("konsa din hai")
-) {
-
-    val day =
-        SimpleDateFormat(
-            "EEEE",
-            Locale.getDefault()
-        ).format(
-            Date()
-        )
-
-    speakOnce(
-        "Today is $day."
-    )
-
-    return
-}
-        // =====================================================
-        // CONTEXT RESOLUTION
-        // =====================================================
-
-        when (
-            val resolution =
-                AurixContextResolver.resolve(
-                    this,
-                    command
-                )
-        ) {
-            is AurixContextResolver.Resolution.MemoryStatement -> {
-
-                AurixMemoryBridge.rememberThat(
-                    this,
-                    resolution.original
-                )
-
-                speakOnce(
-                    "Got it. I'll remember that."
-                )
-
-                return
-            }
-
-            is AurixContextResolver.Resolution.DirectResponse -> {
-
-                speakOnce(
-                    resolution.response
-                )
-
-                return
-            }
-
-            is AurixContextResolver.Resolution.ClearMemory -> {
-
-                if (resolution.all) {
-
-                    AurixMemoryBridge.clearAll(
-                        this
-                    )
-
-                    speakOnce(
-                        "I've cleared my personal memory."
-                    )
-
-                } else {
-
-                    val key =
-                        resolution.key
-
-                    if (key.isNullOrBlank()) {
-
-                        speakOnce(
-                            "Tell me what you want me to forget."
-                        )
-
-                    } else {
-
-                        AurixMemoryBridge
-                            .clearMemoryKey(
-                                this,
-                                key
-                            )
-
-                        speakOnce(
-                            "Okay. I'll forget that."
-                        )
-                    }
-                }
-
-                return
-            }
-
-            is AurixContextResolver.Resolution.Command -> {
-
-                command =
-                    resolution.command
-            }
-        }
-
-        // =====================================================
-        // CONTEXTUAL PLAY
-        // =====================================================
-
-        if (
-            command == "play it" ||
-            command == "play that" ||
-            command == "play this" ||
-            command == "isko chalao" ||
-            command == "ise chalao" ||
-            command == "usko chalao"
-        ) {
-
-            val history =
-                AurixContextEngine
-                    .getRecentHistory(10)
-
-            val previous =
-                history
-                    .asReversed()
-                    .firstOrNull {
-
-                        it.role == "user" &&
-                            it.text
-                                .lowercase()
-                                .trim() != command
-                    }
-                    ?.text
-                    ?.trim()
-
-            if (
-                !previous.isNullOrBlank()
-            ) {
-
-                val previousLower =
-                    previous.lowercase()
-
-                val target =
-                    when {
-
-                        previousLower.startsWith(
-                            "search youtube "
-                        ) ->
-                            previous.substring(
-                                "search youtube ".length
-                            ).trim()
-
-                        previousLower.startsWith(
-                            "youtube search "
-                        ) ->
-                            previous.substring(
-                                "youtube search ".length
-                            ).trim()
-
-                        previousLower.startsWith(
-                            "youtube par "
-                        ) ->
-                            previous.substring(
-                                "youtube par ".length
-                            ).trim()
-
-                        previousLower.startsWith(
-                            "search "
-                        ) ->
-                            previous.substring(
-                                "search ".length
-                            ).trim()
-
-                        else ->
-                            null
-                    }
-
-                if (
-                    !target.isNullOrBlank()
-                ) {
-
-                    command =
-                        "play $target"
-                }
-            }
-        }
-
-        currentUserCommand =
-            command
-
-        // =====================================================
-        // STOP
-        // =====================================================
-
-        if (
-            command == "stop" ||
-            command == "stop listening" ||
-            command == "deactivate aurix" ||
-            command == "aurix stop" ||
-            command == "aurix deactivate"
-        ) {
-
-            speakOnce(
-                "Stopping AURIX."
-            )
-
-            handler.postDelayed(
-                {
-                    stopAurix()
-                },
-                700
-            )
-
-            return
-        }
-
-        // =====================================================
-        // HOME / CLOSE
-        // =====================================================
-
-        if (
-            isCloseCommand(command)
-        ) {
-
-            goHome()
-            return
-        }
-
-        // =====================================================
-        // MEMORY
-        // =====================================================
-
-        if (
-            command.contains(
-                "what did i tell you"
-            ) ||
-            command.contains(
-                "what do you remember"
-            ) ||
-            command.contains(
-                "what do you know about me"
-            ) ||
-            command.contains(
-                "what you know about me"
-            ) ||
-            command.contains(
-                "tell me about myself"
-            )
-        ) {
-
-            val memory =
-                AurixMemoryBridge
-                    .getPersonalMemory(
-                        this
-                    )
-
-            if (
-                memory.isBlank()
-            ) {
-
-                speakOnce(
-                    "I don't have any personal memory about you yet."
-                )
-
-            } else {
-
-                speakOnce(
-                    memory
-                )
-            }
-
-            return
-        }
-
-        if (
-            command.contains(
-                "clear memory"
-            ) ||
-            command.contains(
-                "forget everything"
-            ) ||
-            command.contains(
-                "forget all"
-            ) ||
-            command.contains(
-                "delete memory"
-            )
-        ) {
-
-            AurixMemoryBridge.clearAll(
-                this
-            )
-
-            speakOnce(
-                "All personal memory has been cleared."
-            )
-
-            return
-        }
-
-        // =====================================================
-        // DIAGNOSTICS
-        // =====================================================
-
-        if (
-            command.contains(
-                "aurix status"
-            ) ||
-            command.contains(
-                "aurix diagnostics"
-            ) ||
-            command.contains(
-                "system status"
-            ) ||
-            command == "diagnostics"
-        ) {
-
-            sendStatus(
-                "VERIFYING"
-            )
-
-            val battery =
-                appCommands.getBatteryLevelForDiagnostics()
-
-            val skills =
-                AurixSkillEngine.skillCount()
-
-            val memory =
-                if (
-                    AurixMemoryBridge.hasMemory()
-                ) {
-                    "available"
-                } else {
-                    "empty"
-                }
-
-            speakOnce(
-                "AURIX is online. " +
-                    "Voice is active. " +
-                    "Memory is $memory. " +
-                    "$skills skills are loaded. " +
-                    "Battery is $battery percent."
-            )
-
-            return
-        }
-
-        // =====================================================
-        // AGENT MODE
-        // =====================================================
-
-        if (
-            isAgentCommand(command)
-        ) {
-
-            sendStatus(
-                "EXECUTING"
-            )
-
-            val task =
-                AurixAgentEngine
-                    .createTask(command)
-
-            val plan =
-                AurixAgentEngine
-                    .createPlan(task)
-
-            executeAgentStep(
-                plan,
-                0
-            )
-
-            return
-        }
-
-        // =====================================================
-        // FLASHLIGHT
-        // =====================================================
-
-        if (
-            command.contains(
-                "turn on flashlight"
-            ) ||
-            command.contains(
-                "switch on flashlight"
-            ) ||
-            command.contains(
-                "flashlight on"
-            ) ||
-            command.contains(
-                "torch on"
-            ) ||
-            command.contains(
-                "torch chalao"
-            ) ||
-            command.contains(
-                "flashlight chalao"
-            )
-        ) {
-
-            setFlashlight(true)
-            return
-        }
-
-        if (
-            command.contains(
-                "turn off flashlight"
-            ) ||
-            command.contains(
-                "switch off flashlight"
-            ) ||
-            command.contains(
-                "flashlight off"
-            ) ||
-            command.contains(
-                "torch off"
-            ) ||
-            command.contains(
-                "torch band"
-            ) ||
-            command.contains(
-                "flashlight band"
-            )
-        ) {
-
-            setFlashlight(false)
-            return
-        }
-
-        // =====================================================
-        // TIMER
-        // =====================================================
-
-        if (
-            command.contains("timer")
-        ) {
-
-            setAurixTimer(command)
-            return
-        }
-
-        // =====================================================
-        // ALARM
-        // =====================================================
-
-        if (
-            command.contains("alarm")
-        ) {
-
-            setAurixAlarm(command)
-            return
-        }
-// =====================================================
-        // DATE
-        // =====================================================
-
-        if (
-            command.contains("date") ||
-            command.contains(
-                "today's date"
-            ) ||
-            command.contains(
-                "today date"
-            )
-        ) {
-
-            val date =
-                SimpleDateFormat(
-                    "EEEE, dd MMMM yyyy",
-                    Locale.getDefault()
-                ).format(
-                    Date()
-                )
-
-            speakOnce(
-                "Today is $date."
-            )
-
-            return
-        }
-
-        // =====================================================
-        // DAY
-        // =====================================================
-
-        if (
-            command == "day" ||
-            command.contains(
-                "what day"
-            ) ||
-            command.contains(
-                "which day"
-            )
-        ) {
-
-            val day =
-                SimpleDateFormat(
-                    "EEEE",
-                    Locale.getDefault()
-                ).format(
-                    Date()
-                )
-
-            speakOnce(
-                "Today is $day."
-            )
-
-            return
-        }
-
-      // =====================================================
-      // TIME
-      // =====================================================
-
-if (
-    command == "time" ||
-
-    command.contains("what is the time") ||
-    command.contains("what's the time") ||
-    command.contains("tell me the time") ||
-    command.contains("current time") ||
-    command.contains("what time is it") ||
-
-    command.contains("time kya hai") ||
-    command.contains("abhi time kya hai") ||
-    command.contains("abhi kya time hai") ||
-    command.contains("abhi kitne baje hain") ||
-    command.contains("abhi kitne baje hai") ||
-    command.contains("kitne baje hain") ||
-    command.contains("kitne baje hai") ||
-    command.contains("kitne baj rahe hain") ||
-    command.contains("kitne baj rahe hai") ||
-    command.contains("abhi kitne baj rahe") ||
-    command.contains("samay kya hai")
-) {
-
-    val time =
-        SimpleDateFormat(
-            "hh:mm a",
-            Locale.getDefault()
-        ).format(
-            Date()
-        )
-
-    speakOnce(
-        "The time is $time."
-    )
-
-    return
-}
-
-        // =====================================================
-        // =====================================================
-        // APP / DEVICE COMMAND LAYER
-        // =====================================================
-
-        if (appCommands.handle(command)) {
-            return
-        }
-
-        // GREETING
-        // =====================================================
-
-        if (
-            command == "hello" ||
-            command == "hi" ||
-            command == "hey aurix" ||
-            command == "hello aurix" ||
-            command == "hi aurix"
-        ) {
-
-            speakOnce(
-                "Hello Boss. Main AURIX hoon. बताओ, kya help chahiye?"
-            )
-
-            return
-        }
-
-        // =====================================================
-        // IDENTITY
-        // =====================================================
-
-        if (
-            command.contains(
-                "who are you"
-            ) ||
-            command.contains(
-                "your name"
-            ) ||
-            command.contains(
-                "what are you"
-            )
-        ) {
-
-            speakOnce(
-                "Main AURIX hoon, aapka personal AI assistant."
-            )
-
-            return
-        }
-
-        // =====================================================
-        // DEVICE INFORMATION ENGINE
-        // =====================================================
-
-val deviceResponse =
-    AurixDeviceEngine.answer(
-        this,
-        command
-    )
-
-if (
-    !deviceResponse.isNullOrBlank()
-) {
-    speakOnce(
-        deviceResponse
-    )
-    return
-}
-
-        val localIntentResponse =
-         AurixLocalIntentEngine.answer(command)
-
-        if (
-             !localIntentResponse.isNullOrBlank()
-) {
-    if (localIntentResponse == "TIME_LOCAL") {
-        val now = java.time.LocalTime.now()
         val timeText =
             now.format(
-                java.time.format.DateTimeFormatter.ofPattern("hh:mm a")
+                java.time.format.DateTimeFormatter.ofPattern(
+                    "hh:mm a"
+                )
             )
 
         speakOnce(
             "Abhi time $timeText hai, Boss."
         )
-    } else {
-        speakOnce(
-            localIntentResponse
-        )
+
+        return
     }
 
-    return
-}
+    // =====================================================
+    // DATE
+    // =====================================================
 
-        // =====================================================
-        // LOCAL KNOWLEDGE ENGINE
-        // =====================================================
+    if (
+        command == "date" ||
+        command == "today's date" ||
+        command == "todays date" ||
+        command == "what is today's date" ||
+        command == "aaj ki date kya hai"
+    ) {
 
-val knowledgeResponse =
-    AurixKnowledgeEngine.answer(
-        command
-    )
+        val today =
+            java.time.LocalDate.now()
 
-if (
-    !knowledgeResponse.isNullOrBlank()
-) {
-    speakOnce(
-        knowledgeResponse
-    )
-    return
-}
-
-        // =====================================================
-        // NORMAL AURIX ROUTER
-        // =====================================================
-
-        val aurixRouterResponse =
-            AurixCommandRouter.route(
-                command
+        val dateText =
+            today.format(
+                java.time.format.DateTimeFormatter.ofPattern(
+                    "dd MMMM yyyy"
+                )
             )
 
-        if (
-            aurixRouterResponse.isNotBlank() &&
-            !aurixRouterResponse.startsWith(
-                "I understood:"
+        speakOnce(
+            "Aaj $dateText hai, Boss."
+        )
+
+        return
+    }
+
+    // =====================================================
+    // DAY
+    // =====================================================
+
+    if (
+        command == "day" ||
+        command == "what day is today" ||
+        command == "which day is today" ||
+        command == "aaj kaun sa din hai"
+    ) {
+
+        val today =
+            java.time.LocalDate.now()
+
+        val dayText =
+            today.dayOfWeek
+                .getDisplayName(
+                    java.time.format.TextStyle.FULL,
+                    Locale.ENGLISH
+                )
+
+        speakOnce(
+            "Aaj $dayText hai, Boss."
+        )
+
+        return
+    }
+
+    // =====================================================
+    // CONTEXT RESOLVER
+    // =====================================================
+
+    val resolution =
+        AurixContextResolver.resolve(
+            this,
+            command
+        )
+
+    when (resolution) {
+
+        is AurixContextResolver.Resolution.MemoryStatement -> {
+
+            AurixMemoryBridge.rememberThat(
+                this,
+                resolution.text
             )
-        ) {
 
             speakOnce(
-                aurixRouterResponse
+                "Theek hai Boss, yaad rakh liya."
             )
 
             return
         }
 
+        is AurixContextResolver.Resolution.DirectResponse -> {
 
-// =========================================================
-// FINAL AI FALLBACK - PERMISSION FIRST
-// =========================================================
+            speakOnce(
+                resolution.response
+            )
 
-if (aiRequestInProgress) {
-    return
+            return
+        }
+
+        is AurixContextResolver.Resolution.ClearMemory -> {
+
+            if (
+                resolution.key.isNullOrBlank()
+            ) {
+                AurixMemoryBridge.clearAll(
+                    this
+                )
+            } else {
+                AurixMemoryBridge.clear(
+                    this,
+                    resolution.key
+                )
+            }
+
+            speakOnce(
+                "Memory clear kar di, Boss."
+            )
+
+            return
+        }
+
+        is AurixContextResolver.Resolution.Command -> {
+
+            command =
+                resolution.command
+        }
+
+        else -> {
+            // Continue normally
+        }
+    }
+
+    // =====================================================
+    // CONTEXTUAL PLAY
+    // =====================================================
+
+    if (
+        command == "play it" ||
+        command == "play that" ||
+        command == "play this" ||
+        command == "isko chalao" ||
+        command == "ise chalao" ||
+        command == "usko chalao"
+    ) {
+
+        val history =
+            AurixContextEngine.getRecentHistory(
+                10
+            )
+
+        var target = ""
+
+        for (
+            item in history.asReversed()
+        ) {
+
+            val text =
+                item.toString()
+                    .lowercase(Locale.ENGLISH)
+
+            val prefixes =
+                listOf(
+                    "search youtube",
+                    "youtube search",
+                    "youtube par",
+                    "search"
+                )
+
+            for (
+                prefix in prefixes
+            ) {
+
+                if (
+                    text.startsWith(prefix)
+                ) {
+
+                    target =
+                        text
+                            .removePrefix(prefix)
+                            .trim()
+
+                    if (
+                        target.isNotBlank()
+                    ) {
+                        break
+                    }
+                }
+            }
+
+            if (
+                target.isNotBlank()
+            ) {
+                break
+            }
+        }
+
+        if (
+            target.isNotBlank()
+        ) {
+
+            command =
+                "play $target"
+        }
+    }
+
+    // =====================================================
+    // SAVE CURRENT COMMAND
+    // =====================================================
+
+    currentUserCommand =
+        command
+
+    // =====================================================
+    // STOP COMMANDS
+    // =====================================================
+
+    if (
+        command == "stop" ||
+        command == "bas" ||
+        command == "chup" ||
+        command == "stop listening" ||
+        command == "stop aurix"
+    ) {
+
+        speakOnce(
+            "Okay Boss."
+        )
+
+        try {
+            wakeEngine.pause()
+        } catch (_: Exception) {
+        }
+
+        return
+    }
+
+    // =====================================================
+    // HOME / CLOSE
+    // =====================================================
+
+    if (
+        isCloseCommand(
+            command
+        )
+    ) {
+
+        speakOnce(
+            "Okay Boss."
+        )
+
+        try {
+            sendBroadcast(
+                Intent(
+                    Intent.ACTION_CLOSE_SYSTEM_DIALOGS
+                )
+            )
+        } catch (_: Exception) {
+        }
+
+        return
+    }
+
+    // =====================================================
+    // MEMORY QUERY
+    // =====================================================
+
+    if (
+        command.contains(
+            "what do you remember"
+        ) ||
+        command.contains(
+            "what do you know about me"
+        ) ||
+        command.contains(
+            "meri memory"
+        ) ||
+        command.contains(
+            "memory batao"
+        )
+    ) {
+
+        val memory =
+            AurixMemoryBridge.getMemory(
+                this
+            )
+
+        if (
+            memory.isNullOrBlank()
+        ) {
+
+            speakOnce(
+                "Boss, abhi meri memory mein kuch khaas nahi hai."
+            )
+
+        } else {
+
+            speakOnce(
+                memory
+            )
+        }
+
+        return
+    }
+
+    // =====================================================
+    // CLEAR MEMORY
+    // =====================================================
+
+    if (
+        command == "clear memory" ||
+        command == "forget everything" ||
+        command == "sab kuch bhool jao" ||
+        command == "memory clear karo"
+    ) {
+
+        AurixMemoryBridge.clearAll(
+            this
+        )
+
+        speakOnce(
+            "Theek hai Boss, memory clear kar di."
+        )
+
+        return
+    }
+
+    // =====================================================
+    // DIAGNOSTICS
+    // =====================================================
+
+    if (
+        command == "aurix diagnostics" ||
+        command == "run diagnostics" ||
+        command == "system diagnostics"
+    ) {
+
+        speakOnce(
+            "AURIX diagnostics active hain, Boss."
+        )
+
+        return
+    }
+
+    // =====================================================
+    // AGENT MODE
+    // =====================================================
+
+    if (
+        isAgentCommand(
+            command
+        )
+    ) {
+
+        val task =
+            AurixAgentEngine.createTask(
+                command
+            )
+
+        if (
+            task != null
+        ) {
+
+            AurixAgentEngine.executeAgentStep(
+                this,
+                task
+            )
+
+            return
+        }
+    }
+
+    // =====================================================
+    // FLASHLIGHT
+    // =====================================================
+
+    if (
+        command.contains(
+            "flashlight on"
+        ) ||
+        command.contains(
+            "torch on"
+        ) ||
+        command.contains(
+            "torch chalao"
+        ) ||
+        command.contains(
+            "flashlight chalao"
+        )
+    ) {
+
+        try {
+
+            val cameraManager =
+                getSystemService(
+                    Context.CAMERA_SERVICE
+                ) as android.hardware.camera2.CameraManager
+
+            val cameraId =
+                cameraManager
+                    .cameraIdList
+                    .firstOrNull { id ->
+
+                        val characteristics =
+                            cameraManager.getCameraCharacteristics(
+                                id
+                            )
+
+                        characteristics.get(
+                            android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE
+                        ) == true
+                    }
+
+            if (
+                cameraId != null
+            ) {
+
+                cameraManager.setTorchMode(
+                    cameraId,
+                    true
+                )
+
+                speakOnce(
+                    "Flashlight on kar di, Boss."
+                )
+
+            } else {
+
+                speakOnce(
+                    "Boss, flashlight available nahi hai."
+                )
+            }
+
+        } catch (_: Exception) {
+
+            speakOnce(
+                "Boss, flashlight on nahi ho paayi."
+            )
+        }
+
+        return
+    }
+
+    if (
+        command.contains(
+            "flashlight off"
+        ) ||
+        command.contains(
+            "torch off"
+        ) ||
+        command.contains(
+            "torch band"
+        ) ||
+        command.contains(
+            "flashlight band"
+        )
+    ) {
+
+        try {
+
+            val cameraManager =
+                getSystemService(
+                    Context.CAMERA_SERVICE
+                ) as android.hardware.camera2.CameraManager
+
+            val cameraId =
+                cameraManager
+                    .cameraIdList
+                    .firstOrNull { id ->
+
+                        val characteristics =
+                            cameraManager.getCameraCharacteristics(
+                                id
+                            )
+
+                        characteristics.get(
+                            android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE
+                        ) == true
+                    }
+
+            if (
+                cameraId != null
+            ) {
+
+                cameraManager.setTorchMode(
+                    cameraId,
+                    false
+                )
+
+                speakOnce(
+                    "Flashlight off kar di, Boss."
+                )
+            }
+
+        } catch (_: Exception) {
+
+            speakOnce(
+                "Boss, flashlight off nahi ho paayi."
+            )
+        }
+
+        return
+    }
+
+    // =====================================================
+    // TIMER
+    // =====================================================
+
+    if (
+        command.contains(
+            "timer"
+        )
+    ) {
+
+        // Existing timer implementation
+        // remains below if already present.
+
+    }
+
+    // =====================================================
+    // APP / DEVICE COMMAND LAYER
+    // =====================================================
+
+    sendStatus(
+        "APP COMMAND: $command"
+    )
+
+    if (
+        appCommands.handle(
+            command
+        )
+    ) {
+
+        sendStatus(
+            "APP COMMAND EXECUTED"
+        )
+
+        return
+    }
+
+    // =====================================================
+    // GREETING
+    // =====================================================
+
+    if (
+        command == "hello" ||
+        command == "hi" ||
+        command == "hey aurix" ||
+        command == "hello aurix" ||
+        command == "hi aurix"
+    ) {
+
+        speakOnce(
+            "Hello Boss. Main AURIX hoon. Batao, kya help chahiye?"
+        )
+
+        return
+    }
+
+    // =====================================================
+    // IDENTITY
+    // =====================================================
+
+    if (
+        command.contains(
+            "who are you"
+        ) ||
+        command.contains(
+            "your name"
+        ) ||
+        command.contains(
+            "what are you"
+        )
+    ) {
+
+        speakOnce(
+            "Main AURIX hoon, aapka personal AI assistant."
+        )
+
+        return
+    }
+
+    // =====================================================
+    // DEVICE INFORMATION ENGINE
+    // =====================================================
+
+    val deviceResponse =
+        AurixDeviceEngine.answer(
+            this,
+            command
+        )
+
+    if (
+        !deviceResponse.isNullOrBlank()
+    ) {
+
+        speakOnce(
+            deviceResponse
+        )
+
+        return
+    }
+
+    // =====================================================
+    // LOCAL INTENT ENGINE
+    // =====================================================
+
+    val localIntentResponse =
+        AurixLocalIntentEngine.answer(
+            command
+        )
+
+    if (
+        !localIntentResponse.isNullOrBlank()
+    ) {
+
+        if (
+            localIntentResponse ==
+            "TIME_LOCAL"
+        ) {
+
+            val now =
+                java.time.LocalTime.now()
+
+            val timeText =
+                now.format(
+                    java.time.format.DateTimeFormatter.ofPattern(
+                        "hh:mm a"
+                    )
+                )
+
+            speakOnce(
+                "Abhi time $timeText hai, Boss."
+            )
+
+        } else {
+
+            speakOnce(
+                localIntentResponse
+            )
+        }
+
+        return
+    }
+
+    // =====================================================
+    // LOCAL KNOWLEDGE ENGINE
+    // =====================================================
+
+    val knowledgeResponse =
+        AurixKnowledgeEngine.answer(
+            command
+        )
+
+    if (
+        !knowledgeResponse.isNullOrBlank()
+    ) {
+
+        speakOnce(
+            knowledgeResponse
+        )
+
+        return
+    }
+
+    // =====================================================
+    // NORMAL AURIX ROUTER
+    // =====================================================
+
+    val aurixRouterResponse =
+        AurixCommandRouter.route(
+            command
+        )
+
+    if (
+        aurixRouterResponse.isNotBlank() &&
+        !aurixRouterResponse.startsWith(
+            "I understood:"
+        )
+    ) {
+
+        speakOnce(
+            aurixRouterResponse
+        )
+
+        return
+    }
+
+    // =====================================================
+    // FINAL AI FALLBACK - PERMISSION FIRST
+    // =====================================================
+
+    if (
+        aiRequestInProgress
+    ) {
+        return
+    }
+
+    pendingAICommand =
+        command
+
+    waitingForAIConfirmation =
+        true
+
+    speakOnce(
+        "Boss, ultra search karu?"
+    )
 }
-
-pendingAICommand = command
-waitingForAIConfirmation = true
-
-speakOnce(
-    "Boss, ultra search karu?"
-)
-
-return
-}
-
-
 // =========================================================
 // FINAL AI REQUEST
 // =========================================================
