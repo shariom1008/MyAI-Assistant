@@ -34,8 +34,6 @@ object AurixDeepKnowledge {
   for(e in entries){var score=0;for(k0 in e.keywords){val k=normalize(k0);if(k.isBlank())continue;if(q==k)score+=100 else if(q.contains(k))score+=60 else {val m=k.split(" ").count{w->w.length>=3&&q.contains(w)};score+=m*12}};val t=normalize(e.topic);if(t.isNotBlank()&&q.contains(t))score+=30;if(score>bestScore){bestScore=score;best=e}}
   return if(bestScore>=20)best else null
  }
-fun all(): List<AurixDeepKnowledgeItem> {
-    return entries
-}
+ fun all():List<AurixDeepKnowledgeItem>=entries
  private fun normalize(v:String)=v.lowercase(Locale.ENGLISH).replace(Regex("[^a-z0-9+.-]")," ").replace(Regex("\\s+")," ").trim()
 }
