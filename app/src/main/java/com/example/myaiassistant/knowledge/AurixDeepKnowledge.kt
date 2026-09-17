@@ -5,7 +5,7 @@ data class AurixDeepKnowledgeItem(
     val topic: String,
     val keywords: List<String>,
     val answer: String,
-    val confidence: Int = 95,
+    val confidence: ConfidenceLevel = ConfidenceLevel.HIGH,
     val currentInformation: Boolean = false
 )
 
