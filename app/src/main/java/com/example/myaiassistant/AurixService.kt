@@ -1489,9 +1489,9 @@ if (
 
     return
 }
-
+        
 // =====================================================
-// AURIX KNOWLEDGE ROUTER
+// AURIX KNOWLEDGE ROUTER + LANGUAGE LAYER
 // =====================================================
 
 val knowledgeRouter =
@@ -1505,12 +1505,23 @@ val knowledgeResult =
     )
 
 if (
-    !knowledgeResult.answer.isNullOrBlank() &&
+    knowledgeResult.answer.isNotBlank() &&
     !knowledgeResult.needsResearch
 ) {
 
+    val language =
+        AurixLanguageLayer.preferredLanguage(
+            command
+        )
+
+    val formattedAnswer =
+        AurixLanguageLayer.format(
+            command,
+            knowledgeResult.answer
+        )
+
     speakOnce(
-        knowledgeResult.answer
+        formattedAnswer
     )
 
     return
