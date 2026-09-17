@@ -32,6 +32,7 @@ import java.util.Locale
 import java.util.regex.Pattern
 import java.net.HttpURLConnection
 import java.net.URL
+import com.example.myaiassistant.knowledge.AurixKnowledgeRouter
 
 class AurixService :
     Service(),
@@ -1489,24 +1490,31 @@ if (
     return
 }
 
-        // =====================================================
-        // LOCAL KNOWLEDGE ENGINE
-        // =====================================================
+// =====================================================
+// AURIX KNOWLEDGE ROUTER
+// =====================================================
 
-val knowledgeResponse =
-    AurixKnowledgeEngine.answer(
+val knowledgeRouter =
+    AurixKnowledgeRouter(
+        this
+    )
+
+val knowledgeResult =
+    knowledgeRouter.answer(
         command
     )
 
 if (
-    !knowledgeResponse.isNullOrBlank()
+    !knowledgeResult.answer.isNullOrBlank() &&
+    !knowledgeResult.needsResearch
 ) {
+
     speakOnce(
-        knowledgeResponse
+        knowledgeResult.answer
     )
+
     return
 }
-
         // =====================================================
         // NORMAL AURIX ROUTER
         // =====================================================
