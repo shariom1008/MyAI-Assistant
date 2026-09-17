@@ -256,15 +256,24 @@ class AurixWakeEngine(
         }
 
         override fun onError(exception: Exception?) {
-            if (!running) return
-            callbacks.onWakeError(-22)
-            stopSpeech()
-            if (mode == Mode.COMMAND) {
-                finishCommandAndReturnToWake()
-            } else {
-                restartWakeListening(900L)
-            }
-        }
+           if (!running) return
+
+        android.util.Log.e(
+        "AURIX_VOSK",
+        "Vosk recognition error",
+        exception
+    )
+
+    callbacks.onWakeError(-22)
+
+    stopSpeech()
+
+    if (mode == Mode.COMMAND) {
+        finishCommandAndReturnToWake()
+    } else {
+        restartWakeListening(900L)
+    }
+}
 
         override fun onTimeout() {
             if (!running) return
