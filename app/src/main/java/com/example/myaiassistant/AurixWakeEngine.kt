@@ -177,30 +177,56 @@ class AurixWakeEngine(
     }
 
     private fun startWakeListening() {
-        if (!running || model == null) return
-        if (musicIsActive()) {
-            restartWakeListening(2500L)
-            return
-        }
+
+    if (!running || model == null) return
+
+    stopSpeech()
+
+    try {
+
+        recognizer =
+            Recognizer(
+                model,
+                SAMPLE_RATE
+            )
+
+        speechService =
+            SpeechService(
+                recognizer,
+                SAMPLE_RATE
+            )
+
+        mode =
+            Mode.WAKE
+
+        wakeLatched =
+            false
+
+        commandDispatched =
+            false
+
+        callbacks.onListeningChanged(
+            true,
+            Mode.WAKE
+        )
+
+        speechService?.startListening(
+            voskListener
+        )
+
+    } catch (_: Exception) {
 
         stopSpeech()
 
-        try {
-            recognizer = Recognizer(model, SAMPLE_RATE)
-            speechService = SpeechService(recognizer, SAMPLE_RATE)
-            mode = Mode.WAKE
-            wakeLatched = false
-            commandDispatched = false
+        callbacks.onWakeError(
+            -21
+        )
 
-            callbacks.onListeningChanged(true, Mode.WAKE)
-            speechService?.startListening(voskListener)
-        } catch (_: Exception) {
-            stopSpeech()
-            callbacks.onWakeError(-21)
-            restartWakeListening(1200L)
-        }
+        restartWakeListening(
+            1200L
+        )
     }
-
+    }
     private val voskListener = object : RecognitionListener {
         override fun onPartialResult(hypothesis: String?) {
             if (!running) return
