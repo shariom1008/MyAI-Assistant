@@ -7,13 +7,18 @@ class AurixKnowledgeRouter(
     context: Context
 ) {
 
-    private val cache = AurixKnowledgeCache(context)
+    private val cache =
+        AurixKnowledgeCache(context)
 
-    fun answer(question: String): KnowledgeAnswer {
+    fun answer(
+        question: String
+    ): KnowledgeAnswer {
 
-        val cleanQuestion = question.trim()
+        val cleanQuestion =
+            question.trim()
 
         if (cleanQuestion.isBlank()) {
+
             return KnowledgeAnswer(
                 question = question,
                 answer = "",
@@ -29,57 +34,163 @@ class AurixKnowledgeRouter(
 
         val localAnswer =
             try {
-                AurixKnowledgeEngine.answer(cleanQuestion)
-            } catch (_: Exception) {
+
+                AurixKnowledgeEngine.answer(
+                    cleanQuestion
+                )
+
+            } catch (
+                _: Exception
+            ) {
+
                 null
             }
 
-        if (!localAnswer.isNullOrBlank()) {
+        if (
+            !localAnswer.isNullOrBlank()
+        ) {
 
             return KnowledgeAnswer(
-                question = cleanQuestion,
-                answer = localAnswer,
-                knowledgeType = KnowledgeType.LOCAL,
-                confidence = ConfidenceLevel.HIGH,
-                needsResearch = false,
-                isCurrentInformation = false
+
+                question =
+                    cleanQuestion,
+
+                answer =
+                    localAnswer,
+
+                knowledgeType =
+                    KnowledgeType.LOCAL,
+
+                confidence =
+                    ConfidenceLevel.HIGH,
+
+                needsResearch =
+                    false,
+
+                isCurrentInformation =
+                    false
             )
         }
 
         // =====================================================
-        // 2. CHECK KNOWLEDGE CACHE
+        // 2. DEEP LOCAL KNOWLEDGE
+        // =====================================================
+
+        val deepKnowledge =
+            try {
+
+                AurixDeepKnowledge.search(
+                    cleanQuestion
+                )
+
+            } catch (
+                _: Exception
+            ) {
+
+                null
+            }
+
+        if (
+            deepKnowledge != null &&
+            deepKnowledge.answer.isNotBlank()
+        ) {
+
+            return KnowledgeAnswer(
+
+                question =
+                    cleanQuestion,
+
+                answer =
+                    deepKnowledge.answer,
+
+                knowledgeType =
+                    KnowledgeType.LOCAL,
+
+                confidence =
+                    deepKnowledge.confidence,
+
+                needsResearch =
+                    false,
+
+                isCurrentInformation =
+                    deepKnowledge.currentInformation
+            )
+        }
+
+        // =====================================================
+        // 3. KNOWLEDGE CACHE
         // =====================================================
 
         val cachedAnswer =
-            cache.get(cleanQuestion)
+            try {
 
-        if (cachedAnswer != null &&
+                cache.get(
+                    cleanQuestion
+                )
+
+            } catch (
+                _: Exception
+            ) {
+
+                null
+            }
+
+        if (
+            cachedAnswer != null &&
             cachedAnswer.answer.isNotBlank()
         ) {
 
             return KnowledgeAnswer(
-                question = cleanQuestion,
-                answer = cachedAnswer.answer,
-                knowledgeType = KnowledgeType.CACHED_RESEARCH,
-                confidence = cachedAnswer.confidence,
-                needsResearch = false,
-                isCurrentInformation = false,
-                sources = cachedAnswer.sources,
-                createdAt = cachedAnswer.createdAt
+
+                question =
+                    cleanQuestion,
+
+                answer =
+                    cachedAnswer.answer,
+
+                knowledgeType =
+                    KnowledgeType.CACHED_RESEARCH,
+
+                confidence =
+                    cachedAnswer.confidence,
+
+                needsResearch =
+                    false,
+
+                isCurrentInformation =
+                    false,
+
+                sources =
+                    cachedAnswer.sources,
+
+                createdAt =
+                    cachedAnswer.createdAt
             )
         }
 
         // =====================================================
-        // 3. NOTHING FOUND
+        // 4. NOTHING FOUND
         // =====================================================
 
         return KnowledgeAnswer(
-            question = cleanQuestion,
-            answer = "",
-            knowledgeType = KnowledgeType.UNKNOWN,
-            confidence = ConfidenceLevel.UNKNOWN,
-            needsResearch = true,
-            isCurrentInformation = false
+
+            question =
+                cleanQuestion,
+
+            answer =
+                "",
+
+            knowledgeType =
+                KnowledgeType.UNKNOWN,
+
+            confidence =
+                ConfidenceLevel.UNKNOWN,
+
+            needsResearch =
+                true,
+
+            isCurrentInformation =
+                false
         )
     }
 }
