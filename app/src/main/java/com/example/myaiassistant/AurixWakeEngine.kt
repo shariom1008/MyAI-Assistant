@@ -256,11 +256,11 @@ class AurixWakeEngine(
         }
 
         override fun onError(exception: Exception?) {
-           if (!running) return
+    if (!running) return
 
-        android.util.Log.e(
+    android.util.Log.e(
         "AURIX_VOSK",
-        "Vosk recognition error",
+        "VOSK ERROR: ${exception?.message}",
         exception
     )
 
@@ -273,8 +273,7 @@ class AurixWakeEngine(
     } else {
         restartWakeListening(900L)
     }
-}
-
+        }
         override fun onTimeout() {
             if (!running) return
             if (mode == Mode.COMMAND) {
