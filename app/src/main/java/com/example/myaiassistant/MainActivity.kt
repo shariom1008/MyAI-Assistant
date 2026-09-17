@@ -308,23 +308,25 @@ class MainActivity : Activity() {
 
         root =
             FrameLayout(this).apply {
-
-                background =
-                    GradientDrawable(
-                        GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(
-                            bgTop,
-                            Color.rgb(
-                                1,
-                                5,
-                                16
-                            ),
-                            bgBottom
-                        )
-                    )
+                setBackgroundColor(Color.TRANSPARENT)
             }
 
         setContentView(root)
+
+        // ---------------------------------------------------------
+        // LIVE BACKGROUND
+        // ---------------------------------------------------------
+        // Visual-only layer. Existing AURIX UI remains above it.
+        val liveBackground =
+            UnderwaterLiveBackground(this)
+
+        root.addView(
+            liveBackground,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
 
         /*
          * AurixOriginalUi owns the complete
