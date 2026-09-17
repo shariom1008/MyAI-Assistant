@@ -1,5 +1,5 @@
 package com.example.myaiassistant.knowledge
-
+import java.util.Locale
 data class AurixDeepKnowledgeItem(
     val category: String,
     val topic: String,
