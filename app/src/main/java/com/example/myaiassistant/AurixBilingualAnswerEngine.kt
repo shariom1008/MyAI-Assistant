@@ -41,6 +41,14 @@ object AurixBilingualAnswerEngine {
                 "Density mass per unit volume hoti hai: rho = m/V."
             q.contains("lens") ->
                 "Convex lens generally parallel light rays ko converge karta hai, jabki concave lens unhe diverge karta hai."
+            q.contains("black hole") ->
+                "Black hole space-time ka aisa region hai jahan gravity itni strong hoti hai ki event horizon ke andar se light bhi bahar nahi nikal sakti. Simple language mein, yeh bahut compact object ka extremely strong gravitational region hai."
+            q.contains("diabetes") && q.contains("insulin") ->
+                "Diabetes mein insulin ka main role blood glucose, yaani blood sugar, ko control karna hai. Insulin glucose ko blood se body ki cells mein enter karne mein help karta hai, jahan glucose energy ke liye use ho sakta hai. Type 1 diabetes mein body insulin bahut kam ya nahi banati, jabki type 2 diabetes mein insulin resistance aur insulin production dono role play kar sakte hain."
+            q.contains("insulin") ->
+                "Insulin pancreas se banne wala hormone hai jo blood glucose ko regulate karne mein help karta hai. Yeh glucose ko cells mein use ya storage ke liye available karne mein important role play karta hai."
+            q.contains("diabetes") ->
+                "Diabetes ek metabolic condition hai jisme blood glucose level normal se zyada ho sakta hai. Ismein insulin ki kami, insulin resistance, ya dono important roles play kar sakte hain."
             q.contains("relativity") ->
                 "Special relativity ke according inertial frames mein physical laws same hote hain aur vacuum mein light ki speed invariant hoti hai."
             else -> answer
