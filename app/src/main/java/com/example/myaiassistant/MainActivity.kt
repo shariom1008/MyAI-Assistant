@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -308,25 +309,23 @@ class MainActivity : Activity() {
 
         root =
             FrameLayout(this).apply {
-                setBackgroundColor(Color.TRANSPARENT)
+
+                background =
+                    GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(
+                            bgTop,
+                            Color.rgb(
+                                1,
+                                5,
+                                16
+                            ),
+                            bgBottom
+                        )
+                    )
             }
 
         setContentView(root)
-
-        // ---------------------------------------------------------
-        // LIVE BACKGROUND
-        // ---------------------------------------------------------
-        // Visual-only layer. Existing AURIX UI remains above it.
-        val liveBackground =
-            UnderwaterLiveBackground(this)
-
-        root.addView(
-            liveBackground,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
 
         /*
          * AurixOriginalUi owns the complete
@@ -350,6 +349,51 @@ class MainActivity : Activity() {
 
         val uiView =
             aurixUi.build()
+
+        // ---------------------------------------------------------
+        // LIVE UNDERWATER BACKGROUND
+        // ---------------------------------------------------------
+        // Put the animation INSIDE the existing AURIX UI root so an
+        // opaque root background cannot hide it. Existing controls,
+        // icons, mic/orb, text and callbacks remain unchanged.
+        if (uiView is ViewGroup) {
+            uiView.setBackgroundColor(Color.TRANSPARENT)
+
+            val liveBackground =
+                UnderwaterLiveBackground(this)
+
+            uiView.addView(
+                liveBackground,
+                0,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+        } else {
+            // Safe fallback for an unexpected non-container UI root.
+            val liveBackground =
+                UnderwaterLiveBackground(this)
+
+            root.addView(
+                liveBackground,
+                0,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            root.addView(
+                uiView,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            return
+        }
 
         root.addView(
             uiView,
