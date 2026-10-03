@@ -1417,7 +1417,7 @@ if (
         ) {
 
             speakOnce(
-                "Hello Boss. Main AURIX hoon. 啶い啶距, kya help chahiye?"
+                "Hello Boss. Main AURIX hoon., kya help chahiye?"
             )
 
             return
@@ -2768,19 +2768,19 @@ private fun speakAurixGreeting() {
     val greeting =
         when {
             hour < 5 ->
-                "Boss, abhi kaafi raat ho gayi hai. 啶い啶距 kya karna hai?"
+                "Boss, abhi kaafi raat ho gayi hai. ,Aap Soye Nahi Kya?"
 
             hour < 12 ->
-                "Good morning Boss. 啶い啶距, AURIX aapke liye kya kare?"
+                "Good morning Boss. , Raat Kaisi Beeti ?"
 
             hour < 17 ->
-                "Good afternoon Boss. 啶い啶距, kya karna hai?"
+                "Good afternoon Boss. Lunch ho gaya aapka ?"
 
             hour < 22 ->
-                "Good evening Boss. 啶い啶距, AURIX aapki kya help kare?"
+                "Good evening Boss., Aaj Sunset dekha kya ?"
 
             else ->
-                "Good night Boss. 啶い啶距, AURIX kya kare?"
+                "Good night Boss.,Mujhe bhi sone do ?"
         }
 
     speakOnce(
