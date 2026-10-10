@@ -1,0 +1,19 @@
+--- a/app/src/main/java/com/example/myaiassistant/AurixService.kt
++++ b/app/src/main/java/com/example/myaiassistant/AurixService.kt
+@@ -1 +1,2 @@
+ import com.example.myaiassistant.knowledge.AurixKnowledgeRouter
++import com.example.myaiassistant.knowledge.AurixKnowledgeLearning
+--- a/app/src/main/java/com/example/myaiassistant/AurixService.kt
++++ b/app/src/main/java/com/example/myaiassistant/AurixService.kt
+@@ -3,3 +3,11 @@
+             command,
+             finalAnswer
+         )
++
++        // Save eligible AI answers into the existing local knowledge cache.
++        // This must never interrupt the user's spoken response.
++        try {
++            AurixKnowledgeLearning(this).remember(command, finalAnswer)
++        } catch (_: Exception) {
++            // Learning is best-effort only.
++        }
